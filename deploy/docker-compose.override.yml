@@ -1,0 +1,60 @@
+services:
+  api-gateway:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - NODE_ENV=development
+
+  products:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - NODE_ENV=development
+
+  cart:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - NODE_ENV=development
+
+  orders:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - NODE_ENV=development
+
+  payments:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - NODE_ENV=development
+
+  content:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - NODE_ENV=development

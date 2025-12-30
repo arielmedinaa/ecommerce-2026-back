@@ -1,0 +1,164 @@
+# deploy/docker-compose.yml
+version: '3.8'
+
+services:
+  # API Gateway
+  api-gateway:
+    build: 
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    ports:
+      - "3100:3100"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3100
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:5173}
+      - IS_DOCKER=true
+      # Service ports
+      - AUTH_PORT=3101
+      - CART_PORT=3102
+      - CONTENT_PORT=3103
+      - ORDERS_PORT=3104
+      - PAYMENTS_PORT=3105
+      - PRODUCTS_PORT=3106
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+    command: yarn start:dev:gateway
+    depends_on:
+      - auth
+      - products
+      - cart
+      - content
+      - orders
+      - payments
+    networks:
+      - app-network
+
+  # Auth Service
+  auth:
+    build: 
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    env_file:
+      - ../.env
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3101
+      - AUTH_PORT=3101
+      - MONGO_URL=${MONGO_URL}
+      - IS_DOCKER=true
+    ports:
+      - "3101:3101"
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+    command: yarn start:dev:auth
+    networks:
+      - app-network
+
+  # Products Service
+  products:
+    build: 
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    env_file:
+      - ../.env
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3106
+      - PRODUCTS_PORT=3106
+      #- MONGO_URL=${MONGO_URL}
+      - IS_DOCKER=true
+    ports:
+      - "3106:3106"
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+    command: yarn start:dev:products
+    networks:
+      - app-network
+
+  # Cart Service
+  cart:
+    build: 
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3102
+      - CART_PORT=3102
+      #- MONGO_URL=${MONGO_URL}
+      - IS_DOCKER=true
+    ports:
+      - "3102:3102"
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+    command: yarn start:dev:cart
+    networks:
+      - app-network
+  
+  # Content Service
+  content:
+    build: 
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3103
+      - CONTENT_PORT=3103
+      #- MONGO_URL=${MONGO_URL}
+      - IS_DOCKER=true
+    ports:
+      - "3103:3103"
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+    command: yarn start:dev:content
+    networks:
+      - app-network
+
+  # Orders Service
+  orders:
+    build: 
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3104
+      - ORDERS_PORT=3104
+      - MONGO_URL=${MONGO_URL}
+      - IS_DOCKER=true
+    ports:
+      - "3104:3104"
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+    command: yarn start:dev:orders
+    networks:
+      - app-network
+
+  # Payments Service
+  payments:
+    build: 
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3105
+      - PAYMENTS_PORT=3105
+      - MONGO_URL=${MONGO_URL}
+      - IS_DOCKER=true
+    ports:
+      - "3105:3105"
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+    command: yarn start:dev:payments
+    networks:
+      - app-network
+networks:
+  app-network:
+    driver: bridge
+    attachable: true

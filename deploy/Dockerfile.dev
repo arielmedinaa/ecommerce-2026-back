@@ -1,0 +1,32 @@
+FROM node:20-alpine
+
+WORKDIR /usr/src/app
+
+# Install nodemon and ts-node for development
+RUN npm install -g nodemon ts-node tsconfig-paths
+
+# Copy package files
+COPY package*.json ./
+COPY yarn.lock ./
+COPY tsconfig.json ./
+COPY tsconfig.paths.json ./
+
+# Install dependencies
+RUN yarn install
+
+# Install tsconfig-paths for runtime path resolution
+RUN yarn add -D tsconfig-paths
+
+# Copy source code
+COPY . .
+
+# Create a non-root user and switch to it
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN chown -R appuser:appgroup /usr/src/app
+USER appuser
+
+# Expose ports
+EXPOSE 3000
+
+# Start the application with nodemon for hot-reloading
+CMD ["yarn", "start:dev:products"]
