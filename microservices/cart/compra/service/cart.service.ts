@@ -25,7 +25,6 @@ export class CartContadoService {
       return { data: [], success: false, message: 'Producto no válido' };
     }
 
-    // Crear filtro de búsqueda
     const filtro: any = {
       $or: [{ 'cliente.equipo': clienteToken }, { 'cliente.correo': cuenta }],
     };
@@ -77,7 +76,7 @@ export class CartContadoService {
       }
 
       return {
-        data: [],
+        data: [carritoExistente],
         success: true,
         message: 'PRODUCTO AGREGADO AL CARRITO',
       };

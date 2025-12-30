@@ -5,13 +5,13 @@ export type CartDocument = Cart & Document;
 
 @Schema({ timestamps: true, collection: 'carritos' })
 export class Cart {
-  @Prop({ type: Number, required: true })
+  @Prop({ type: Number, required: false })
   codigo: number;
 
-  @Prop({ type: String, required: true })
+  @Prop({ type: String, required: false })
   proceso: string;
 
-  @Prop({ type: Object, required: true })
+  @Prop({ type: Object, required: false })
   cliente: Record<string, any>;
 
   @Prop({ type: Date, default: Date.now })

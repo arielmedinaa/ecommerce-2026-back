@@ -1,4 +1,4 @@
-import { Body, Controller, Logger, UseGuards } from '@nestjs/common';
+import { Body, Controller, Logger, Query, UseGuards } from '@nestjs/common';
 import { Ctx, MessagePattern, Payload } from '@nestjs/microservices';
 import { CartContadoService } from '../service/cart.service';
 import { JwtAuthGuard } from '@gateway/common/guards/jwt-auth.guard';
@@ -11,13 +11,13 @@ export class CartController {
 
   @UseGuards(JwtAuthGuard)
   @MessagePattern({ cmd: 'add_to_cart' })
-  async addToCart(@Payload() data: any, @Ctx() context: any, @Body() body: any) {
+  async addToCart(@Payload() payload: any) {
+    const { token, email, codigo, body } = payload;
     try {
-      const token = context.args[0].headers?.authorization?.split(' ')[1];
       const result = await this.cartService.addCart(
         token,
-        data.cuenta,
-        data.codigo,
+        email,
+        codigo ? Number(codigo) : 0,
         body,
       );
       return result;
