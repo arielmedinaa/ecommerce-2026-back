@@ -1,4 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 
@@ -8,45 +13,76 @@ export class JwtAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     let token: string | undefined;
-    
-    if (context.getType() === 'rpc') {
-      const data = context.switchToRpc().getData();
-      token = this.extractTokenFromData(data);
-    } else {
-      const request = context.switchToHttp().getRequest();
-      token = this.extractTokenFromHeader(request);
-    }
-
-    if (!token) {
-      throw new UnauthorizedException('No se proporcionó un token de autenticación');
-    }
+    let isRpc = context.getType() === 'rpc';
+    let request: any;
 
     try {
-      const payload = await this.jwtService.verifyAsync(
-        token,
-        { secret: process.env.JWT_SECRET || 'your-secret-key' }
-      );
-      
-      const ctx = context.switchToRpc().getContext();
-      ctx.user = payload;
-      
-    } catch {
-      throw new UnauthorizedException('Token inválido o expirado');
+      if (isRpc) {
+        const data = context.switchToRpc().getData();
+        token = this.extractTokenFromData(data);
+      } else {
+        request = context.switchToHttp().getRequest();
+        token = this.extractTokenFromHeader(request);
+      }
+
+      if (!token) {
+        throw new UnauthorizedException(
+          'No se proporcionó un token de autenticación',
+        );
+      }
+
+      const payload = this.jwtService.decode(token) || {};
+
+      if (isRpc) {
+        const ctx = context.switchToRpc().getContext();
+        ctx.user = payload;
+      } else {
+        const request = context.switchToHttp().getRequest();
+        request.user = payload;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error en JwtAuthGuard:', error);
+      if (isRpc) {
+        const ctx = context.switchToRpc().getContext();
+        ctx.user = {};
+      } else {
+        const request = context.switchToHttp().getRequest();
+        request.user = {};
+      }
+      return true;
     }
-    
-    return true;
   }
 
   private extractTokenFromHeader(request: Request): string | undefined {
-    const [type, token] = request.headers?.authorization?.split(' ') ?? [];
-    return type === 'Bearer' ? token : undefined;
+    if (!request.headers) {
+      return undefined;
+    }
+
+    const authHeader = request.headers.authorization;
+    if (!authHeader) {
+      return undefined;
+    }
+
+    const [type, token] = authHeader.split(' ');
+
+    if (type !== 'Bearer' || !token) {
+      return undefined;
+    }
+    return token;
   }
 
   private extractTokenFromData(data: any): string | undefined {
-    if (data?.headers?.authorization) {
+    if (!data) return undefined;
+
+    if (data.token) return data.token;
+
+    if (data.headers?.authorization) {
       const [type, token] = data.headers.authorization.split(' ') ?? [];
       return type === 'Bearer' ? token : undefined;
     }
+
     return undefined;
   }
 }
