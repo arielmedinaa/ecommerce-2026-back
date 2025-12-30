@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@global/*": ["api-gateway/src/common/global/*"],
+      "@auth/*": ["microservices/auth/*"],
+      "@cart/*": ["microservices/cart/*"],
+      "@cart/schemas/*": ["microservices/cart/schemas/*"],
+      "@products/*": ["microservices/products/*"],
+      "@image/*": ["microservices/image/*"],
+      "@response/*": ["api-gateway/src/common/response/*"],
+      "@shared/*": ["shared/*"],
+      "@shared/config/*": ["shared/config/*"],
+      "@shared/microservice/*": ["shared/microservice/*"],
+      "@gateway/*": ["api-gateway/src/*"],
+      "@models/*": ["api-gateway/src/common/models/*"],
+      "@utils/*": ["api-gateway/src/common/utils/*"],
+      "@microservices/*": ["microservices/*"],
+      "config/*": ["shared/config/*"],
+      "microservice-config/*": ["shared/config/microservice/*"]
+    }
+  }
+}
