@@ -8,6 +8,7 @@ import {
   UseGuards,
   Request,
   Query,
+  Get,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
@@ -32,8 +33,7 @@ export class CartController {
       throw new Error('Usuario no autenticado');
     }
 
-    const token =
-      req.headers.authorization?.replace('Bearer ', '');
+    const token = req.headers.authorization?.replace('Bearer ', '');
 
     const payload = {
       token,
@@ -44,18 +44,43 @@ export class CartController {
 
     try {
       return await firstValueFrom(
-        this.cartClient.send(
-          { cmd: 'add_to_cart' },
-          payload,
-        ),
+        this.cartClient.send({ cmd: 'add_to_cart' }, payload),
       );
     } catch (error) {
-      console.error('Error in addToCart:', {
+      console.error('Error al agregar al carrito:', {
         message: error.message,
         stack: error.stack,
         payload,
       });
       throw new Error('Error al agregar al carrito: ' + error.message);
+    }
+  }
+
+  @Get()
+  @UseGuards(JwtAuthGuard)
+  @UsePipes(new ValidationPipe())
+  async getCart(
+    @Request() req,
+    @Query('email') email?: string,
+    @Query('codigo') codigo?: string,
+  ) {
+    if (!req.user) {
+      throw new Error('Usuario no autenticado');
+    }
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    const payload = { token, email: email || req.user.email, codigo };
+
+    try {
+      return await firstValueFrom(
+        this.cartClient.send({ cmd: 'get_cart' }, payload),
+      );
+    } catch (error) {
+      console.error('Error al obtener el carrito:', {
+        message: error.message,
+        stack: error.stack,
+        payload,
+      });
+      throw new Error('Error al obtener el carrito: ' + error.message);
     }
   }
 }

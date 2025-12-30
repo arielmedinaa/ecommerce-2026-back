@@ -1,6 +1,6 @@
 import { Body, Controller, Logger, Query, UseGuards } from '@nestjs/common';
 import { Ctx, MessagePattern, Payload } from '@nestjs/microservices';
-import { CartContadoService } from '../service/cart.service';
+import { CartContadoService } from '@cart/service/cart.service';
 import { JwtAuthGuard } from '@gateway/common/guards/jwt-auth.guard';
 
 @Controller()
@@ -23,6 +23,23 @@ export class CartController {
       return result;
     } catch (error) {
       this.logger.error('Error adding to cart:', error);
+      throw error;
+    }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @MessagePattern({ cmd: 'get_cart' })
+  async getCart(@Payload() payload: any) {
+    const { token, cuenta, codigo } = payload;
+    try {
+      const result = await this.cartService.getCart(
+        token,
+        cuenta,
+        codigo ? codigo : 0,
+      );
+      return result;
+    } catch (error) {
+      this.logger.error('Error al obtener los carritos', error);
       throw error;
     }
   }
