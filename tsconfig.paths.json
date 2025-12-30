@@ -4,6 +4,7 @@
     "paths": {
       "@global/*": ["api-gateway/src/common/global/*"],
       "@auth/*": ["microservices/auth/*"],
+      "@home/*": ["microservices/content/home/*"],
       "@cart/*": ["microservices/cart/*"],
       "@cart/schemas/*": ["microservices/cart/schemas/*"],
       "@products/*": ["microservices/products/*"],

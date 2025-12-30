@@ -5,6 +5,7 @@ import { AppController } from '@gateway/app.controller';
 import { ProductsController } from '@gateway/modules/products/controllers/products.controller';
 import { CartController } from '@gateway/modules/cart/controllers/cart.controller';
 import { JwtModule } from '@nestjs/jwt';
+import { ContentController } from '@gateway/modules/content/controllers/content.controller';
 
 @Module({
   imports: [
@@ -25,6 +26,6 @@ import { JwtModule } from '@nestjs/jwt';
       'PRODUCTS_SERVICE'
     ]),
   ],
-  controllers: [AppController, ProductsController, CartController],
+  controllers: [AppController, ProductsController, CartController, ContentController],
 })
 export class AppModule {}

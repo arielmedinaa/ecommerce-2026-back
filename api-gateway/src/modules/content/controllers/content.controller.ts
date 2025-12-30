@@ -1,6 +1,7 @@
-import { Controller, Get, Inject } from '@nestjs/common';
+import { Controller, Post, Body, Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import { FilterHomeDto } from '@home/dto/filter.home';
 
 @Controller('content')
 export class ContentController {
@@ -8,11 +9,11 @@ export class ContentController {
     @Inject('CONTENT_SERVICE') private readonly contentClient: ClientProxy,
   ) {}
 
-  @Get('home')
-  async getHomeContent() {
+  @Post('home')
+  async getHomeContent(@Body() filter: FilterHomeDto) {
     try {
       const content = await firstValueFrom(
-        this.contentClient.send({ cmd: 'get_home_content' }, {}),
+        this.contentClient.send({ cmd: 'get_home_content' }, filter),
       );
       return content;
     } catch (error) {

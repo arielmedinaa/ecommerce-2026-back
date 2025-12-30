@@ -84,6 +84,8 @@ services:
     build: 
       context: ..
       dockerfile: deploy/Dockerfile.dev
+    env_file:
+      - ../.env
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - PORT=3102
@@ -104,14 +106,16 @@ services:
     build: 
       context: ..
       dockerfile: deploy/Dockerfile.dev
+    env_file:
+      - ../.env
     environment:
       - NODE_ENV=${NODE_ENV:-development}
-      - PORT=3103
-      - CONTENT_PORT=3103
+      - PORT=3107
+      - CONTENT_PORT=3107
       #- MONGO_URL=${MONGO_URL}
       - IS_DOCKER=true
     ports:
-      - "3103:3103"
+      - "3107:3107"
     volumes:
       - ../:/usr/src/app
       - /usr/src/app/node_modules
@@ -124,6 +128,8 @@ services:
     build: 
       context: ..
       dockerfile: deploy/Dockerfile.dev
+    env_file:
+      - ../.env
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - PORT=3104
@@ -144,6 +150,8 @@ services:
     build: 
       context: ..
       dockerfile: deploy/Dockerfile.dev
+    env_file:
+      - ../.env
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - PORT=3105

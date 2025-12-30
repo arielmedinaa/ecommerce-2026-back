@@ -4,7 +4,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 export const SERVICE_PORTS = {
   AUTH_SERVICE: 3101,
   CART_SERVICE: 3102,
-  CONTENT_SERVICE: 3103,
+  CONTENT_SERVICE: 3107,
   ORDERS_SERVICE: 3104,
   PAYMENTS_SERVICE: 3105,
   PRODUCTS_SERVICE: 3106,
