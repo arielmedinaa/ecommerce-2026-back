@@ -10,7 +10,7 @@ export class ProductsService {
         @InjectModel(Product.name) private readonly productModel: Model<Product>
     ) {}
 
-    async findAll(limit: number = 10, offset: number = 0, filters: any = {}): Promise<{data: Product[], total: number}> {
+    async findAll(filters: any = {}): Promise<{data: Product[], total: number}> {
         const query: any = { estado: { $ne: 0 } };
 
         if (filters.categoria) {
@@ -34,8 +34,8 @@ export class ProductsService {
         const [data, total] = await Promise.all([
             this.productModel.find(query)
                 .sort({ prioridad: -1, _id: 1 })
-                .skip(Number(offset))
-                .limit(Number(limit))
+                .skip(Number(filters.offset))
+                .limit(Number(filters.limit))
                 .lean(),
             this.productModel.countDocuments(query)
         ]);

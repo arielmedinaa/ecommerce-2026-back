@@ -8,9 +8,9 @@ export class ProductsController {
     constructor(private readonly productsService: ProductsService) {}
 
     @MessagePattern({ cmd: 'get_products' })
-    async findAll() {
+    async findAll(filters: any = {}) {
         try {
-            const products = await this.productsService.findAll();
+            const products = await this.productsService.findAll(filters);
             return products;
         } catch (error) {
             this.logger.error('Error in get_products:', error);
