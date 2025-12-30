@@ -3,13 +3,14 @@ import { HomeService } from '@home/service/home.service';
 import { FilterHomeDto } from '@home/dto/filter.home';
 import { ResponseData } from '@gateway/common/response/response.data';
 import { HomeData } from '@home/interfaces/home.interface';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 
-@Controller('home')
+@Controller()
 export class HomeController {
   constructor(private readonly homeService: HomeService) {}
 
-  @Post('data')
-  async getHomeData(@Body() filter: FilterHomeDto): Promise<ResponseData<HomeData>> {
+  @MessagePattern({ cmd: 'get_home_content' })
+  async getHomeData(@Payload() filter: FilterHomeDto): Promise<ResponseData<HomeData>> {
     return this.homeService.getHomeData(filter);
   }
 }
