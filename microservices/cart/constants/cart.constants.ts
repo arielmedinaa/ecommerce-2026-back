@@ -1,4 +1,4 @@
-import { Cart } from '../../schemas/cart.schema';
+import { Cart } from '@cart/schemas/cart.schema';
 
 export const DEFAULT_CART: Partial<Cart> = {
   proceso: '',

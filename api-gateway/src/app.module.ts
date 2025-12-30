@@ -14,7 +14,7 @@ import { ContentController } from '@gateway/modules/content/controllers/content.
       envFilePath: '.env',
     }),
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'your-secret-key',
+      secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '60s' },
     }),
     MicroserviceModule.forRoot([
