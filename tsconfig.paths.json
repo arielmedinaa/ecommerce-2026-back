@@ -4,7 +4,7 @@
     "paths": {
       "@global/*": ["api-gateway/src/common/global/*"],
       "@auth/*": ["microservices/auth/*"],
-      "@home/*": ["microservices/content/home/*"],
+      "@content/*": ["microservices/content/*"],
       "@cart/*": ["microservices/cart/*"],
       "@cart/schemas/*": ["microservices/cart/schemas/*"],
       "@products/*": ["microservices/products/*"],
@@ -17,8 +17,8 @@
       "@models/*": ["api-gateway/src/common/models/*"],
       "@utils/*": ["api-gateway/src/common/utils/*"],
       "@microservices/*": ["microservices/*"],
-      "config/*": ["shared/config/*"],
-      "microservice-config/*": ["shared/config/microservice/*"]
+      "@config/*": ["shared/config/*"],
+      "@microservice-config/*": ["shared/config/microservice/*"]
     }
   }
 }

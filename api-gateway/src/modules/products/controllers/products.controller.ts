@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Post, Body } from '@nestjs/common';
+import { Body, Controller, Post, Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { timeout, catchError } from 'rxjs/operators';
@@ -10,7 +10,7 @@ export class ProductsController {
   ) {}
 
   @Post()
-  async getProducts(@Body() filters: { limit: 4; offset: 0; categorias?: string }) {
+  async getProducts(@Body() filters: { offset: 0; limit: 10 }) {
     try {
       const products = await firstValueFrom(
         this.productsClient.send({ cmd: 'get_products' }, filters).pipe(

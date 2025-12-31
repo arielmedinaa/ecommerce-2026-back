@@ -18,14 +18,12 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "start:dev:products": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/products/main.ts --watch --preserveWatchOutput",
-    "start:dev:auth": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/auth/main.ts --watch --preserveWatchOutput",
-    "start:dev:gateway": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/main.ts --watch --preserveWatchOutput",
-    "start:dev:cart": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/cart/main.ts --watch --preserveWatchOutput",
-    "start:dev:content": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/content/main.ts --watch --preserveWatchOutput"
+    "start:dev:products": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/products/main.ts",
+    "start:dev:auth": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/auth/main.ts",
+    "start:dev:gateway": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/main.ts",
+    "start:dev:cart": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/cart/main.ts"
   },
   "dependencies": {
-    "@nestjs/axios": "^4.0.1",
     "@nestjs/class-validator": "^0.13.4",
     "@nestjs/common": "^11.1.9",
     "@nestjs/config": "^4.0.2",
@@ -38,7 +36,6 @@
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.2.3",
     "@nestjs/typeorm": "^11.0.0",
-    "axios": "^1.13.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
     "mongoose": "^9.0.1",

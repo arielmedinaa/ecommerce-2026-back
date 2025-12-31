@@ -4,18 +4,12 @@ import { MicroserviceModule } from '@shared/config/microservice/microservice.mod
 import { AppController } from '@gateway/app.controller';
 import { ProductsController } from '@gateway/modules/products/controllers/products.controller';
 import { CartController } from '@gateway/modules/cart/controllers/cart.controller';
-import { JwtModule } from '@nestjs/jwt';
-import { ContentController } from '@gateway/modules/content/controllers/content.controller';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
-    }),
-    JwtModule.register({
-      secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '60s' },
     }),
     MicroserviceModule.forRoot([
       'AUTH_SERVICE',
@@ -26,6 +20,6 @@ import { ContentController } from '@gateway/modules/content/controllers/content.
       'PRODUCTS_SERVICE'
     ]),
   ],
-  controllers: [AppController, ProductsController, CartController, ContentController],
+  controllers: [AppController, ProductsController, CartController],
 })
 export class AppModule {}
