@@ -4,7 +4,7 @@ import { MicroserviceModule } from '@shared/config/microservice/microservice.mod
 
 @Module({
   imports: [
-    MicroserviceModule,
+    MicroserviceModule.forFeature(['PRODUCTS_SERVICE']),
   ],
   controllers: [ProductsController],
   exports: [],

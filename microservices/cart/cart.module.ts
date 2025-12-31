@@ -1,21 +1,19 @@
-
+// src/services/cart/cart.module.ts
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '@shared/config/database/database.module';
-import { Cart, CartSchema } from '@cart/schemas/cart.schema'
+import { Cart, CartSchema } from './schemas/cart.schema'
 import { MongooseModule } from "@nestjs/mongoose";
-import { Llave, LlaveSchema } from '@cart/schemas/llave.schema';
-import { Transaccion, TransaccionSchema } from '@cart/schemas/transaccion.schema';
-import { CartContadoService } from './service/cart.service';
-import { CartController } from "@cart/controller/cart.controller";
+import { Llave, LlaveSchema } from './schemas/llave.schema';
+import { Transaccion, TransaccionSchema } from './schemas/transaccion.schema';
+import { CartContadoService } from './compra/service/cart.service';
+import { CartController } from "./compra/controller/cart.controller";
 import { CommonModule } from '@gateway/common/common.module';
 import { JwtModule } from '@nestjs/jwt';
-import { HttpModule } from '@nestjs/axios';
-import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
 
 @Module({
   imports: [
     JwtModule.register({
-      secret: process.env.JWT_SECRET,
+      secret: process.env.JWT_SECRET || 'your-secret-key',
       signOptions: { expiresIn: '1d' },
     }),
     MongooseModule.forFeature([
@@ -23,12 +21,8 @@ import { MicroserviceModule } from '@shared/config/microservice/microservice.mod
       { name: Llave.name, schema: LlaveSchema },
       { name: Transaccion.name, schema: TransaccionSchema },
     ]),
-    MicroserviceModule.forRoot([
-      'PRODUCTS_SERVICE',
-    ]),
     DatabaseModule.forRoot(),
     CommonModule,
-    HttpModule,
   ],
   controllers: [CartController],
   providers: [CartContadoService],
