@@ -9,6 +9,7 @@ import { CartContadoService } from './compra/service/cart.service';
 import { CartController } from "./compra/controller/cart.controller";
 import { CommonModule } from '@gateway/common/common.module';
 import { JwtModule } from '@nestjs/jwt';
+import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
 
 @Module({
   imports: [
@@ -20,6 +21,9 @@ import { JwtModule } from '@nestjs/jwt';
       { name: Cart.name, schema: CartSchema },
       { name: Llave.name, schema: LlaveSchema },
       { name: Transaccion.name, schema: TransaccionSchema },
+    ]),
+    MicroserviceModule.forRoot([
+      'PRODUCTS_SERVICE',
     ]),
     DatabaseModule.forRoot(),
     CommonModule,
