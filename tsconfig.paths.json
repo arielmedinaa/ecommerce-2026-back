@@ -18,7 +18,8 @@
       "@utils/*": ["api-gateway/src/common/utils/*"],
       "@microservices/*": ["microservices/*"],
       "@config/*": ["shared/config/*"],
-      "@microservice-config/*": ["shared/config/microservice/*"]
+      "@microservice-config/*": ["shared/config/microservice/*"],
+      "@home/*": ["microservices/content/home/*"]
     }
   }
 }

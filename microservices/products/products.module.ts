@@ -10,7 +10,6 @@ import { DatabaseModule } from '@shared/config/database/database.module';
 
 @Module({
   imports: [
-    MicroserviceModule.register('PRODUCTS'),
     DatabaseModule.forRoot(),
     MongooseModule.forFeature([
       { name: Product.name, schema: ProductSchema },
