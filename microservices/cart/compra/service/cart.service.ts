@@ -4,7 +4,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ObtenerClaveService } from '@cart/common/utils/obtenerClave';
-import { NEW_CART_INITIAL_STATE } from '../constants/cart.constants';
+import { NEW_CART_INITIAL_STATE } from '@cart/constants/cart.constants';
 
 @Injectable()
 export class CartContadoService {
