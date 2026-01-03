@@ -10,7 +10,9 @@ export class ProductsController {
   ) {}
 
   @Post()
-  async getProducts(@Body() filters: { limit: 4; offset: 0; categorias?: string }) {
+  async getProducts(
+    @Body() filters: { limit: 4; offset: 0; categorias?: string },
+  ) {
     try {
       const products = await firstValueFrom(
         this.productsClient.send({ cmd: 'get_products' }, filters).pipe(
@@ -35,6 +37,48 @@ export class ProductsController {
         code: error.code,
       });
       throw new Error('Error al obtener los productos: ' + error.message);
+    }
+  }
+
+  @Post('/listar/promos')
+  async getProductosByPromos(
+    @Body() filters: { limit: 10; offset: 0; promoDesc?: string },
+  ) {
+    try {
+      const productosPromos = await firstValueFrom(
+        this.productsClient.send({ cmd: 'get_products_by_promos' }, filters),
+      );
+      return productosPromos;
+    } catch (error) {
+      console.error('Error in getProductosByPromos:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        code: error.code,
+      });
+      throw new Error(
+        'Error al obtener los productos con promos: ' + error.message,
+      );
+    }
+  }
+
+  @Post('/searchProducts')
+  async searchProducts(@Body() filters: any = { limit: 4, offset: 0 }) {
+    try {
+      const productos = await firstValueFrom(
+        this.productsClient.send({ cmd: 'search_products' }, filters)
+      )
+      return productos;
+    } catch (error) {
+      console.error('Error in searchProducts:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        code: error.code,
+      });
+      throw new Error(
+        'Error al buscar los productos: ' + error.message,
+      );
     }
   }
 }

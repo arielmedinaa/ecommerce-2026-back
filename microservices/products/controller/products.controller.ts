@@ -1,4 +1,4 @@
-import { Controller, Logger } from '@nestjs/common';
+import { Body, Controller, Logger } from '@nestjs/common';
 import { MessagePattern } from '@nestjs/microservices';
 import { ProductsService } from '@products/service/products.service';
 
@@ -6,6 +6,7 @@ import { ProductsService } from '@products/service/products.service';
 export class ProductsController {
   private readonly logger = new Logger(ProductsController.name);
   constructor(private readonly productsService: ProductsService) {}
+  
 
   @MessagePattern({ cmd: 'get_products' })
   async findAll(filters: any = {}) {
@@ -19,6 +20,26 @@ export class ProductsController {
       return await this.productsService.findAll(filters);
     } catch (error) {
       this.logger.error('Error in get_products:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'get_products_by_promos' })
+  async findByPromos(filters: any = {}){
+    try {
+      return await this.productsService.findByPromos(filters);
+    } catch (error) {
+      this.logger.error('Error in findByPromos:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'search_products' })
+  async searchProducts(filters: any = {}){
+    try {
+      return await this.productsService.searchProducts(filters);
+    } catch (error) {
+      this.logger.error('Error in searchProducts:', error);
       throw error;
     }
   }
