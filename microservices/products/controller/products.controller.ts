@@ -8,21 +8,17 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
   
 
-  @MessagePattern({ cmd: 'get_products' })
-  async findAll(filters: any = {}) {
-    try {
-      if (filters.ids) {
-        return await this.productsService.findByIds(
-          filters.ids,
-          filters.fields,
-        );
-      }
-      return await this.productsService.findAll(filters);
-    } catch (error) {
-      this.logger.error('Error in get_products:', error);
-      throw error;
+    @MessagePattern({ cmd: 'get_products' })
+    async findAll(@Body() filters: { offset: number; limit: number }) {
+        try {
+            const products = await this.productsService.findAll(filters);
+            return products;
+        } catch (error) {
+            this.logger.error('Error in get_products:', error);
+            throw error;
+        }
     }
-  }
+
 
   @MessagePattern({ cmd: 'get_products_by_promos' })
   async findByPromos(filters: any = {}){
