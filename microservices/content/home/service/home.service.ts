@@ -1,18 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { FilterHomeDto } from '@home/dto/filter.home';
-import { HomeData } from '@home/interfaces/home.interface';
+import { FilterHomeDto } from '@content/home/dto/filter.home';
+import { HomeData } from '@content/home/interfaces/home.interface';
 import { ResponseData } from '@gateway/common/response/response.data';
 import { ImageService } from '@image/image.service';
 import { Product } from '@products/schemas/product.schema';
 
 @Injectable()
 export class HomeService {
-  constructor(
-    private readonly imageService: ImageService, 
-    @InjectModel(Product.name) private readonly productModel: Model<Product>
-  ) {}
+  constructor(private readonly imageService: ImageService, private readonly productModel: Model<Product>) {}
 
   private get mockBanners() {
     return [

@@ -9,7 +9,7 @@ export class FilterHomeDto {
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  @Min(4)
+  @Min(1)
   limit?: number;
 
   @IsOptional()
