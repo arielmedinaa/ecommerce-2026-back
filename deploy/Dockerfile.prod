@@ -1,29 +1,45 @@
-FROM node:20-alpine as builder
+# Etapa 1: Construcción (Build)
+FROM node:20-alpine AS builder
 
 WORKDIR /usr/src/app
 
+# Copiamos archivos de dependencias
 COPY package*.json ./
 COPY yarn.lock ./
+COPY tsconfig.json ./
+COPY tsconfig.paths.json ./
 
-RUN yarn install --production
+# Instalamos todas las dependencias (incluyendo el CLI de Nest)
+RUN yarn install --frozen-lockfile 
 
+# Copiamos el resto del código
 COPY . .
 
-RUN yarn build
+# CORRECCIÓN: Usamos el binario local de nest para evitar el error "command not found"
+RUN ./node_modules/.bin/nest build 
 
-FROM node:20-alpine
+# Etapa 2: Producción (Runtime)
+FROM node:20-alpine AS runner
 
 WORKDIR /usr/src/app
 
-COPY package*.json ./
-COPY yarn.lock ./
+ENV NODE_ENV=production
 
-RUN yarn install --production
-
+# Copiamos solo lo necesario para ejecutar
+COPY --from=builder /usr/src/app/package*.json ./
+COPY --from=builder /usr/src/app/yarn.lock ./
 COPY --from=builder /usr/src/app/dist ./dist
+
+# Instalamos solo dependencias de producción para que sea rápido y ligero
+RUN yarn install --production --frozen-lockfile 
+
+# Seguridad: Usuario no root
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup 
+RUN chown -R appuser:appgroup /usr/src/app 
+USER appuser 
 
 EXPOSE 3000
 
-USER node
-
-CMD ["node", "dist/main.js"]
+# Este comando es el valor por defecto, pero recuerda que en Render 
+# lo sobrescribirás en el campo "Docker Command" para cada microservicio.
+CMD ["node", "dist/main"]
