@@ -4,20 +4,21 @@ export class BaseHttpException extends HttpException {
   constructor(
     message: string,
     statusCode: HttpStatus,
-    public readonly cause?: Error,
+    cause?: Error, 
     public readonly context?: string,
   ) {
-    const response = {
+    const responseBody = {
       statusCode,
       message,
       error: HttpStatus[statusCode],
       ...(context && { context }),
       ...(cause && { cause: cause.message }),
     };
+
+    super(responseBody, statusCode, { cause: cause });
     
-    super(response, statusCode, { cause });
     this.name = this.constructor.name;
-    
+
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, this.constructor);
     }
