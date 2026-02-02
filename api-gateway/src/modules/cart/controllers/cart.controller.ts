@@ -1,5 +1,5 @@
-import { Controller, Post, Body, UsePipes, ValidationPipe, Inject, Req, Query } from '@nestjs/common';
-import { ClientProxy, Payload } from '@nestjs/microservices';
+import { Controller, Post, Body, UsePipes, ValidationPipe, Inject, Req, Query, Get } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { Request } from 'express';
 import { SneakyThrows } from '../../../common/decorators';
@@ -13,7 +13,7 @@ export class CartController {
   @Post()
   @UsePipes(new ValidationPipe())
   @SneakyThrows('CartService', 'addToCart')
-  async addToCart(@Payload() data: any, @Body() body: any, @Req() request: Request, @Query() query: any) {
+  async addToCart(@Body() body: any, @Req() request: Request, @Query() query: any) {
     const authorization = request.headers.authorization;
     const token = authorization?.split(' ')[1] || '';
     
@@ -21,7 +21,7 @@ export class CartController {
     const cartCodigoNum = Number(cartCodigo);
     const payload = {
       token: token,
-      email: data.cuenta || '',
+      email: query.cuenta || '',
       codigo: cartCodigoNum,
       body: body
     };
@@ -30,7 +30,32 @@ export class CartController {
       this.cartClient.send({ cmd: 'add_to_cart' }, payload),
     );
     
-    console.log('Cart service response:', result);
+    return result;
+  }
+
+  @Get('getCart')
+  @UsePipes(new ValidationPipe())
+  @SneakyThrows('CartService', 'getCart')
+  async getCart(@Req() request: Request, @Query() query: any) {
+    const authorization = request.headers.authorization;
+    const token = authorization?.split(' ')[1] || '';
+    
+    const cartCodigo = query.codigo;
+    const cartCodigoNum = Number(cartCodigo);
+    const payload = {
+      token: token,
+      cuenta: query.cuenta || '', // Cuenta es opcional
+      codigo: cartCodigoNum,
+    };
+    
+    console.log('📤 getCart - Sending payload to microservice:', payload);
+    
+    const result = await firstValueFrom(
+      this.cartClient.send({ cmd: 'get_cart' }, payload),
+    );
+    
+    console.log('📥 getCart - Microservice response:', result);
+    
     return result;
   }
 }

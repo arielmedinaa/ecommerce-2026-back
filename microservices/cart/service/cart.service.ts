@@ -12,7 +12,8 @@ import { firstValueFrom } from 'rxjs';
 export class CartContadoService {
   constructor(
     @InjectModel(Cart.name) private readonly carrito: Model<Cart>,
-    @InjectModel(Transaccion.name) private readonly transacciones: Model<Transaccion>,
+    @InjectModel(Transaccion.name)
+    private readonly transacciones: Model<Transaccion>,
     @Inject('PRODUCTS_SERVICE') private readonly productsService: ClientProxy,
     private readonly obtenerClaveService: ObtenerClaveService,
   ) {}
@@ -23,7 +24,6 @@ export class CartContadoService {
     codigo?: number,
     producto?: any,
   ): Promise<{ data: Cart[]; success: boolean; message: string }> {
-    
     if (!producto) {
       return { data: [], success: false, message: 'Producto no válido' };
     }
@@ -32,14 +32,14 @@ export class CartContadoService {
       $or: [{ 'cliente.equipo': clienteToken }, { 'cliente.correo': cuenta }],
     };
     codigo === 0 ? (filtro.estado = 1) : (filtro.codigo = codigo);
-
-    console.log("filtro", filtro)
-
     const articuloTipo = producto.credito ? 'credito' : 'contado';
-    const carritoExistente = await this.carrito.findOne(filtro).sort({ codigo: -1 });
+    const carritoExistente = await this.carrito
+      .findOne(filtro)
+      .sort({ codigo: -1 });
 
     if (!carritoExistente) {
-      const nuevoCodigo = await this.obtenerClaveService.obtenerClave('carrito');
+      const nuevoCodigo =
+        await this.obtenerClaveService.obtenerClave('carrito');
       const nuevoCarrito = new this.carrito({
         ...NEW_CART_INITIAL_STATE(nuevoCodigo, clienteToken, cuenta),
         articulos: {
@@ -66,20 +66,34 @@ export class CartContadoService {
       );
     }
 
-    const productoExiste = await this.carrito.findOne({
-      ...filtro,
-      [`articulos.${articuloTipo}.codigo`]: producto.codigo,
-    });
+    const productoExiste = carritoExistente.articulos[articuloTipo].find(
+      (articulo: any) => String(articulo.codigo) === String(producto.codigo)
+    );
 
     if (productoExiste) {
+      carritoExistente.articulos[articuloTipo] = carritoExistente.articulos[
+        articuloTipo
+      ].map((articulo: any) =>
+        String(articulo.codigo) === String(producto.codigo)
+          ? { ...articulo, cantidad: articulo.cantidad + producto.cantidad }
+          : articulo,
+      );
+
       await this.carrito.updateOne(
-        { ...filtro, [`articulos.${articuloTipo}.codigo`]: producto.codigo },
-        { $inc: { [`articulos.${articuloTipo}.$.cantidad`]: producto.cantidad } },
+        { codigo: carritoExistente.codigo },
+        {
+          $set: {
+            [`articulos.${articuloTipo}`]:
+              carritoExistente.articulos[articuloTipo],
+          },
+        },
       );
     } else {
-      await this.carrito.updateOne(filtro, {
-        $push: { [`articulos.${articuloTipo}`]: producto },
-      });
+      carritoExistente.articulos[articuloTipo].push(producto);
+      await this.carrito.updateOne(
+        { codigo: carritoExistente.codigo },
+        { $push: { [`articulos.${articuloTipo}`]: producto } },
+      );
     }
 
     return {
@@ -101,7 +115,6 @@ export class CartContadoService {
       ],
     };
     codigo === 0 ? (filtro.estado = 1) : (filtro.codigo = codigo);
-
     const resultado = await this.carrito
       .findOne(filtro, { _id: 0, proceso: 0, transaccion: 0, __v: 0 })
       .sort({ codigo: -1 })

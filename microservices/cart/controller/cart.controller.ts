@@ -9,29 +9,32 @@ export class CartController {
 
   constructor(private readonly cartService: CartContadoService) {}
 
+  // Log para saber si el microservicio está recibiendo peticiones
+  @MessagePattern({ cmd: 'ping' })
+  async ping() {
+    console.log('🏓 Microservice ping received');
+    return { status: 'ok', message: 'Cart microservice is alive' };
+  }
+
   // @UseGuards(JwtAuthGuard)
   @MessagePattern({ cmd: 'add_to_cart' })
   async addToCart(@Payload() payload: any) {
     const { token, email, codigo, body } = payload;
     try {
-      console.log('Cart microservice received payload:', JSON.stringify(payload, null, 2));
-      
       const result = await this.cartService.addCart(
         token,
         email,
         codigo ? Number(codigo) : 0,
         body,
       );
-      console.log('Cart service result:', result);
       return result;
     } catch (error) {
-      console.error('Error adding to cart:', error);
       this.logger.error('Error adding to cart:', error);
       throw error;
     }
   }
 
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard)
   @MessagePattern({ cmd: 'get_cart' })
   async getCart(@Payload() payload: any) {
     const { token, cuenta, codigo } = payload;
@@ -41,8 +44,17 @@ export class CartController {
         cuenta,
         codigo ? codigo : 0,
       );
+      
+      console.log('📥 Microservice getCart - Service result:', result);
       return result;
     } catch (error) {
+      console.error('🚨 Microservice getCart - Error in service:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        code: error.code,
+        fullError: error
+      });
       this.logger.error('Error al obtener los carritos', error);
       throw error;
     }

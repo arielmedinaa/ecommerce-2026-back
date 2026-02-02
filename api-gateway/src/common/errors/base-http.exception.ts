@@ -25,6 +25,9 @@ export class BaseHttpException extends HttpException {
       path: BaseHttpException.getCurrentPath()
     };
 
+    // Logging detallado del error
+    BaseHttpException.logErrorDetails(responseBody, cause);
+
     super(responseBody, statusCode, { cause: cause });
     
     this.name = this.constructor.name;
@@ -32,6 +35,62 @@ export class BaseHttpException extends HttpException {
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, this.constructor);
     }
+  }
+
+  private static logErrorDetails(errorResponse: any, cause?: Error): void {
+    const logData = {
+      timestamp: errorResponse.timestamp,
+      level: 'ERROR',
+      service: errorResponse.service || 'Unknown',
+      operation: errorResponse.operation || 'Unknown',
+      context: errorResponse.context || 'Unknown',
+      statusCode: errorResponse.statusCode,
+      error: errorResponse.error,
+      message: errorResponse.message,
+      field: errorResponse.field,
+      line: errorResponse.line,
+      path: errorResponse.path,
+      ...(cause && {
+        originalError: {
+          name: cause.name,
+          message: cause.message,
+          stack: cause.stack
+        }
+      })
+    };
+
+    // Formatear para consola con colores y estructura clara
+    console.error('\n' + '='.repeat(80));
+    console.error('🚨 SNEAKY THROWS ERROR DETECTED');
+    console.error('='.repeat(80));
+    console.error(`📅 Timestamp: ${logData.timestamp}`);
+    console.error(`🏢 Service: ${logData.service}`);
+    console.error(`⚙️  Operation: ${logData.operation}`);
+    console.error(`📍 Context: ${logData.context}`);
+    console.error(`🔢 Status Code: ${logData.statusCode} ${logData.error}`);
+    console.error(`💬 Message: ${logData.message}`);
+    
+    if (logData.field) {
+      console.error(`🏷️  Field: ${logData.field}`);
+    }
+    
+    if (logData.line) {
+      console.error(`📍 Line: ${logData.line}`);
+    }
+    
+    if (logData.path) {
+      console.error(`🛤️  Path: ${logData.path}`);
+    }
+
+    if (logData.originalError) {
+      console.error('\n🔍 Original Error Details:');
+      console.error(`   Name: ${logData.originalError.name}`);
+      console.error(`   Message: ${logData.originalError.message}`);
+      console.error(`   Stack Trace:\n${logData.originalError.stack}`);
+    }
+
+    console.error('='.repeat(80));
+    console.error('🚨 END SNEAKY THROWS ERROR\n');
   }
 
   private static getCurrentPath(): string {
@@ -161,6 +220,32 @@ export class BaseHttpException extends HttpException {
   static handle(error: any, service?: string, operation?: string, line?: number): never {
     if (error instanceof BaseHttpException) {
       throw error;
+    }
+
+    // Logging del error original antes de manejarlo
+    console.error('\n' + '='.repeat(80));
+    console.error('🔧 SNEAKY THROWS - HANDLING ERROR');
+    console.error('='.repeat(80));
+    console.error(`📅 Timestamp: ${new Date().toISOString()}`);
+    console.error(`🏢 Service: ${service || 'Unknown'}`);
+    console.error(`⚙️  Operation: ${operation || 'Unknown'}`);
+    console.error(`📍 Line: ${line || 'Unknown'}`);
+    console.error(`🔍 Original Error: ${error.name || 'Unknown'}`);
+    console.error(`💬 Message: ${error.message || 'No message'}`);
+    console.error(`📊 Code: ${error.code || 'No code'}`);
+    console.error(`🛤️  Stack: ${error.stack || 'No stack'}`);
+    console.error(`📋 Full Error Object:`, JSON.stringify(error, null, 2));
+    console.error('='.repeat(80));
+    console.error('🔧 END ERROR HANDLING\n');
+
+    // Detectar errores de microservicios con mensaje genérico "Internal server error"
+    if (error.message === 'Internal server error' || error.message?.includes('Internal server error')) {
+      throw BaseHttpException.microserviceError(
+        service || 'Unknown', 
+        operation || 'Unknown', 
+        error, 
+        line
+      );
     }
 
     // Manejar errores comunes de Node.js/NestJS
