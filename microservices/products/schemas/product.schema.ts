@@ -29,6 +29,9 @@ export class Product {
   @Prop({ type: Number })
   venta: number;
 
+  @Prop({ type: Array, default: [] })
+  ventaCredito: any[];
+
   @Prop({ type: Number })
   costo: number;
 
@@ -65,11 +68,8 @@ export class Product {
   @Prop({ type: Array, default: [] })
   proveedores: any[];
 
-  @Prop({ type: [String], default: [] })
+  @Prop({ type: [String], default: [], required: true })
   imagenes: string[];
-
-  @Prop({ type: String })
-  imagen: string;
 
   @Prop({ type: String })
   sello: string;

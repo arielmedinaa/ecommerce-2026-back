@@ -43,6 +43,7 @@ export class JwtAuthGuard implements CanActivate {
   }
 
   private extractTokenFromData(data: any): string | undefined {
+    // Try to extract from headers (for microservice context)
     if (data?.headers?.authorization) {
       const [type, token] = data.headers.authorization.split(' ') ?? [];
       return type === 'Bearer' ? token : undefined;

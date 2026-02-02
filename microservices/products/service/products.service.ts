@@ -12,7 +12,6 @@ export class ProductsService {
     private readonly promosService: PromosService,
   ) {}
 
-  // --- Sistema de Caché ---
   private productosCache = new Map<string, { data: Product[]; timestamp: number; total: number }>();
   private productoPorCodigoCache = new Map<string, { data: any; timestamp: number }>();
   private readonly CACHE_TTL = 5 * 60 * 1000;
@@ -31,17 +30,10 @@ export class ProductsService {
     });
   }
 
-  private getIdsCacheKey(ids: string[], fields?: string): string {
-    const sortedIds = [...ids].sort();
-    return `ids:${sortedIds.join(',')}:fields:${fields || 'all'}`;
-  }
-
   invalidateCache(): void {
     this.productosCache.clear();
     this.productoPorCodigoCache.clear();
   }
-
-  // --- Métodos de Consulta ---
 
   private async getCachedProductos(filters: any = {}): Promise<{ data: Product[]; total: number }> {
     const cacheKey = this.getCacheKey(filters);
@@ -108,8 +100,6 @@ export class ProductsService {
     return this.productModel.findOne({ codigo, estado: { $ne: 0 } }).lean();
   }
 
-  // --- Mutaciones ---
-
   async create(createProductDto: CreateProductDto): Promise<Product> {
     const createdProduct = new this.productModel({
       ...createProductDto,
@@ -134,8 +124,6 @@ export class ProductsService {
     this.invalidateCache();
     return updatedProduct as Product;
   }
-
-  // --- Búsquedas Especializadas ---
 
   async searchProducts(filters: any = {}): Promise<{data: Product[], total: number}> {
     const query = {
@@ -207,8 +195,6 @@ export class ProductsService {
     });
 
     const productosFinal = ids.map(codigo => productosPorCodigo[codigo]).filter(Boolean);
-
-    // Paginación manual de los resultados combinados
     const offset = Number(filters.offset) || 0;
     const limit = Number(filters.limit) || productosFinal.length;
     return productosFinal.slice(offset, offset + limit);

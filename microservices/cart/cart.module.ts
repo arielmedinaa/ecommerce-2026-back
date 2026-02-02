@@ -5,8 +5,8 @@ import { Cart, CartSchema } from './schemas/cart.schema'
 import { MongooseModule } from "@nestjs/mongoose";
 import { Llave, LlaveSchema } from './schemas/llave.schema';
 import { Transaccion, TransaccionSchema } from './schemas/transaccion.schema';
-import { CartContadoService } from './compra/service/cart.service';
-import { CartController } from "./compra/controller/cart.controller";
+import { CartContadoService } from './service/cart.service';
+import { CartController } from "./controller/cart.controller";
 import { CommonModule } from '@gateway/common/common.module';
 import { JwtModule } from '@nestjs/jwt';
 import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
@@ -14,7 +14,7 @@ import { MicroserviceModule } from '@shared/config/microservice/microservice.mod
 @Module({
   imports: [
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'your-secret-key',
+      secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1d' },
     }),
     MongooseModule.forFeature([

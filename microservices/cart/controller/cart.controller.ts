@@ -9,19 +9,23 @@ export class CartController {
 
   constructor(private readonly cartService: CartContadoService) {}
 
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard)
   @MessagePattern({ cmd: 'add_to_cart' })
   async addToCart(@Payload() payload: any) {
     const { token, email, codigo, body } = payload;
     try {
+      console.log('Cart microservice received payload:', JSON.stringify(payload, null, 2));
+      
       const result = await this.cartService.addCart(
         token,
         email,
         codigo ? Number(codigo) : 0,
         body,
       );
+      console.log('Cart service result:', result);
       return result;
     } catch (error) {
+      console.error('Error adding to cart:', error);
       this.logger.error('Error adding to cart:', error);
       throw error;
     }
