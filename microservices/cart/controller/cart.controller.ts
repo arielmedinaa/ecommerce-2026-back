@@ -59,4 +59,21 @@ export class CartController {
       throw error;
     }
   }
+
+  @MessagePattern({ cmd: 'finish_cart' })
+  async finishCart(@Payload() payload: any) {
+    const { token, cuenta, codigo, process } = payload;
+    try {
+      const result = await this.cartService.finishCart(
+        token,
+        cuenta,
+        codigo,
+        process,
+      );
+      return result;
+    } catch (error) {
+      this.logger.error('Error finalizando el carrito', error);
+      throw error;
+    }
+  }
 }

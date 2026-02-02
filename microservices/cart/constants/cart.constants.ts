@@ -1,4 +1,5 @@
 import { Cart } from '@cart/schemas/cart.schema';
+import moment from 'moment-timezone';
 
 export const DEFAULT_CART: Partial<Cart> = {
   proceso: '',
@@ -9,7 +10,7 @@ export const DEFAULT_CART: Partial<Cart> = {
     correo: '',
     telefono: '',
   },
-  tiempo: new Date(),
+  tiempo: moment().tz('America/Asuncion').format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
   transaccion: [],
   seguimiento: [],
   envio: {

@@ -44,7 +44,7 @@ export class CartController {
     const cartCodigoNum = Number(cartCodigo);
     const payload = {
       token: token,
-      cuenta: query.cuenta || '', // Cuenta es opcional
+      cuenta: query.cuenta || '',
       codigo: cartCodigoNum,
     };
     
@@ -55,6 +55,33 @@ export class CartController {
     );
     
     console.log('📥 getCart - Microservice response:', result);
+    
+    return result;
+  }
+  
+  @Post('finishCart')
+  @UsePipes(new ValidationPipe())
+  @SneakyThrows('CartService', 'finishCart')
+  async finishCart(@Body() body: any, @Req() request: Request, @Query() query: any) {
+    const authorization = request.headers.authorization;
+    const token = authorization?.split(' ')[1] || '';
+    
+    const cartCodigo = query.codigo;
+    const cartCodigoNum = Number(cartCodigo);
+    const payload = {
+      token: token,
+      cuenta: query.cuenta || '',
+      codigo: cartCodigoNum,
+      process: body
+    };
+    
+    console.log('📤 finishCart - Sending payload to microservice:', payload);
+    
+    const result = await firstValueFrom(
+      this.cartClient.send({ cmd: 'finish_cart' }, payload),
+    );
+    
+    console.log('📥 finishCart - Microservice response:', result);
     
     return result;
   }

@@ -7,6 +7,7 @@ import { ObtenerClaveService } from '@cart/common/utils/obtenerClave';
 import { NEW_CART_INITIAL_STATE } from '@cart/constants/cart.constants';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import moment from 'moment-timezone';
 
 @Injectable()
 export class CartContadoService {
@@ -67,7 +68,7 @@ export class CartContadoService {
     }
 
     const productoExiste = carritoExistente.articulos[articuloTipo].find(
-      (articulo: any) => String(articulo.codigo) === String(producto.codigo)
+      (articulo: any) => String(articulo.codigo) === String(producto.codigo),
     );
 
     if (productoExiste) {
@@ -171,5 +172,56 @@ export class CartContadoService {
         message: 'Carrito recuperado (sin información adicional de productos)',
       };
     }
+  }
+
+  async finishCart(
+    clienteToken: string,
+    cuenta: string,
+    codigo: number,
+    process: Object,
+  ): Promise<{
+    data: any[];
+    success: boolean;
+    message: string;
+  }> {
+    if (!process) {
+      return {
+        data: [],
+        success: false,
+        message: 'Proceso no encontrado',
+      };
+    }
+
+    let filtro: any = {
+      'cliente.equipo': clienteToken,
+      codigo,
+    };
+    if (cuenta) {
+      filtro.cuenta = cuenta;
+    }
+
+    const carritoExistente = await this.carrito.findOne(filtro);
+    if (!carritoExistente) {
+      return {
+        data: [],
+        success: false,
+        message: 'Carrito no encontrado',
+      };
+    }
+    await this.carrito.updateOne(
+      { 'cliente.equipo': clienteToken, codigo },
+      {
+        $set: {
+          pago: process,
+          estado: 0,
+          finished: moment().tz('America/Asuncion').format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
+        },
+      },
+    );
+    return {
+      data: [],
+      success: true,
+      message: 'CARRITO FINALIZADO CON ÉXITO',
+    };
   }
 }

@@ -14,8 +14,8 @@ export class Cart {
   @Prop({ type: Object, required: true })
   cliente: Record<string, any>;
 
-  @Prop({ type: Date, default: Date.now })
-  tiempo: Date;
+  @Prop({ type: String })
+  tiempo: string;
 
   @Prop({ type: Array, default: [] })
   transaccion: any[];
@@ -40,6 +40,9 @@ export class Cart {
 
   @Prop({ type: Object, default: {} })
   estados: Record<string, any>;
+
+  @Prop({ type: String })
+  finished?: string;
 }
 
 export const CartSchema = SchemaFactory.createForClass(Cart);
