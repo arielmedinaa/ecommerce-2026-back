@@ -12,11 +12,9 @@ import { firstValueFrom } from 'rxjs';
 export class CartContadoService {
   constructor(
     @InjectModel(Cart.name) private readonly carrito: Model<Cart>,
-    @InjectModel(Transaccion.name)
-    private readonly transacciones: Model<Transaccion>,
-    private readonly obtenerClaveService: ObtenerClaveService,
-
+    @InjectModel(Transaccion.name) private readonly transacciones: Model<Transaccion>,
     @Inject('PRODUCTS_SERVICE') private readonly productsService: ClientProxy,
+    private readonly obtenerClaveService: ObtenerClaveService,
   ) {}
 
   async addCart(
@@ -25,6 +23,7 @@ export class CartContadoService {
     codigo?: number,
     producto?: any,
   ): Promise<{ data: Cart[]; success: boolean; message: string }> {
+    
     if (!producto) {
       return { data: [], success: false, message: 'Producto no válido' };
     }
@@ -32,75 +31,61 @@ export class CartContadoService {
     const filtro: any = {
       $or: [{ 'cliente.equipo': clienteToken }, { 'cliente.correo': cuenta }],
     };
+    codigo === 0 ? (filtro.estado = 1) : (filtro.codigo = codigo);
 
-    if (codigo === 0) {
-      filtro.estado = 1;
-    } else if (codigo) {
-      filtro.codigo = codigo;
-    }
+    console.log("filtro", filtro)
 
-    const carritoExistente = await this.carrito
-      .findOne(filtro)
-      .sort({ codigo: -1 });
+    const articuloTipo = producto.credito ? 'credito' : 'contado';
+    const carritoExistente = await this.carrito.findOne(filtro).sort({ codigo: -1 });
 
-    if (carritoExistente) {
-      if (carritoExistente.proceso) {
-        const transaccion = await this.transacciones.findOne({
-          carrito: carritoExistente.codigo,
-          estado: 1,
-        });
-
-        if (transaccion) {
-          await this.transacciones.updateOne(
-            { codigo: transaccion.codigo },
-            { $set: { estado: 0 } },
-          );
-        }
-
-        await this.carrito.updateOne(
-          { codigo: carritoExistente.codigo },
-          { $set: { proceso: '' } },
-        );
-      }
-
-      const productoExiste = await this.carrito.findOne({
-        ...filtro,
-        'articulos.contado.codigo': producto.codigo,
+    if (!carritoExistente) {
+      const nuevoCodigo = await this.obtenerClaveService.obtenerClave('carrito');
+      const nuevoCarrito = new this.carrito({
+        ...NEW_CART_INITIAL_STATE(nuevoCodigo, clienteToken, cuenta),
+        articulos: {
+          [articuloTipo]: [producto],
+          [articuloTipo === 'credito' ? 'contado' : 'credito']: [],
+        },
       });
-
-      if (productoExiste) {
-        await this.carrito.updateOne(
-          { ...filtro, 'articulos.contado.codigo': producto.codigo },
-          { $inc: { 'articulos.contado.$.cantidad': producto.cantidad } },
-        );
-      } else {
-        await this.carrito.updateOne(filtro, {
-          $push: { 'articulos.contado': producto },
-        });
-      }
-
+      await nuevoCarrito.save();
       return {
-        data: [carritoExistente],
+        data: [nuevoCarrito],
         success: true,
-        message: 'PRODUCTO AGREGADO AL CARRITO',
+        message: 'CARRITO CREADO CON ÉXITO',
       };
     }
 
-    const nuevoCodigo = await this.obtenerClaveService.obtenerClave('carrito');
-    const nuevoCarrito = new this.carrito({
-      ...NEW_CART_INITIAL_STATE(nuevoCodigo, clienteToken, cuenta),
-      articulos: {
-        contado: [producto],
-        credito: [],
-      },
+    if (carritoExistente.proceso) {
+      await this.transacciones.updateOne(
+        { carrito: carritoExistente.codigo, estado: 1 },
+        { $set: { estado: 0 } },
+      );
+      await this.carrito.updateOne(
+        { codigo: carritoExistente.codigo },
+        { $set: { proceso: '' } },
+      );
+    }
+
+    const productoExiste = await this.carrito.findOne({
+      ...filtro,
+      [`articulos.${articuloTipo}.codigo`]: producto.codigo,
     });
 
-    await nuevoCarrito.save();
+    if (productoExiste) {
+      await this.carrito.updateOne(
+        { ...filtro, [`articulos.${articuloTipo}.codigo`]: producto.codigo },
+        { $inc: { [`articulos.${articuloTipo}.$.cantidad`]: producto.cantidad } },
+      );
+    } else {
+      await this.carrito.updateOne(filtro, {
+        $push: { [`articulos.${articuloTipo}`]: producto },
+      });
+    }
 
     return {
-      data: [nuevoCarrito],
+      data: [carritoExistente],
       success: true,
-      message: 'CARRITO CREADO CON ÉXITO',
+      message: 'PRODUCTO AGREGADO AL CARRITO',
     };
   }
 
@@ -125,10 +110,7 @@ export class CartContadoService {
       return { data: [], success: false, message: 'Carrito no encontrado' };
     }
 
-    const articulosRaw = [
-      ...(resultado.articulos?.contado || []),
-      ...(resultado.articulos?.credito || []),
-    ];
+    const articulosRaw = [...(resultado.articulos?.contado || [])];
     const codigos = [...new Set(articulosRaw.map((a) => String(a.codigo)))];
     try {
       const productos = await firstValueFrom(
@@ -161,11 +143,6 @@ export class CartContadoService {
         if (resultado.articulos.contado) {
           resultado.articulos.contado = enriquecerArticulos(
             resultado.articulos.contado,
-          );
-        }
-        if (resultado.articulos.credito) {
-          resultado.articulos.credito = enriquecerArticulos(
-            resultado.articulos.credito,
           );
         }
       }

@@ -35,7 +35,7 @@ export class Cart {
   @Prop({ type: Number, default: 0 })
   atencion: number;
 
-  @Prop({ type: Number, default: 0 })
+  @Prop({ type: Number, default: 1 })
   estado: number;
 
   @Prop({ type: Object, default: {} })

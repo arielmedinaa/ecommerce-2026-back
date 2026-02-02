@@ -1,6 +1,8 @@
-import { Controller, Post, Body, UsePipes, ValidationPipe, Inject } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { Controller, Post, Body, UsePipes, ValidationPipe, Inject, Req, Query } from '@nestjs/common';
+import { ClientProxy, Payload } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import { Request } from 'express';
+import { SneakyThrows } from '../../../common/decorators';
 
 @Controller('cart')
 export class CartController {
@@ -10,20 +12,25 @@ export class CartController {
 
   @Post()
   @UsePipes(new ValidationPipe())
-  async addToCart(@Body() data: any) {
-    try {
-      console.log('Sending addToCart request to cart service:', data);
-      const result = await firstValueFrom(
-        this.cartClient.send({ cmd: 'add_to_cart' }, data),
-      );
-      console.log('Received result from cart service:', result);
-      return result;
-    } catch (error) {
-      console.error('Error in addToCart:', {
-        message: error.message,
-        stack: error.stack,
-      });
-      throw new Error('Error al agregar al carrito: ' + error.message);
-    }
+  @SneakyThrows('CartService', 'addToCart')
+  async addToCart(@Payload() data: any, @Body() body: any, @Req() request: Request, @Query() query: any) {
+    const authorization = request.headers.authorization;
+    const token = authorization?.split(' ')[1] || '';
+    
+    const cartCodigo = query.codigo;
+    const cartCodigoNum = Number(cartCodigo);
+    const payload = {
+      token: token,
+      email: data.cuenta || '',
+      codigo: cartCodigoNum,
+      body: body
+    };
+    
+    const result = await firstValueFrom(
+      this.cartClient.send({ cmd: 'add_to_cart' }, payload),
+    );
+    
+    console.log('Cart service response:', result);
+    return result;
   }
 }

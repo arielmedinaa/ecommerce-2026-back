@@ -7,5 +7,5 @@ export interface Product {
   category?: string;
   createdAt?: Date;
   updatedAt?: Date;
-  [key: string]: any; // For additional properties
+  [key: string]: any;
 }

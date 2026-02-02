@@ -68,6 +68,10 @@ export class CreateProductDto {
     @IsOptional()
     web?: number;
 
+    @IsNumber()
+    @IsOptional()
+    websc?: number;
+
     @IsString()
     @IsOptional()
     deposito?: string;
