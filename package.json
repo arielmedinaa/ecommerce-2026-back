@@ -18,10 +18,10 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "start:dev:products": "NODE_ENV=development nodemon --exec ts-node -r tsconfig-paths/register microservices/products/main.ts",
-    "start:dev:auth": "NODE_ENV=development nodemon --exec ts-node -r tsconfig-paths/register microservices/auth/main.ts",
-    "start:dev:gateway": "NODE_ENV=development nodemon --exec ts-node -r tsconfig-paths/register microservices/main.ts",
-    "start:dev:cart": "NODE_ENV=development nodemon --exec ts-node -r tsconfig-paths/register microservices/cart/main.ts"
+    "start:dev:products": "NODE_ENV=development ts-node --exec ts-node -r tsconfig-paths/register microservices/products/main.ts",
+    "start:dev:auth": "NODE_ENV=development ts-node --exec ts-node -r tsconfig-paths/register microservices/auth/main.ts",
+    "start:dev:gateway": "NODE_ENV=development ts-node --exec ts-node -r tsconfig-paths/register microservices/main.ts",
+    "start:dev:cart": "NODE_ENV=development ts-node --exec ts-node -r tsconfig-paths/register microservices/cart/main.ts"
   },
   "dependencies": {
     "@nestjs/class-validator": "^0.13.4",
