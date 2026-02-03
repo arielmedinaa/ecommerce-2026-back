@@ -8,16 +8,20 @@ import { NEW_CART_INITIAL_STATE } from '@cart/constants/cart.constants';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { CartValidationService } from './cart.service.spec';
+import { CartErrorService } from './errors/cart-error.service';
 import moment from 'moment-timezone';
 
 @Injectable()
 export class CartContadoService {
   constructor(
     @InjectModel(Cart.name) private readonly carrito: Model<Cart>,
-    @InjectModel(Transaccion.name) private readonly transacciones: Model<Transaccion>,
+    @InjectModel(Transaccion.name)
+    private readonly transacciones: Model<Transaccion>,
     @Inject('PRODUCTS_SERVICE') private readonly productsService: ClientProxy,
+    @Inject('PAYMENTS_SERVICE') private readonly paymentsService: ClientProxy,
     private readonly obtenerClaveService: ObtenerClaveService,
     private readonly cartValidationService: CartValidationService,
+    private readonly cartErrorService: CartErrorService,
   ) {}
 
   async addCart(
@@ -30,7 +34,7 @@ export class CartContadoService {
       clienteToken,
       cuenta,
       codigo,
-      producto
+      producto,
     );
 
     if (!validation.isValid) {
@@ -41,7 +45,7 @@ export class CartContadoService {
       $or: [{ 'cliente.equipo': clienteToken }, { 'cliente.correo': cuenta }],
     };
     codigo === 0 ? (filtro.estado = 1) : (filtro.codigo = codigo);
-    
+
     const articuloTipo = producto.credito ? 'credito' : 'contado';
     const carritoExistente = await this.carrito
       .findOne(filtro)
@@ -119,10 +123,7 @@ export class CartContadoService {
     codigo?: 0,
   ): Promise<{ data: Cart[]; success: boolean; message: string }> {
     const filtro: any = {
-      $or: [
-        { 'cliente.equipo': clienteToken },
-        { 'cliente.correo': cuenta || { $exists: false } },
-      ],
+      $or: [{ 'cliente.equipo': clienteToken }, { 'cliente.correo': cuenta }],
     };
     codigo === 0 ? (filtro.estado = 1) : (filtro.codigo = codigo);
     const resultado = await this.carrito
@@ -185,20 +186,23 @@ export class CartContadoService {
 
   async finishCart(
     clienteToken: string,
-    cuenta: string,
-    codigo: number,
-    process: Object,
+    cuenta?: string,
+    codigo?: number,
+    process?: any,
   ): Promise<{
     data: any[];
     success: boolean;
     message: string;
   }> {
-    if (!process) {
-      return {
-        data: [],
-        success: false,
-        message: 'Proceso no encontrado',
-      };
+    const validation = await this.cartValidationService.validateFinishCart(
+      clienteToken,
+      cuenta,
+      codigo,
+      process,
+    );
+
+    if (!validation.isValid) {
+      return validation.error;
     }
 
     let filtro: any = {
@@ -209,28 +213,127 @@ export class CartContadoService {
       filtro.cuenta = cuenta;
     }
 
-    const carritoExistente = await this.carrito.findOne(filtro);
-    if (!carritoExistente) {
+    const carrito = await this.carrito.findOne(filtro).lean();
+    if (!carrito) {
+      const error = new Error('CARRITO NO ENCONTRADO');
+      await this.cartErrorService.logMicroserviceError(
+        error,
+        codigo?.toString(),
+        'finishCart',
+        {
+          motivo: 'carrito_no_encontrado',
+          filtro,
+          codigo,
+        },
+      );
+      throw error;
+    }
+
+    let metodoPago = '';
+    let montoTotal = 0;
+    let descripcion = '';
+
+    if (process.tipo === 'Debito contra Entrega') {
+      metodoPago = 'efectivo contra entrega';
+      if (process.cuotas && Array.isArray(process.cuotas)) {
+        montoTotal = process.cuotas.reduce((total, cuota) => total + cuota.importe, 0);
+      }
+      descripcion = `Débito contra entrega - ${process.cantidadcuotas} cuotas`;
+    } else if (process.tipo && process.tipo.toLowerCase().includes('pagopar')) {
+      metodoPago = 'pagopar';
+      montoTotal = process.monto || 0;
+      descripcion = 'Pago PagoPar';
+    } else if (process.tipo && process.tipo.toLowerCase().includes('bancard')) {
+      metodoPago = 'bancard';
+      montoTotal = process.monto || 0;
+      descripcion = 'Pago Bancard';
+    } else if (process.tipo && process.tipo.toLowerCase().includes('tarjeta contra entrega')) {
+      metodoPago = 'tarjeta contra entrega';
+      montoTotal = process.monto || 0;
+      descripcion = 'Tarjeta contra entrega';
+    } else {
+      metodoPago = 'efectivo contra entrega';
+      montoTotal = process.monto || 0;
+      descripcion = process.tipo || 'Pago contra entrega';
+    }
+
+    const clienteInfo = {
+      equipo: clienteToken,
+      nombre: carrito.cliente?.nombre || '',
+      email: carrito.cliente?.correo || cuenta || '',
+      telefono: carrito.cliente?.telefono || '',
+      documento: carrito.cliente?.documento || '',
+    };
+
+    try {
+      const pagoResponse = await firstValueFrom(
+        this.paymentsService.send(
+          { cmd: 'registrar_pago' },
+          {
+            codigoCarrito: codigo,
+            carrito: carrito,
+            metodoPago: metodoPago,
+            monto: montoTotal,
+            moneda: process.moneda || 'PYG',
+            cliente: clienteInfo,
+            descripcion: descripcion,
+            respuestaPagopar: metodoPago === 'pagopar' ? process.pagoparResponse || {} : {},
+            respuestaBancard: metodoPago === 'bancard' ? process.bancardResponse || {} : {},
+          },
+        ),
+      );
+
+      if (!pagoResponse.success) {
+        const error = new Error(`ERROR AL REGISTRAR PAGO: ${pagoResponse.message}`);
+        await this.cartErrorService.logMicroserviceError(
+          error,
+          codigo?.toString(),
+          'finishCart',
+          {
+            motivo: 'error_registro_pago',
+            pagoResponse,
+            codigo,
+          },
+        );
+        throw error;
+      }
+
+      await this.carrito.updateOne(filtro, {
+        $set: {
+          pago: {
+            ...process,
+            pagoId: pagoResponse.data.idTransaccion,
+            registradoEnPayments: true,
+          },
+          estado: 0,
+          finished: moment()
+            .tz('America/Asuncion')
+            .format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
+        },
+      });
+
+      return {
+        data: [pagoResponse.data],
+        success: true,
+        message: 'CARRITO FINALIZADO Y PAGO REGISTRADO CON ÉXITO',
+      };
+    } catch (error) {
+      await this.cartErrorService.logMicroserviceError(
+        error,
+        codigo?.toString(),
+        'finishCart',
+        {
+          motivo: 'error_finalizar_carrito',
+          error: error.message,
+          codigo,
+        },
+      );
+      
       return {
         data: [],
         success: false,
-        message: 'Carrito no encontrado',
+        message: `ERROR AL FINALIZAR CARRITO: ${error.message}`,
       };
     }
-    await this.carrito.updateOne(
-      { 'cliente.equipo': clienteToken, codigo },
-      {
-        $set: {
-          pago: process,
-          estado: 0,
-          finished: moment().tz('America/Asuncion').format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
-        },
-      },
-    );
-    return {
-      data: [],
-      success: true,
-      message: 'CARRITO FINALIZADO CON ÉXITO',
-    };
   }
 }

@@ -148,7 +148,7 @@ services:
       - NODE_ENV=${NODE_ENV:-development}
       - PORT=3105
       - PAYMENTS_PORT=3105
-      - MONGO_URL=${MONGO_URL}
+      #- MONGO_URL=${MONGO_URL}
       - IS_DOCKER=true
     ports:
       - "3105:3105"

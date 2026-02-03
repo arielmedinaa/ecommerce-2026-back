@@ -166,30 +166,260 @@ export class CartValidationService {
       };
     }
 
-    if (!cuenta || cuenta.trim() === '') {
-      const error = new Error('Cuenta de cliente inválida');
+    // if (!cuenta || cuenta.trim() === '') {
+    //   const error = new Error('Cuenta de cliente inválida');
+    //   await this.cartErrorService.logMicroserviceError(
+    //     error,
+    //     codigo?.toString(),
+    //     'validateCartPayload',
+    //     {
+    //       motivo: 'cuenta_invalida',
+    //       clienteToken,
+    //       cuenta,
+    //       codigo,
+    //     },
+    //   );
+    //   this.logger.error('Error al validar el producto', error);
+    //   return {
+    //     isValid: false,
+    //     error: {
+    //       success: false,
+    //       message: 'Cuenta de cliente no válida',
+    //       data: [],
+    //     },
+    //   };
+    // }
+
+    return await this.validateProduct(producto, codigo?.toString());
+  }
+
+  async validateFinishCart(
+    clienteToken: string,
+    cuenta?: string,
+    codigo?: number,
+    process?: any,
+  ): Promise<{ isValid: boolean; error?: any }> {
+    if (!codigo || codigo <= 0) {
+      const error = new Error('Código de carrito inválido');
       await this.cartErrorService.logMicroserviceError(
         error,
         codigo?.toString(),
-        'validateCartPayload',
+        'validateFinishCart',
         {
-          motivo: 'cuenta_invalida',
-          clienteToken,
-          cuenta,
+          motivo: 'codigo_carrito_invalido',
           codigo,
         },
       );
-      this.logger.error('Error al validar el producto', error);
+      this.logger.error('Error al validar código de carrito', error);
       return {
         isValid: false,
         error: {
           success: false,
-          message: 'Cuenta de cliente no válida',
+          message: 'Código de carrito no válido - debe ser mayor a 0',
           data: [],
         },
       };
     }
 
-    return await this.validateProduct(producto, codigo?.toString());
+    if (!clienteToken || clienteToken.trim() === '') {
+      const error = new Error('Token de cliente inválido');
+      await this.cartErrorService.logMicroserviceError(
+        error,
+        codigo?.toString(),
+        'validateFinishCart',
+        {
+          motivo: 'token_invalido',
+          clienteToken,
+          codigo,
+        },
+      );
+      this.logger.error('Error al validar token de cliente', error);
+      return {
+        isValid: false,
+        error: {
+          success: false,
+          message: 'Token de cliente no válido',
+          data: [],
+        },
+      };
+    }
+
+    if (!process) {
+      const error = new Error('Proceso de pago es requerido');
+      await this.cartErrorService.logMicroserviceError(
+        error,
+        codigo?.toString(),
+        'validateFinishCart',
+        {
+          motivo: 'proceso_null',
+          process,
+          codigo,
+        },
+      );
+      this.logger.error('Error al validar proceso de pago', error);
+      return {
+        isValid: false,
+        error: {
+          success: false,
+          message: 'El proceso de pago es requerido',
+          data: [],
+        },
+      };
+    }
+
+    if (!process.tipo || process.tipo.trim() === '') {
+      const error = new Error('Tipo de pago es requerido');
+      await this.cartErrorService.logMicroserviceError(
+        error,
+        codigo?.toString(),
+        'validateFinishCart',
+        {
+          motivo: 'tipo_pago_requerido',
+          process,
+          codigo,
+        },
+      );
+      this.logger.error('Error al validar tipo de pago', error);
+      return {
+        isValid: false,
+        error: {
+          success: false,
+          message: 'El tipo de pago es requerido',
+          data: [],
+        },
+      };
+    }
+
+    const tiposPagoValidos = [
+      'Debito contra Entrega',
+      'Tarjeta contra Entrega',
+      'PagoPar',
+      'Bancard',
+      'Efectivo contra Entrega'
+    ];
+
+    if (!tiposPagoValidos.includes(process.tipo)) {
+      const error = new Error('Tipo de pago no válido');
+      await this.cartErrorService.logMicroserviceError(
+        error,
+        codigo?.toString(),
+        'validateFinishCart',
+        {
+          motivo: 'tipo_pago_invalido',
+          tipo: process.tipo,
+          tiposValidos: tiposPagoValidos,
+          codigo,
+        },
+      );
+      this.logger.error('Error al validar tipo de pago', error);
+      return {
+        isValid: false,
+        error: {
+          success: false,
+          message: `Tipo de pago no válido. Permitidos: ${tiposPagoValidos.join(', ')}`,
+          data: [],
+        },
+      };
+    }
+
+    if (process.tipo === 'Debito contra Entrega') {
+      if (!process.cantidadcuotas || process.cantidadcuotas <= 0) {
+        const error = new Error('Cantidad de cuotas inválida para Débito contra Entrega');
+        await this.cartErrorService.logMicroserviceError(
+          error,
+          codigo?.toString(),
+          'validateFinishCart',
+          {
+            motivo: 'cantidad_cuotas_invalida',
+            cantidadcuotas: process.cantidadcuotas,
+            codigo,
+          },
+        );
+        this.logger.error('Error al validar cantidad de cuotas', error);
+        return {
+          isValid: false,
+          error: {
+            success: false,
+            message: 'La cantidad de cuotas debe ser mayor a 0 para Débito contra Entrega',
+            data: [],
+          },
+        };
+      }
+
+      if (!process.cuotas || !Array.isArray(process.cuotas) || process.cuotas.length === 0) {
+        const error = new Error('Array de cuotas es requerido para Débito contra Entrega');
+        await this.cartErrorService.logMicroserviceError(
+          error,
+          codigo?.toString(),
+          'validateFinishCart',
+          {
+            motivo: 'cuotas_array_invalido',
+            cuotas: process.cuotas,
+            codigo,
+          },
+        );
+        this.logger.error('Error al validar array de cuotas', error);
+        return {
+          isValid: false,
+          error: {
+            success: false,
+            message: 'El array de cuotas es requerido para Débito contra Entrega',
+            data: [],
+          },
+        };
+      }
+
+      for (let i = 0; i < process.cuotas.length; i++) {
+        const cuota = process.cuotas[i];
+        if (!cuota.numero || !cuota.importe || cuota.importe <= 0) {
+          const error = new Error(`Estructura de cuota ${i + 1} inválida`);
+          await this.cartErrorService.logMicroserviceError(
+            error,
+            codigo?.toString(),
+            'validateFinishCart',
+            {
+              motivo: 'cuota_estructura_invalida',
+              cuotaIndex: i,
+              cuota,
+              codigo,
+            },
+          );
+          this.logger.error('Error al validar estructura de cuota', error);
+          return {
+            isValid: false,
+            error: {
+              success: false,
+              message: `La cuota ${i + 1} debe tener número e importe mayor a 0`,
+              data: [],
+            },
+          };
+        }
+      }
+    }
+
+    if (process.moneda && process.moneda.trim() === '') {
+      const error = new Error('Moneda no puede estar vacía');
+      await this.cartErrorService.logMicroserviceError(
+        error,
+        codigo?.toString(),
+        'validateFinishCart',
+        {
+          motivo: 'moneda_vacia',
+          moneda: process.moneda,
+          codigo,
+        },
+      );
+      this.logger.error('Error al validar moneda', error);
+      return {
+        isValid: false,
+        error: {
+          success: false,
+          message: 'La moneda no puede estar vacía',
+          data: [],
+        },
+      };
+    }
+
+    return { isValid: true };
   }
 }

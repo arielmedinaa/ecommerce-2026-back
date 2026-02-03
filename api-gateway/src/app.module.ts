@@ -4,6 +4,8 @@ import { MicroserviceModule } from '@shared/config/microservice/microservice.mod
 import { AppController } from '@gateway/app.controller';
 import { ProductsController } from '@gateway/modules/products/controllers/products.controller';
 import { CartController } from '@gateway/modules/cart/controllers/cart.controller';
+import { PaymentsModule } from '@gateway/modules/payments/payments.module';
+import { PaymentsController } from '@gateway/modules/payments/controllers/payments.controller';
 
 @Module({
   imports: [
@@ -19,7 +21,8 @@ import { CartController } from '@gateway/modules/cart/controllers/cart.controlle
       'PAYMENTS_SERVICE',
       'PRODUCTS_SERVICE'
     ]),
+    PaymentsModule,
   ],
-  controllers: [AppController, ProductsController, CartController],
+  controllers: [AppController, ProductsController, CartController, PaymentsController],
 })
 export class AppModule {}
