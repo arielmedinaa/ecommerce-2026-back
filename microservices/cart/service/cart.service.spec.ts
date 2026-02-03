@@ -422,4 +422,83 @@ export class CartValidationService {
 
     return { isValid: true };
   }
+
+  async validateInsertCentralApp(
+    solicitud: Object,
+    clienteToken: string,
+    codigo?: number,
+    clienteInfo?: Object,
+  ): Promise<{ isValid: boolean; error?: any }> {
+
+    if (!solicitud || [solicitud].length < 0) {
+      const error = new Error('Solicitud inválida - No se proporcionó el objeto de la solicitud');
+      await this.cartErrorService.logMicroserviceError(
+        error,
+        codigo?.toString(),
+        'validateInsertCentralApp',
+        {
+          motivo: 'solicitud_invalida',
+          solicitud,
+          codigo,
+        },
+      );
+      this.logger.error('Erro al proporcionar el cuerpo de la solicitud', error);
+      return {
+        isValid: false,
+        error: {
+          success: false,
+          message: 'Solicitud inválida - No se proporcionó el objeto de la solicitud',
+          data: [],
+        },
+      }
+    }
+
+    // if (!clienteInfo || [clienteInfo].length < 0) {
+    //   const error = new Error('Cliente inválido - No se proporcionó el objeto del clienteInfo');
+    //   await this.cartErrorService.logMicroserviceError(
+    //     error,
+    //     codigo?.toString(),
+    //     'validateInsertCentralApp',
+    //     {
+    //       motivo: 'cliente_invalido',
+    //       clienteInfo,
+    //       codigo,
+    //     },
+    //   );
+    //   this.logger.error('Erro al proporcionar el cuerpo del clienteInfo', error);
+    //   return {
+    //     isValid: false,
+    //     error: {
+    //       success: false,
+    //       message: 'Cliente inválido - No se proporcionó el objeto del clienteInfo',
+    //       data: [],
+    //     },
+    //   }
+    // }
+
+    if (!clienteToken || clienteToken.trim() === '') {
+      const error = new Error('Token de cliente inválido');
+      await this.cartErrorService.logMicroserviceError(
+        error,
+        codigo?.toString(),
+        'validateFinishCart',
+        {
+          motivo: 'token_invalido',
+          clienteToken,
+          codigo,
+        },
+      );
+      this.logger.error('Error al validar token de cliente', error);
+      return {
+        isValid: false,
+        error: {
+          success: false,
+          message: 'Token de cliente no válido',
+          data: [],
+        },
+      };
+    }
+
+    return { isValid: true };
+  }
 }

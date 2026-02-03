@@ -1,5 +1,5 @@
-import { Body, Controller, Post, Inject } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { Body, Controller, Post, Inject, Get } from '@nestjs/common';
+import { ClientProxy, Payload } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { timeout, catchError } from 'rxjs/operators';
 
@@ -80,5 +80,14 @@ export class ProductsController {
         'Error al buscar los productos: ' + error.message,
       );
     }
+  }
+
+  @Get('/searchComboByCodigo')
+  async searchComboByCodigo(@Payload() payload: {
+    codigo: string;
+  }) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'search_combo_by_codigo' }, payload)
+    )
   }
 }

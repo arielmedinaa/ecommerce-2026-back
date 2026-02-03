@@ -48,14 +48,9 @@ export class CartController {
       codigo: cartCodigoNum,
     };
     
-    console.log('📤 getCart - Sending payload to microservice:', payload);
-    
     const result = await firstValueFrom(
       this.cartClient.send({ cmd: 'get_cart' }, payload),
     );
-    
-    console.log('📥 getCart - Microservice response:', result);
-    
     return result;
   }
   

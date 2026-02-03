@@ -39,4 +39,9 @@ export class ProductsController {
       throw error;
     }
   }
+
+  @MessagePattern({cmd: 'search_combo_by_codigo'})
+  async searchComboByCodigo(codigo: string) {
+    return await this.productsService.findComboByCodigo(codigo);
+  }
 }
