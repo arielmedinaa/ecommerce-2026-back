@@ -5,6 +5,7 @@ import { PromosService } from './service/promos.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Product, ProductSchema } from './schemas/product.schema';
 import { Promo, PromoSchema } from './schemas/promos.schema';
+import { Combos, CombosSchema } from './schemas/combos.schema';
 import { DatabaseModule } from '@shared/config/database/database.module';
 
 @Module({
@@ -13,6 +14,7 @@ import { DatabaseModule } from '@shared/config/database/database.module';
     MongooseModule.forFeature([
       { name: Product.name, schema: ProductSchema },
       { name: Promo.name, schema: PromoSchema },
+      { name: Combos.name, schema: CombosSchema },
     ]),
   ],
   controllers: [ProductsController],

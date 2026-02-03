@@ -4,12 +4,16 @@ import { Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ObtenerClaveService } from '@shared/common/utils/obtenerClave';
-import { NEW_CART_INITIAL_STATE } from '@cart/constants/cart.constants';
+import {
+  NEW_CART_INITIAL_STATE,
+  NEW_SOLICITUD_INITIAL_STATE,
+} from '@cart/constants/cart.constants';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { CartValidationService } from './cart.service.spec';
 import { CartErrorService } from './errors/cart-error.service';
 import moment from 'moment-timezone';
+import * as https from 'https';
 
 @Injectable()
 export class CartContadoService {
@@ -80,19 +84,58 @@ export class CartContadoService {
       );
     }
 
-    const productoExiste = carritoExistente.articulos[articuloTipo].find(
-      (articulo: any) => String(articulo.codigo) === String(producto.codigo),
-    );
-
-    if (productoExiste) {
-      carritoExistente.articulos[articuloTipo] = carritoExistente.articulos[
-        articuloTipo
-      ].map((articulo: any) =>
-        String(articulo.codigo) === String(producto.codigo)
-          ? { ...articulo, cantidad: articulo.cantidad + producto.cantidad }
-          : articulo,
+    const buscarProductoConMismasCondiciones = (
+      carrito: any,
+      producto: any,
+      tipo: string,
+    ) => {
+      const productosMismoCodigo = carrito.articulos[tipo].filter(
+        (articulo: any) => String(articulo.codigo) === String(producto.codigo),
       );
 
+      if (tipo === 'credito') {
+        return productosMismoCodigo.find(
+          (articulo: any) =>
+            articulo.credito?.cuota === producto.credito?.cuota,
+        );
+      }
+      return productosMismoCodigo[0];
+    };
+
+    const actualizarCantidadProducto = (
+      carrito: any,
+      producto: any,
+      tipo: string,
+    ) => {
+      carrito.articulos[tipo] = carrito.articulos[tipo].map((articulo: any) => {
+        if (tipo === 'credito') {
+          return String(articulo.codigo) === String(producto.codigo) &&
+            articulo.credito?.cuota === producto.credito?.cuota
+            ? { ...articulo, cantidad: articulo.cantidad + producto.cantidad }
+            : articulo;
+        } else {
+          return String(articulo.codigo) === String(producto.codigo)
+            ? { ...articulo, cantidad: articulo.cantidad + producto.cantidad }
+            : articulo;
+        }
+      });
+    };
+
+    const agregarNuevoProducto = (
+      carrito: any,
+      producto: any,
+      tipo: string,
+    ) => {
+      carrito.articulos[tipo].push(producto);
+    };
+
+    const productoExistente = buscarProductoConMismasCondiciones(
+      carritoExistente,
+      producto,
+      articuloTipo,
+    );
+    if (productoExistente) {
+      actualizarCantidadProducto(carritoExistente, producto, articuloTipo);
       await this.carrito.updateOne(
         { codigo: carritoExistente.codigo },
         {
@@ -103,7 +146,7 @@ export class CartContadoService {
         },
       );
     } else {
-      carritoExistente.articulos[articuloTipo].push(producto);
+      agregarNuevoProducto(carritoExistente, producto, articuloTipo);
       await this.carrito.updateOne(
         { codigo: carritoExistente.codigo },
         { $push: { [`articulos.${articuloTipo}`]: producto } },
@@ -232,30 +275,45 @@ export class CartContadoService {
     let metodoPago = '';
     let montoTotal = 0;
     let descripcion = '';
+    const paymentConfig = {
+      'debito contra entrega': {
+        metodo: 'efectivo contra entrega',
+        getMonto: () =>
+          process.cuotas?.reduce((total, cuota) => total + cuota.importe, 0) ||
+          0,
+        getDescripcion: () =>
+          `Débito contra entrega - ${process.cantidadcuotas} cuotas`,
+      },
+      pagopar: {
+        metodo: 'pagopar',
+        getMonto: () => process.monto || 0,
+        getDescripcion: () => 'Pago PagoPar',
+      },
+      bancard: {
+        metodo: 'bancard',
+        getMonto: () => process.monto || 0,
+        getDescripcion: () => 'Pago Bancard',
+      },
+      'tarjeta contra entrega': {
+        metodo: 'tarjeta contra entrega',
+        getMonto: () => process.monto || 0,
+        getDescripcion: () => 'Tarjeta contra entrega',
+      },
+    };
 
-    if (process.tipo === 'Debito contra Entrega') {
-      metodoPago = 'efectivo contra entrega';
-      if (process.cuotas && Array.isArray(process.cuotas)) {
-        montoTotal = process.cuotas.reduce((total, cuota) => total + cuota.importe, 0);
-      }
-      descripcion = `Débito contra entrega - ${process.cantidadcuotas} cuotas`;
-    } else if (process.tipo && process.tipo.toLowerCase().includes('pagopar')) {
-      metodoPago = 'pagopar';
-      montoTotal = process.monto || 0;
-      descripcion = 'Pago PagoPar';
-    } else if (process.tipo && process.tipo.toLowerCase().includes('bancard')) {
-      metodoPago = 'bancard';
-      montoTotal = process.monto || 0;
-      descripcion = 'Pago Bancard';
-    } else if (process.tipo && process.tipo.toLowerCase().includes('tarjeta contra entrega')) {
-      metodoPago = 'tarjeta contra entrega';
-      montoTotal = process.monto || 0;
-      descripcion = 'Tarjeta contra entrega';
-    } else {
-      metodoPago = 'efectivo contra entrega';
-      montoTotal = process.monto || 0;
-      descripcion = process.tipo || 'Pago contra entrega';
-    }
+    const tipo = process.tipo?.toLowerCase() || '';
+    const config = Object.keys(paymentConfig).find((key) => tipo.includes(key));
+    const paymentData = config
+      ? paymentConfig[config]
+      : {
+          metodo: 'efectivo contra entrega',
+          getMonto: () => process.monto || 0,
+          getDescripcion: () => process.tipo || 'Pago contra entrega',
+        };
+
+    metodoPago = paymentData.metodo;
+    montoTotal = paymentData.getMonto();
+    descripcion = paymentData.getDescripcion();
 
     const clienteInfo = {
       equipo: clienteToken,
@@ -277,26 +335,13 @@ export class CartContadoService {
             moneda: process.moneda || 'PYG',
             cliente: clienteInfo,
             descripcion: descripcion,
-            respuestaPagopar: metodoPago === 'pagopar' ? process.pagoparResponse || {} : {},
-            respuestaBancard: metodoPago === 'bancard' ? process.bancardResponse || {} : {},
+            respuestaPagopar:
+              metodoPago === 'pagopar' ? process.pagoparResponse || {} : {},
+            respuestaBancard:
+              metodoPago === 'bancard' ? process.bancardResponse || {} : {},
           },
         ),
       );
-
-      if (!pagoResponse.success) {
-        const error = new Error(`ERROR AL REGISTRAR PAGO: ${pagoResponse.message}`);
-        await this.cartErrorService.logMicroserviceError(
-          error,
-          codigo?.toString(),
-          'finishCart',
-          {
-            motivo: 'error_registro_pago',
-            pagoResponse,
-            codigo,
-          },
-        );
-        throw error;
-      }
 
       await this.carrito.updateOne(filtro, {
         $set: {
@@ -311,6 +356,15 @@ export class CartContadoService {
             .format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
         },
       });
+
+      try {
+        await this.insertarSolicitudesCentralApp({}, clienteToken, '', codigo);
+      } catch (centralAppError) {
+        console.error(
+          'Error al enviar solicitudes a Central App:',
+          centralAppError,
+        );
+      }
 
       return {
         data: [pagoResponse.data],
@@ -328,11 +382,293 @@ export class CartContadoService {
           codigo,
         },
       );
-      
+
       return {
         data: [],
         success: false,
         message: `ERROR AL FINALIZAR CARRITO: ${error.message}`,
+      };
+    }
+  }
+
+  private async insertarCarritos(parametros: any): Promise<number> {
+    const url =
+      'https://192.168.100.5:3055/api/solicitud_ecommerce/insert_ecommerce_solicitudes';
+
+    return new Promise((resolve, reject) => {
+      const postData = JSON.stringify(parametros);
+
+      const options = {
+        hostname: '192.168.100.5',
+        port: 3055,
+        path: '/api/solicitud_ecommerce/insert_ecommerce_solicitudes',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(postData),
+        },
+        // Ignorar completamente la verificación del certificado SSL
+        rejectUnauthorized: false,
+        checkServerIdentity: () => undefined,
+      };
+
+      const req = https.request(options, (res) => {
+        let data = '';
+
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+
+        res.on('end', () => {
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            resolve(1);
+          } else {
+            console.error(`Error HTTP: ${res.statusCode}`, data);
+            resolve(0);
+          }
+        });
+      });
+
+      req.on('error', (error) => {
+        console.error('Hubo un error al realizar la petición:', error);
+        resolve(0);
+      });
+
+      req.write(postData);
+      req.end();
+    });
+  }
+
+  async insertarSolicitudesCentralApp(
+    solicitud: Object,
+    clienteToken: string,
+    cuenta?: string,
+    codigo?: number,
+    clienteInfo?: Object,
+  ): Promise<{ data: any[]; success: boolean; message: string }> {
+    const validation =
+      await this.cartValidationService.validateInsertCentralApp(
+        solicitud,
+        clienteToken,
+        codigo,
+        clienteInfo,
+      );
+    if (!validation.isValid) {
+      return validation.error;
+    }
+
+    const filtro: any = {
+      'cliente.equipo': clienteToken,
+      codigo,
+    };
+    if (cuenta) {
+      filtro.cuenta = cuenta;
+    }
+
+    try {
+      let datos = await this.carrito.findOne(filtro);
+      if (!datos) {
+        return {
+          data: [],
+          success: false,
+          message: 'Carrito no encontrado',
+        };
+      }
+
+      // Agrupar artículos de crédito por cantidad de cuotas
+      const solicitudesPorCuota: Map<number, any[]> = new Map();
+      
+      if (
+        datos.articulos &&
+        datos.articulos.credito &&
+        Array.isArray(datos.articulos.credito)
+      ) {
+        datos.articulos.credito.forEach((articulo: any) => {
+          const cuotas = articulo.credito?.cuota || 0;
+          if (!solicitudesPorCuota.has(cuotas)) {
+            solicitudesPorCuota.set(cuotas, []);
+          }
+          solicitudesPorCuota.get(cuotas)!.push(articulo);
+        });
+      }
+
+      // Crear solicitudes separadas para cada grupo de cuotas y una para contado
+      const resultados: {
+        cuotas: number;
+        success: boolean;
+        articulosCount: number;
+      }[] = [];
+
+      // 1. Primero crear solicitud para artículos contado (si existen)
+      if (
+        datos.articulos &&
+        datos.articulos.contado &&
+        Array.isArray(datos.articulos.contado) &&
+        datos.articulos.contado.length > 0
+      ) {
+        const solicitudContado = NEW_SOLICITUD_INITIAL_STATE(
+          codigo!,
+          clienteToken,
+          cuenta || '',
+        );
+
+        // Actualizar datos del cliente y envío
+        solicitudContado.cliente = {
+          ...solicitudContado.cliente!, // Mantener datos de la constante (documento, razonsocial, etc.)
+          equipo:
+            datos.cliente?.equipo ||
+            solicitudContado.cliente?.equipo ||
+            clienteToken, // Usar equipo del carrito, constante o el token
+        };
+        solicitudContado.envio =
+          solicitud['envio'] || datos.envio || solicitudContado.envio;
+        solicitudContado.codigo = codigo!;
+
+        // Establecer solo artículos contado con lógica de combo/promo
+        solicitudContado.articulos = {
+          contado: datos.articulos.contado.map((item: any) => {
+            const processedItem: any = { ...item };
+
+            // Aplicar lógica de combo/promo para artículos contado
+            // Si tiene combo pero no promo
+            if (item.isCombo && !item.isPromo) {
+              processedItem.is_combo = 1;
+              processedItem.is_promo = 0;
+              processedItem.id_promo = null;
+              processedItem.nombrePromo = null;
+            }
+            // Si tiene promo pero no combo
+            else if (!item.isCombo && item.isPromo) {
+              processedItem.is_combo = 0;
+              processedItem.is_promo = 1;
+              processedItem.id_promo = item.promoCodigo || null;
+              processedItem.nombrePromo = item.promoNombre || null;
+            }
+            // Si tiene ambos
+            else if (item.isCombo && item.isPromo) {
+              processedItem.is_combo = 1;
+              processedItem.is_promo = 1;
+              processedItem.id_promo = item.promoCodigo || null;
+              processedItem.nombrePromo = item.promoNombre || null;
+            }
+            // Si no tiene ninguno
+            else {
+              processedItem.is_combo = 0;
+              processedItem.is_promo = 0;
+              processedItem.id_promo = null;
+              processedItem.nombrePromo = null;
+            }
+
+            return processedItem;
+          }),
+          credito: [], // Sin artículos crédito en esta solicitud
+        };
+
+        console.log('solicitudContado', solicitudContado);
+        const resultadoContado = await this.insertarCarritos(solicitudContado);
+        resultados.push({
+          cuotas: 0, // 0 representa contado
+          success: resultadoContado === 1,
+          articulosCount: datos.articulos.contado.length,
+        });
+      }
+
+      // 2. Luego crear solicitudes para artículos de crédito por cuotas
+      for (const [cuotas, articulos] of solicitudesPorCuota.entries()) {
+        if (cuotas === 0) continue; // Ignorar artículos sin cuotas
+
+        // Crear una nueva solicitud basada en la plantilla
+        const nuevaSolicitud = NEW_SOLICITUD_INITIAL_STATE(
+          codigo!,
+          clienteToken,
+          cuenta || '',
+        );
+
+        // Actualizar datos del cliente y envío
+        nuevaSolicitud.cliente = {
+          ...nuevaSolicitud.cliente!, // Mantener datos de la constante (documento, razonsocial, etc.)
+          equipo:
+            datos.cliente?.equipo ||
+            nuevaSolicitud.cliente?.equipo ||
+            clienteToken, // Usar equipo del carrito, constante o el token
+        };
+        nuevaSolicitud.envio =
+          solicitud['envio'] || datos.envio || nuevaSolicitud.envio;
+        nuevaSolicitud.codigo = codigo!;
+
+        // Establecer artículos de crédito para esta solicitud con lógica de combo/promo
+        nuevaSolicitud.articulos = {
+          contado: [], // Sin artículos contado en esta solicitud
+          credito: articulos.map((articulo: any) => {
+            const processedItem: any = {
+              codigo: articulo.codigo,
+              nombre: articulo.nombre,
+              ruta: articulo.ruta,
+              imagen: articulo.imagen,
+              cantidad: articulo.cantidad,
+              precio: articulo.credito?.precio || articulo.precio,
+              cuota: cuotas,
+            };
+
+            // Aplicar lógica de combo/promo para artículos de crédito
+            // Si tiene combo pero no promo
+            if (articulo.isCombo && !articulo.isPromo) {
+              processedItem.is_combo = 1;
+              processedItem.is_promo = 0;
+              processedItem.id_promo = null;
+              processedItem.nombrePromo = null;
+            }
+            // Si tiene promo pero no combo
+            else if (!articulo.isCombo && articulo.isPromo) {
+              processedItem.is_combo = 0;
+              processedItem.is_promo = 1;
+              processedItem.id_promo = articulo.promoCodigo || null;
+              processedItem.nombrePromo = articulo.promoNombre || null;
+            }
+            // Si tiene ambos
+            else if (articulo.isCombo && articulo.isPromo) {
+              processedItem.is_combo = 1;
+              processedItem.is_promo = 1;
+              processedItem.id_promo = articulo.promoCodigo || null;
+              processedItem.nombrePromo = articulo.promoNombre || null;
+            }
+            // Si no tiene ninguno
+            else {
+              processedItem.is_combo = 0;
+              processedItem.is_promo = 0;
+              processedItem.id_promo = null;
+              processedItem.nombrePromo = null;
+            }
+
+            return processedItem;
+          }),
+        };
+
+        console.log('nuevoSoli', nuevaSolicitud);
+        const resultado = await this.insertarCarritos(nuevaSolicitud);
+        resultados.push({
+          cuotas,
+          success: resultado === 1,
+          articulosCount: articulos.length,
+        });
+      }
+
+      const successCount = resultados.filter((r) => r.success).length;
+      const totalCount = resultados.length;
+
+      return {
+        data: resultados,
+        success: successCount === totalCount && totalCount > 0,
+        message:
+          totalCount > 0
+            ? `${successCount}/${totalCount} solicitudes insertadas en Central App`
+            : 'No hay artículos de crédito para procesar',
+      };
+    } catch (error) {
+      return {
+        data: [],
+        success: false,
+        message: `ERROR AL INSERTAR EN CENTRAL APP: ${error.message}`,
       };
     }
   }
