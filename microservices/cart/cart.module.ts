@@ -29,6 +29,7 @@ import { ErrorLoggingInterceptor } from './interceptors/error-logging.intercepto
     ]),
     MicroserviceModule.forRoot([
       'PRODUCTS_SERVICE',
+      'PAYMENTS_SERVICE',
     ]),
     DatabaseModule.forRoot(),
     CommonModule,
