@@ -1,22 +1,17 @@
-import { Body, Controller, Logger, Query, UseGuards } from '@nestjs/common';
-import { Ctx, MessagePattern, Payload } from '@nestjs/microservices';
+import { Controller, Logger } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { CartContadoService } from '@cart/service/cart.service';
-import { JwtAuthGuard } from '@gateway/common/guards/jwt-auth.guard';
+import { CartErrorService } from '@cart/service/errors/cart-error.service';
 
 @Controller()
 export class CartController {
   private readonly logger = new Logger(CartController.name);
 
-  constructor(private readonly cartService: CartContadoService) {}
+  constructor(
+    private readonly cartService: CartContadoService,
+    private readonly cartErrorService: CartErrorService,
+  ) {}
 
-  // Log para saber si el microservicio está recibiendo peticiones
-  @MessagePattern({ cmd: 'ping' })
-  async ping() {
-    console.log('🏓 Microservice ping received');
-    return { status: 'ok', message: 'Cart microservice is alive' };
-  }
-
-  // @UseGuards(JwtAuthGuard)
   @MessagePattern({ cmd: 'add_to_cart' })
   async addToCart(@Payload() payload: any) {
     const { token, email, codigo, body } = payload;
@@ -29,12 +24,18 @@ export class CartController {
       );
       return result;
     } catch (error) {
+      await this.cartErrorService.logMicroserviceError(
+        error,
+        codigo?.toString(),
+        'addToCart',
+        { payload }
+      );
+      
       this.logger.error('Error adding to cart:', error);
       throw error;
     }
   }
 
-  // @UseGuards(JwtAuthGuard)
   @MessagePattern({ cmd: 'get_cart' })
   async getCart(@Payload() payload: any) {
     const { token, cuenta, codigo } = payload;
@@ -48,6 +49,13 @@ export class CartController {
       console.log('📥 Microservice getCart - Service result:', result);
       return result;
     } catch (error) {
+      await this.cartErrorService.logMicroserviceError(
+        error,
+        codigo?.toString(),
+        'getCart',
+        { payload }
+      );
+      
       console.error('🚨 Microservice getCart - Error in service:', {
         name: error.name,
         message: error.message,
@@ -72,6 +80,13 @@ export class CartController {
       );
       return result;
     } catch (error) {
+      await this.cartErrorService.logMicroserviceError(
+        error,
+        codigo?.toString(),
+        'finishCart',
+        { payload }
+      );
+      
       this.logger.error('Error finalizando el carrito', error);
       throw error;
     }

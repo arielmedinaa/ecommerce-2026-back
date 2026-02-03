@@ -3,20 +3,21 @@ import { Transaccion } from '../schemas/transaccion.schema';
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { ObtenerClaveService } from '@cart/common/utils/obtenerClave';
+import { ObtenerClaveService } from '@shared/common/utils/obtenerClave';
 import { NEW_CART_INITIAL_STATE } from '@cart/constants/cart.constants';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import { CartValidationService } from './cart.service.spec';
 import moment from 'moment-timezone';
 
 @Injectable()
 export class CartContadoService {
   constructor(
     @InjectModel(Cart.name) private readonly carrito: Model<Cart>,
-    @InjectModel(Transaccion.name)
-    private readonly transacciones: Model<Transaccion>,
+    @InjectModel(Transaccion.name) private readonly transacciones: Model<Transaccion>,
     @Inject('PRODUCTS_SERVICE') private readonly productsService: ClientProxy,
     private readonly obtenerClaveService: ObtenerClaveService,
+    private readonly cartValidationService: CartValidationService,
   ) {}
 
   async addCart(
@@ -25,14 +26,22 @@ export class CartContadoService {
     codigo?: number,
     producto?: any,
   ): Promise<{ data: Cart[]; success: boolean; message: string }> {
-    if (!producto) {
-      return { data: [], success: false, message: 'Producto no válido' };
+    const validation = await this.cartValidationService.validateCartPayload(
+      clienteToken,
+      cuenta,
+      codigo,
+      producto
+    );
+
+    if (!validation.isValid) {
+      return validation.error;
     }
 
     const filtro: any = {
       $or: [{ 'cliente.equipo': clienteToken }, { 'cliente.correo': cuenta }],
     };
     codigo === 0 ? (filtro.estado = 1) : (filtro.codigo = codigo);
+    
     const articuloTipo = producto.credito ? 'credito' : 'contado';
     const carritoExistente = await this.carrito
       .findOne(filtro)
