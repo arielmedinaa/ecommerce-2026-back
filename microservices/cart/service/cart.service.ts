@@ -20,9 +20,9 @@ export class CartContadoService {
   constructor(
     @InjectModel(Cart.name) private readonly carrito: Model<Cart>,
     @InjectModel(Transaccion.name)
-    private readonly transacciones: Model<Transaccion>,
     @Inject('PRODUCTS_SERVICE') private readonly productsService: ClientProxy,
     @Inject('PAYMENTS_SERVICE') private readonly paymentsService: ClientProxy,
+    private readonly transacciones: Model<Transaccion>,
     private readonly obtenerClaveService: ObtenerClaveService,
     private readonly cartValidationService: CartValidationService,
     private readonly cartErrorService: CartErrorService,
@@ -45,17 +45,26 @@ export class CartContadoService {
       return validation.error;
     }
 
-    const filtro: any = {
-      $or: [{ 'cliente.equipo': clienteToken }, { 'cliente.correo': cuenta }],
+    let filtro: any = {
+      'cliente.equipo': clienteToken,
     };
-    codigo === 0 ? (filtro.estado = 1) : (filtro.codigo = codigo);
+
+    if (codigo === 0) {
+      filtro.estado = 1;
+    } else {
+      filtro.codigo = codigo;
+    }
+
+    if (cuenta) {
+      filtro.cuenta = cuenta;
+    }
 
     const articuloTipo = producto.credito ? 'credito' : 'contado';
     const carritoExistente = await this.carrito
       .findOne(filtro)
       .sort({ codigo: -1 });
 
-    if (!carritoExistente) {
+    if (carritoExistente === null || carritoExistente === undefined) {
       const nuevoCodigo =
         await this.obtenerClaveService.obtenerClave('carrito');
       const nuevoCarrito = new this.carrito({
@@ -251,6 +260,7 @@ export class CartContadoService {
     let filtro: any = {
       'cliente.equipo': clienteToken,
       codigo,
+      estado: { $ne: 0 },
     };
     if (cuenta) {
       filtro.cuenta = cuenta;
@@ -258,13 +268,15 @@ export class CartContadoService {
 
     const carrito = await this.carrito.findOne(filtro).lean();
     if (!carrito) {
-      const error = new Error('CARRITO NO ENCONTRADO');
+      const error = new Error(
+        'CARRITO NO ENCONTRADO O CON POSIBLE PAGO CONFIRMADO',
+      );
       await this.cartErrorService.logMicroserviceError(
         error,
         codigo?.toString(),
         'finishCart',
         {
-          motivo: 'carrito_no_encontrado',
+          motivo: 'carrito_no_encontrado_o_con_posible_pago_confirmado',
           filtro,
           codigo,
         },
@@ -315,14 +327,6 @@ export class CartContadoService {
     montoTotal = paymentData.getMonto();
     descripcion = paymentData.getDescripcion();
 
-    const clienteInfo = {
-      equipo: clienteToken,
-      nombre: carrito.cliente?.nombre || '',
-      email: carrito.cliente?.correo || cuenta || '',
-      telefono: carrito.cliente?.telefono || '',
-      documento: carrito.cliente?.documento || '',
-    };
-
     try {
       const pagoResponse = await firstValueFrom(
         this.paymentsService.send(
@@ -333,7 +337,10 @@ export class CartContadoService {
             metodoPago: metodoPago,
             monto: montoTotal,
             moneda: process.moneda || 'PYG',
-            cliente: clienteInfo,
+            cliente: {
+              ...process.cliente,
+              equipo: clienteToken,
+            },
             descripcion: descripcion,
             respuestaPagopar:
               metodoPago === 'pagopar' ? process.pagoparResponse || {} : {},
@@ -351,20 +358,32 @@ export class CartContadoService {
             registradoEnPayments: true,
           },
           estado: 0,
+          cliente: {
+            ...process.cliente,
+            equipo: clienteToken,
+          },
+          envio: process?.envio || {},
           finished: moment()
             .tz('America/Asuncion')
             .format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
         },
       });
 
-      try {
-        await this.insertarSolicitudesCentralApp({}, clienteToken, '', codigo);
-      } catch (centralAppError) {
-        console.error(
-          'Error al enviar solicitudes a Central App:',
-          centralAppError,
-        );
-      }
+      setImmediate(async () => {
+        try {
+          await this.insertarSolicitudesCentralApp(
+            {},
+            clienteToken,
+            '',
+            codigo,
+          );
+        } catch (centralAppError) {
+          console.error(
+            'Error al enviar solicitudes a Central App (segundo plano):',
+            centralAppError,
+          );
+        }
+      });
 
       return {
         data: [pagoResponse.data],
@@ -393,13 +412,13 @@ export class CartContadoService {
 
   private async insertarCarritos(parametros: any): Promise<number> {
     const url =
-      'https://192.168.100.5:3055/api/solicitud_ecommerce/insert_ecommerce_solicitudes';
+      `${process.env.CENTRAL_APP_URL}`;
 
     return new Promise((resolve, reject) => {
       const postData = JSON.stringify(parametros);
 
       const options = {
-        hostname: '192.168.100.5',
+        hostname: `${process.env.CENTRAL_APP_HOST}`,
         port: 3055,
         path: '/api/solicitud_ecommerce/insert_ecommerce_solicitudes',
         method: 'POST',
@@ -467,6 +486,7 @@ export class CartContadoService {
 
     try {
       let datos = await this.carrito.findOne(filtro);
+      console.log("datos", datos)
       if (!datos) {
         return {
           data: [],
@@ -477,7 +497,7 @@ export class CartContadoService {
 
       // Agrupar artículos de crédito por cantidad de cuotas
       const solicitudesPorCuota: Map<number, any[]> = new Map();
-      
+
       if (
         datos.articulos &&
         datos.articulos.credito &&
@@ -520,6 +540,8 @@ export class CartContadoService {
             solicitudContado.cliente?.equipo ||
             clienteToken, // Usar equipo del carrito, constante o el token
         };
+        solicitudContado.pago = datos.pago;
+        solicitudContado.estado = datos.estado;
         solicitudContado.envio =
           solicitud['envio'] || datos.envio || solicitudContado.envio;
         solicitudContado.codigo = codigo!;
@@ -564,13 +586,12 @@ export class CartContadoService {
           credito: [], // Sin artículos crédito en esta solicitud
         };
 
-        console.log('solicitudContado', solicitudContado);
-        const resultadoContado = await this.insertarCarritos(solicitudContado);
-        resultados.push({
-          cuotas: 0, // 0 representa contado
-          success: resultadoContado === 1,
-          articulosCount: datos.articulos.contado.length,
-        });
+        // const resultadoContado = await this.insertarCarritos(solicitudContado);
+        // resultados.push({
+        //   cuotas: 0, // 0 representa contado
+        //   success: resultadoContado === 1,
+        //   articulosCount: datos.articulos.contado.length,
+        // });
       }
 
       // 2. Luego crear solicitudes para artículos de crédito por cuotas
@@ -592,6 +613,8 @@ export class CartContadoService {
             nuevaSolicitud.cliente?.equipo ||
             clienteToken, // Usar equipo del carrito, constante o el token
         };
+        nuevaSolicitud.estado = datos.estado;
+        nuevaSolicitud.pago = datos.pago;
         nuevaSolicitud.envio =
           solicitud['envio'] || datos.envio || nuevaSolicitud.envio;
         nuevaSolicitud.codigo = codigo!;
@@ -644,13 +667,12 @@ export class CartContadoService {
           }),
         };
 
-        console.log('nuevoSoli', nuevaSolicitud);
-        const resultado = await this.insertarCarritos(nuevaSolicitud);
-        resultados.push({
-          cuotas,
-          success: resultado === 1,
-          articulosCount: articulos.length,
-        });
+        // const resultado = await this.insertarCarritos(nuevaSolicitud);
+        // resultados.push({
+        //   cuotas,
+        //   success: resultado === 1,
+        //   articulosCount: articulos.length,
+        // });
       }
 
       const successCount = resultados.filter((r) => r.success).length;

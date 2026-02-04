@@ -76,12 +76,25 @@ export class Payments {
   @Prop({ type: String })
   descripcion: string;
 
-  @Prop({ type: Object, default: {} })
+  @Prop({
+    type: Object,
+    required: true,
+    default: {
+      equipo: '',
+      nombre: '',
+      email: '',
+      telefono: '',
+      documento: '',
+      nroDocumento: '',
+    },
+  })
   cliente: {
-    nombre?: string;
-    email?: string;
+    equipo: string;
+    nombre: string;
+    email: string;
     telefono?: string;
-    documento?: string;
+    documento: string;
+    nroDocumento: string;
   };
 
   @Prop({ type: Object, default: {} })

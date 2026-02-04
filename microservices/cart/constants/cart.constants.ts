@@ -14,12 +14,18 @@ export const DEFAULT_CART: Partial<Cart> = {
   transaccion: [],
   seguimiento: [],
   envio: {
+    callePrincipal: "",
+    calleSecundaria: "",
     direccion: '',
     numerocasa: '',
     ciudad: '',
+    ciudadId: 1,
     barrio: '',
     observacion: '',
-    ubicacion: '',
+    ubicacion: {},
+    agendamiento: moment().tz('America/Asuncion').format('YYYY-MM-DDTHH'),
+    horaAgendamiento: '',
+    retirar: 0
   },
   pago: {
     tipo: '',
@@ -49,38 +55,38 @@ export const DEFAULT_CART: Partial<Cart> = {
 export const DEFAULT_SOLICITUD: Partial<Cart> = {
   codigo: 1,
   cliente: {
-    equipo: "eyJhbGciOiJIUzI1NiJ9.R3ZnSUhad21KNnhHekpBSW9pa3VWdlhTMQ.xI6gpc0Hp5x377TDeFlUagPId07DeSAP5Rwu154I0ak",
-    razonsocial: "ARIEL MEDINA",
-    documento: "234234",
-    correo: "sincorreo@gmail.com370",
-    telefono: "0993345859",
-    tipoDocumento: "CI"
+    equipo: '',
+    razonsocial: '',
+    documento: '',
+    correo: '',
+    telefono: '',
+    tipodocumento: ''
   },
   tiempo: moment().tz('America/Asuncion').format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
   envio: {
-    callePrincipal: "Calle Principal",
-    calleSecundaria: "Calle Secundaria",
-    numerocasa: "370",
-    ciudad: "ASUNCION                      ",
+    callePrincipal: '',
+    calleSecundaria: '',
+    numerocasa: '',
+    ciudad: '',
     ciudadId: 1,
-    barrio: "JARA",
-    observacion: "",
+    barrio: '',
+    observacion: '',
     ubicacion: {
       lat: -25.31287,
       lng: -57.578178
     },
-    agendamiento: "2026-01-16",
-    horaAgendamiento: "19:12",
+    agendamiento: '',
+    horaAgendamiento: '',
     retirar: 0
   },
   pago: {
-    tipo: "",
-    monto: "",
-    moneda: "",
-    condicion: "",
-    periodicidad: "",
+    tipo: '',
+    monto: '',
+    moneda: '',
+    condicion: '',
+    periodicidad: '',
     entregainicial: 0,
-    cantidadcuotas: "",
+    cantidadcuotas: '',
     cuotas: []
   },
   articulos: {

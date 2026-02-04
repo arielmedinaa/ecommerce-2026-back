@@ -291,11 +291,11 @@ export class CartValidationService {
     }
 
     const tiposPagoValidos = [
-      'Debito contra Entrega',
-      'Tarjeta contra Entrega',
-      'PagoPar',
+      'Debito contra entrega',
+      'Tarjeta contra entrega',
+      'Pagopar',
       'Bancard',
-      'Efectivo contra Entrega'
+      'Efectivo contra entrega'
     ];
 
     if (!tiposPagoValidos.includes(process.tipo)) {

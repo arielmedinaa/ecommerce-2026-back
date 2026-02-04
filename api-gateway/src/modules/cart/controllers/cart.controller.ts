@@ -70,14 +70,9 @@ export class CartController {
       process: body
     };
     
-    console.log('📤 finishCart - Sending payload to microservice:', payload);
-    
     const result = await firstValueFrom(
       this.cartClient.send({ cmd: 'finish_cart' }, payload),
     );
-    
-    console.log('📥 finishCart - Microservice response:', result);
-    
     return result;
   }
 }
