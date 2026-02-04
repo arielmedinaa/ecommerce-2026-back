@@ -68,6 +68,12 @@ export class CartController {
     }
   }
 
+  @MessagePattern({ cmd: "get_all_cart" })
+  async getAllCartByClient(@Payload() payload: any) {
+    const { token, limit, skip, sort, order } = payload;
+    return this.cartService.getAllCart(token, limit, skip, sort, order);
+  }
+
   @MessagePattern({ cmd: 'finish_cart' })
   async finishCart(@Payload() payload: any) {
     const { token, cuenta, codigo, process } = payload;
