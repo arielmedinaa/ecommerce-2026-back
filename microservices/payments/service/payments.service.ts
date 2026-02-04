@@ -24,9 +24,8 @@ export class PaymentsService {
     respuestaPagopar?: any,
     respuestaBancard?: any,
   ): Promise<{ data: Payments | null; success: boolean; message: string }> {
+    const idTransaccion = this.generarIdTransaccion();
     try {
-      const idTransaccion = this.generarIdTransaccion();
-      
       const nuevoPago = new this.paymentsModel({
         codigoCarrito,
         carrito,
@@ -45,13 +44,17 @@ export class PaymentsService {
       });
 
       await nuevoPago.save();
-
       return {
         data: nuevoPago,
         success: true,
         message: 'PAGO REGISTRADO CON ÉXITO',
       };
     } catch (error) {
+      this.paymentErrorService.logMicroserviceError(
+        error,
+        idTransaccion,
+        'registrarPago',
+      );
       return {
         data: null,
         success: false,
@@ -110,7 +113,7 @@ export class PaymentsService {
         };
       }
 
-      const todosReembolsos = pagos.flatMap(pago => pago.reembolsos || []);
+      const todosReembolsos = pagos.flatMap((pago) => pago.reembolsos || []);
 
       return {
         data: todosReembolsos,
@@ -181,9 +184,7 @@ export class PaymentsService {
       };
 
       if (estado === 'completado') {
-        updateData.finalizado = moment()
-          .tz('America/Asuncion')
-          .toDate();
+        updateData.finalizado = moment().tz('America/Asuncion').toDate();
       }
 
       if (respuestaPagopar) {
@@ -236,7 +237,7 @@ export class PaymentsService {
 
   private calcularFechaExpiracion(metodoPago: string): Date {
     const ahora = new Date();
-    
+
     switch (metodoPago) {
       case 'pagopar':
         return new Date(ahora.getTime() + 24 * 60 * 60 * 1000);

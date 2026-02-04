@@ -8,11 +8,29 @@ export class Cart {
   @Prop({ type: Number, required: true })
   codigo: number;
 
-  @Prop({ type: String, required: true })
+  @Prop({ type: String })
   proceso: string;
 
-  @Prop({ type: Object, required: true })
-  cliente: Record<string, any>;
+  @Prop({
+    type: Object,
+    required: true,
+    default: {
+      equipo: '',
+      razonsocial: '',
+      correo: '',
+      telefono: '',
+      documento: '',
+      tipodocumento: '',
+    },
+  })
+  cliente: {
+    equipo: string;
+    razonsocial?: string;
+    correo?: string;
+    telefono?: string;
+    documento?: string;
+    tipodocumento?: string;
+  };
 
   @Prop({ type: String })
   tiempo: string;
@@ -23,7 +41,20 @@ export class Cart {
   @Prop({ type: Array, default: [] })
   seguimiento: any[];
 
-  @Prop({ type: Object, default: {} })
+  @Prop({
+    type: Object,
+    default: {
+      direccion: '',
+      numerocasa: '',
+      ciudad: '',
+      barrio: '',
+      observacion: '',
+      ubicacion: {
+        latitud: -25.3084825,
+        longitud: -57.5764874,
+      },
+    },
+  })
   envio: Record<string, any>;
 
   @Prop({ type: Object, default: {} })
