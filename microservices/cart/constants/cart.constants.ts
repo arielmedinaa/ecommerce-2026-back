@@ -117,3 +117,16 @@ export const NEW_SOLICITUD_INITIAL_STATE = (codigo: number, clienteToken: string
     correo: cuenta === 'undefined' ? '' : cuenta,
   },
 });
+
+export const ESTADO_SOLICITUD_MAP = {
+  '01': 'Solicitud en análisis de crédito',
+  '02': 'Solicitud en análisis de crédito', 
+  '04': 'Solicitud en análisis de crédito',
+  '07': 'El pedido se está procesando',
+  '10': 'El pedido se está procesando',
+  '13': 'El pedido se está procesando',
+  '22': 'El pedido se está procesando',
+  '23': 'El pedido se está procesando',
+  '05': 'El pedido se está procesando',
+  '16': 'Su solicitud está lista para despacharse',
+};

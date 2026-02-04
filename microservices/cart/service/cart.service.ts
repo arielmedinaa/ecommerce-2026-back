@@ -14,15 +14,18 @@ import { CartValidationService } from './cart.service.spec';
 import { CartErrorService } from './errors/cart-error.service';
 import moment from 'moment-timezone';
 import * as https from 'https';
+import * as mysql from 'mysql2/promise';
+import { ESTADO_SOLICITUD_MAP } from '@cart/constants/cart.constants';
 
 @Injectable()
 export class CartContadoService {
   constructor(
     @InjectModel(Cart.name) private readonly carrito: Model<Cart>,
     @InjectModel(Transaccion.name)
-    @Inject('PRODUCTS_SERVICE') private readonly productsService: ClientProxy,
-    @Inject('PAYMENTS_SERVICE') private readonly paymentsService: ClientProxy,
     private readonly transacciones: Model<Transaccion>,
+    @Inject('PRODUCTS_SERVICE')
+    private readonly productsService: ClientProxy,
+    @Inject('PAYMENTS_SERVICE') private readonly paymentsService: ClientProxy,
     private readonly obtenerClaveService: ObtenerClaveService,
     private readonly cartValidationService: CartValidationService,
     private readonly cartErrorService: CartErrorService,
@@ -236,6 +239,37 @@ export class CartContadoService {
     }
   }
 
+  async getAllCart(
+    clienteToken: string,
+    limit: number,
+    skip: number,
+    sort: string,
+    order: string = 'desc',
+  ): Promise<{ data: Cart[]; success: boolean; message: string }> {
+    const resultado = await this.carrito
+      .find({ 'cliente.equipo': clienteToken, estado: 0 })
+      .lean()
+      .limit(limit)
+      .skip(skip)
+      .sort({ [sort]: order === 'desc' ? -1 : 1 });
+
+    const carritosConEstado = await Promise.all(
+      resultado.map(async (carrito) => {
+        const estadoEcont = await this.getEstadoSolicitudEcont(carrito.codigo);
+        return {
+          ...carrito,
+          estadoSolicitud: estadoEcont,
+        };
+      }),
+    );
+
+    return {
+      data: carritosConEstado,
+      success: true,
+      message: 'Carritos recuperados',
+    };
+  }
+
   async finishCart(
     clienteToken: string,
     cuenta?: string,
@@ -411,8 +445,7 @@ export class CartContadoService {
   }
 
   private async insertarCarritos(parametros: any): Promise<number> {
-    const url =
-      `${process.env.CENTRAL_APP_URL}`;
+    const url = `${process.env.CENTRAL_APP_URL}`;
 
     return new Promise((resolve, reject) => {
       const postData = JSON.stringify(parametros);
@@ -486,7 +519,7 @@ export class CartContadoService {
 
     try {
       let datos = await this.carrito.findOne(filtro);
-      console.log("datos", datos)
+      console.log('datos', datos);
       if (!datos) {
         return {
           data: [],
@@ -692,6 +725,53 @@ export class CartContadoService {
         success: false,
         message: `ERROR AL INSERTAR EN CENTRAL APP: ${error.message}`,
       };
+    }
+  }
+
+  private async getEstadoSolicitudEcont(
+    codigoCarrito: number,
+  ): Promise<string> {
+    try {
+      const estadoSoli = await this.consultarEstadoEcontDB(codigoCarrito);
+      return ESTADO_SOLICITUD_MAP[estadoSoli] || 'Estado no identificado';
+    } catch (error) {
+      console.error(
+        `Error consultando estado para carrito ${codigoCarrito}:`,
+        error,
+      );
+      return 'No se pudo consultar el estado';
+    }
+  }
+
+  private async consultarEstadoEcontDB(secuencia: number): Promise<string> {
+    let connection: mysql.Connection | null = null;
+    try {
+      const dbName = process.env.ECONT_DB_DATABASE;
+      if (!dbName) {
+        throw new Error('ECONT_DB_DATABASE environment variable is not set');
+      }
+      connection = await mysql.createConnection({
+        host: process.env.ECONT_DB_HOST,
+        port: parseInt(process.env.ECONT_DB_PORT || '3306'),
+        user: process.env.ECONT_DB_USER,
+        password: process.env.ECONT_DB_PASSWORD,
+        database: dbName,
+      });
+
+      const [rows] = await connection.query(
+        'Select estado_soli from solicitudcab sb inner join cs_solicitud_ecommerce_cabecera csec on csec.solicitudcab_secuencia = sb.secuencia where csec.mongo_id = ?',
+        [secuencia],
+      );
+
+      const result = rows as any[];
+      await connection.end();
+      return result.length > 0 ? result[0].estado_soli : '00';
+    } catch (error) {
+      if (connection) {
+        await connection.end().catch(() => {});
+      }
+      console.error('Error consultando base de datos Econt:', error);
+      return '00';
     }
   }
 }
