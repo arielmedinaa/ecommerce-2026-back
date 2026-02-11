@@ -46,7 +46,6 @@ services:
       - NODE_ENV=${NODE_ENV:-development}
       - PORT=3101
       - AUTH_PORT=3101
-      - MONGO_URL=${MONGO_URL}
       - IS_DOCKER=true
     ports:
       - "3101:3101"
