@@ -6,6 +6,7 @@ import { ProductsController } from '@gateway/modules/products/controllers/produc
 import { CartController } from '@gateway/modules/cart/controllers/cart.controller';
 import { PaymentsModule } from '@gateway/modules/payments/payments.module';
 import { PaymentsController } from '@gateway/modules/payments/controllers/payments.controller';
+import { AuthController } from './modules/auth/controllers/auth.controller';
 
 @Module({
   imports: [
@@ -23,6 +24,6 @@ import { PaymentsController } from '@gateway/modules/payments/controllers/paymen
     ]),
     PaymentsModule,
   ],
-  controllers: [AppController, ProductsController, CartController, PaymentsController],
+  controllers: [AppController, ProductsController, CartController, PaymentsController, AuthController],
 })
 export class AppModule {}
