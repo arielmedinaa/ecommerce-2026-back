@@ -35,6 +35,7 @@ export class ProductsService {
       precioMin: filters.precioMin,
       precioMax: filters.precioMax,
       search: filters.search,
+      nombre: filters.nombre,
     });
   }
 
@@ -54,22 +55,27 @@ export class ProductsService {
       return { data: cached.data, total: cached.total };
     }
 
-    const query: any = { estado: { $ne: 0 } };
+    const query: any = { 
+      estado: { $ne: 0 },
+      imagenes: { $exists: true, $ne: [] },
+      dias_ultimo_movimiento: { $lte: 30 }
+    };
     if (filters.categoria) query['categorias._id'] = filters.categoria;
     if (filters.subcategoria) query['subcategorias._id'] = filters.subcategoria;
 
     if (filters.precioMin || filters.precioMax) {
-      query.venta = {};
       if (filters.precioMin) query.venta.$gte = Number(filters.precioMin);
       if (filters.precioMax) query.venta.$lte = Number(filters.precioMax);
     }
 
     if (filters.search) {
       query.$or = [
-        { nombre: { $regex: filters.search, $options: 'i' } },
-        { descripcion: { $regex: filters.search, $options: 'i' } },
         { codigo: filters.search },
       ];
+    }
+
+    if (filters.nombre) {
+      query.nombre = { $regex: filters.nombre, $options: 'i' };
     }
 
     const [data, total] = await Promise.all([
@@ -102,7 +108,8 @@ export class ProductsService {
       .findOne({
         _id: id,
         estado: { $ne: 0 },
-        dias_ultimo_movimiento: { $gt: 30 },
+        imagenes: { $exists: true, $ne: [] },
+        dias_ultimo_movimiento: { $lte: 30 }
       })
       .lean();
 
@@ -113,7 +120,12 @@ export class ProductsService {
   }
 
   async findByCode(codigo: string): Promise<Product | null> {
-    return this.productModel.findOne({ codigo, estado: { $ne: 0 } }).lean();
+    return this.productModel.findOne({ 
+      codigo, 
+      estado: { $ne: 0 },
+      imagenes: { $exists: true, $ne: [] },
+      dias_ultimo_movimiento: { $lte: 30 }
+    }).lean();
   }
 
   async create(createProductDto: CreateProductDto): Promise<Product> {
@@ -153,6 +165,8 @@ export class ProductsService {
       nombre: { $regex: filters.search, $options: 'i' },
       estado: 1,
       web: 1,
+      imagenes: { $exists: true, $ne: [] },
+      dias_ultimo_movimiento: { $lte: 30 }
     };
 
     const total = await this.productModel.countDocuments(query);
@@ -170,7 +184,13 @@ export class ProductsService {
     limit: number = 10,
     offset: number = 0,
   ) {
-    const query = { 'categorias._id': categoryId, estado: 1, web: 1 };
+    const query = { 
+      'categorias._id': categoryId, 
+      estado: 1, 
+      web: 1,
+      imagenes: { $exists: true, $ne: [] },
+      dias_ultimo_movimiento: { $lte: 30 }
+    };
     const [data, total] = await Promise.all([
       this.productModel
         .find(query)
@@ -212,7 +232,12 @@ export class ProductsService {
     if (codigosFaltantes.length > 0) {
       productosDB = await this.productModel
         .find(
-          { codigo: { $in: codigosFaltantes }, estado: { $ne: 0 } },
+          { 
+            codigo: { $in: codigosFaltantes }, 
+            estado: { $ne: 0 },
+            imagenes: { $exists: true, $ne: [] },
+            dias_ultimo_movimiento: { $lte: 30 }
+          },
           projection,
         )
         .sort({ prioridad: -1, _id: 1 })
