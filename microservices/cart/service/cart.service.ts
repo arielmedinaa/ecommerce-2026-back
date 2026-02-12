@@ -459,7 +459,6 @@ export class CartContadoService {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(postData),
         },
-        // Ignorar completamente la verificación del certificado SSL
         rejectUnauthorized: false,
         checkServerIdentity: () => undefined,
       };
@@ -519,7 +518,6 @@ export class CartContadoService {
 
     try {
       let datos = await this.carrito.findOne(filtro);
-      console.log('datos', datos);
       if (!datos) {
         return {
           data: [],
@@ -528,9 +526,7 @@ export class CartContadoService {
         };
       }
 
-      // Agrupar artículos de crédito por cantidad de cuotas
       const solicitudesPorCuota: Map<number, any[]> = new Map();
-
       if (
         datos.articulos &&
         datos.articulos.credito &&
@@ -545,14 +541,12 @@ export class CartContadoService {
         });
       }
 
-      // Crear solicitudes separadas para cada grupo de cuotas y una para contado
       const resultados: {
         cuotas: number;
         success: boolean;
         articulosCount: number;
       }[] = [];
 
-      // 1. Primero crear solicitud para artículos contado (si existen)
       if (
         datos.articulos &&
         datos.articulos.contado &&
@@ -565,13 +559,12 @@ export class CartContadoService {
           cuenta || '',
         );
 
-        // Actualizar datos del cliente y envío
         solicitudContado.cliente = {
-          ...solicitudContado.cliente!, // Mantener datos de la constante (documento, razonsocial, etc.)
+          ...solicitudContado.cliente!,
           equipo:
             datos.cliente?.equipo ||
             solicitudContado.cliente?.equipo ||
-            clienteToken, // Usar equipo del carrito, constante o el token
+            clienteToken,
         };
         solicitudContado.pago = datos.pago;
         solicitudContado.estado = datos.estado;
@@ -579,34 +572,28 @@ export class CartContadoService {
           solicitud['envio'] || datos.envio || solicitudContado.envio;
         solicitudContado.codigo = codigo!;
 
-        // Establecer solo artículos contado con lógica de combo/promo
         solicitudContado.articulos = {
           contado: datos.articulos.contado.map((item: any) => {
             const processedItem: any = { ...item };
-
-            // Aplicar lógica de combo/promo para artículos contado
-            // Si tiene combo pero no promo
             if (item.isCombo && !item.isPromo) {
               processedItem.is_combo = 1;
               processedItem.is_promo = 0;
               processedItem.id_promo = null;
               processedItem.nombrePromo = null;
             }
-            // Si tiene promo pero no combo
+
             else if (!item.isCombo && item.isPromo) {
               processedItem.is_combo = 0;
               processedItem.is_promo = 1;
               processedItem.id_promo = item.promoCodigo || null;
               processedItem.nombrePromo = item.promoNombre || null;
             }
-            // Si tiene ambos
             else if (item.isCombo && item.isPromo) {
               processedItem.is_combo = 1;
               processedItem.is_promo = 1;
               processedItem.id_promo = item.promoCodigo || null;
               processedItem.nombrePromo = item.promoNombre || null;
             }
-            // Si no tiene ninguno
             else {
               processedItem.is_combo = 0;
               processedItem.is_promo = 0;
@@ -616,35 +603,33 @@ export class CartContadoService {
 
             return processedItem;
           }),
-          credito: [], // Sin artículos crédito en esta solicitud
+          credito: [],
         };
 
-        // const resultadoContado = await this.insertarCarritos(solicitudContado);
-        // resultados.push({
-        //   cuotas: 0, // 0 representa contado
-        //   success: resultadoContado === 1,
-        //   articulosCount: datos.articulos.contado.length,
-        // });
+        const resultadoContado = await this.insertarCarritos(solicitudContado);
+        resultados.push({
+          cuotas: 0, // 0 representa contado
+          success: resultadoContado === 1,
+          articulosCount: datos.articulos.contado.length,
+        });
       }
 
-      // 2. Luego crear solicitudes para artículos de crédito por cuotas
-      for (const [cuotas, articulos] of solicitudesPorCuota.entries()) {
-        if (cuotas === 0) continue; // Ignorar artículos sin cuotas
 
-        // Crear una nueva solicitud basada en la plantilla
+      for (const [cuotas, articulos] of solicitudesPorCuota.entries()) {
+        if (cuotas === 0) continue;
+
         const nuevaSolicitud = NEW_SOLICITUD_INITIAL_STATE(
           codigo!,
           clienteToken,
           cuenta || '',
         );
 
-        // Actualizar datos del cliente y envío
         nuevaSolicitud.cliente = {
-          ...nuevaSolicitud.cliente!, // Mantener datos de la constante (documento, razonsocial, etc.)
+          ...nuevaSolicitud.cliente!,
           equipo:
             datos.cliente?.equipo ||
             nuevaSolicitud.cliente?.equipo ||
-            clienteToken, // Usar equipo del carrito, constante o el token
+            clienteToken,
         };
         nuevaSolicitud.estado = datos.estado;
         nuevaSolicitud.pago = datos.pago;
@@ -652,9 +637,8 @@ export class CartContadoService {
           solicitud['envio'] || datos.envio || nuevaSolicitud.envio;
         nuevaSolicitud.codigo = codigo!;
 
-        // Establecer artículos de crédito para esta solicitud con lógica de combo/promo
         nuevaSolicitud.articulos = {
-          contado: [], // Sin artículos contado en esta solicitud
+          contado: [],
           credito: articulos.map((articulo: any) => {
             const processedItem: any = {
               codigo: articulo.codigo,
@@ -666,29 +650,24 @@ export class CartContadoService {
               cuota: cuotas,
             };
 
-            // Aplicar lógica de combo/promo para artículos de crédito
-            // Si tiene combo pero no promo
             if (articulo.isCombo && !articulo.isPromo) {
               processedItem.is_combo = 1;
               processedItem.is_promo = 0;
               processedItem.id_promo = null;
               processedItem.nombrePromo = null;
             }
-            // Si tiene promo pero no combo
             else if (!articulo.isCombo && articulo.isPromo) {
               processedItem.is_combo = 0;
               processedItem.is_promo = 1;
               processedItem.id_promo = articulo.promoCodigo || null;
               processedItem.nombrePromo = articulo.promoNombre || null;
             }
-            // Si tiene ambos
             else if (articulo.isCombo && articulo.isPromo) {
               processedItem.is_combo = 1;
               processedItem.is_promo = 1;
               processedItem.id_promo = articulo.promoCodigo || null;
               processedItem.nombrePromo = articulo.promoNombre || null;
             }
-            // Si no tiene ninguno
             else {
               processedItem.is_combo = 0;
               processedItem.is_promo = 0;
@@ -700,12 +679,12 @@ export class CartContadoService {
           }),
         };
 
-        // const resultado = await this.insertarCarritos(nuevaSolicitud);
-        // resultados.push({
-        //   cuotas,
-        //   success: resultado === 1,
-        //   articulosCount: articulos.length,
-        // });
+        const resultado = await this.insertarCarritos(nuevaSolicitud);
+        resultados.push({
+          cuotas,
+          success: resultado === 1,
+          articulosCount: articulos.length,
+        });
       }
 
       const successCount = resultados.filter((r) => r.success).length;
