@@ -8,7 +8,10 @@ import { Product } from '@products/schemas/product.schema';
 
 @Injectable()
 export class HomeService {
-  constructor(private readonly imageService: ImageService, private readonly productModel: Model<Product>) {}
+  constructor(
+    private readonly imageService: ImageService,
+    private readonly productModel: Model<Product>,
+  ) {}
 
   private get mockBanners() {
     return [
@@ -16,7 +19,8 @@ export class HomeService {
         id: '1',
         title: 'Navidad',
         description: 'Up to 50% off on selected items',
-        imageUrl: 'https://csdigitalizacion.nyc3.cdn.digitaloceanspaces.com/ecommerce/publicidad/banner/417894449.png',
+        imageUrl:
+          'https://csdigitalizacion.nyc3.cdn.digitaloceanspaces.com/ecommerce/publicidad/banner/417894449.png',
         url: '/navidad',
         order: 1,
       },
@@ -37,20 +41,23 @@ export class HomeService {
 
   private async getCachedCategorias(): Promise<string[]> {
     const now = Date.now();
-    if (this.categoriasCache.length === 0 || now - this.lastCacheUpdate > this.CACHE_TTL) {
+    if (
+      this.categoriasCache.length === 0 ||
+      now - this.lastCacheUpdate > this.CACHE_TTL
+    ) {
       const pipeline: any[] = [
-        { $unwind: "$categorias" },
-        { $group: { _id: "$categorias" } },
+        { $unwind: '$categorias' },
+        { $group: { _id: '$categorias' } },
         { $sort: { _id: 1 } },
         { $limit: 20 },
-        { $project: { _id: 0, categoria: "$_id" } }
+        { $project: { _id: 0, categoria: '$_id' } },
       ];
-      
+
       const result = await this.productModel.aggregate(pipeline).exec();
-      this.categoriasCache = result.map(item => item.categoria);
+      this.categoriasCache = result.map((item) => item.categoria);
       this.lastCacheUpdate = now;
     }
-    
+
     return this.categoriasCache;
   }
 
@@ -63,22 +70,24 @@ export class HomeService {
       query.categorias = filter.category;
     }
 
-    const productosPromise = this.productModel.find()
+    const productosPromise = this.productModel
+      .find()
       .limit(limit)
       .skip(offset)
       .sort({ tiempo: -1 })
       .lean();
 
-    const countPromise = offset === 0 && !filter.category 
-      ? Promise.resolve(1000) 
-      : this.productModel.countDocuments(query);
+    const countPromise =
+      offset === 0 && !filter.category
+        ? Promise.resolve(1000)
+        : this.productModel.countDocuments(query);
 
     const [productos, total, categorias] = await Promise.all([
       productosPromise,
       countPromise,
-      this.getCachedCategorias()
+      this.getCachedCategorias(),
     ]);
-      
+
     const response = new ResponseData<HomeData>();
     response.data = {
       banners: this.mockBanners,
