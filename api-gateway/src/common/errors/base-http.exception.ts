@@ -25,7 +25,6 @@ export class BaseHttpException extends HttpException {
       path: BaseHttpException.getCurrentPath()
     };
 
-    // Logging detallado del error
     BaseHttpException.logErrorDetails(responseBody, cause);
 
     super(responseBody, statusCode, { cause: cause });
@@ -59,27 +58,26 @@ export class BaseHttpException extends HttpException {
       })
     };
 
-    // Formatear para consola con colores y estructura clara
     console.error('\n' + '='.repeat(80));
-    console.error('🚨 SNEAKY THROWS ERROR DETECTED');
+    console.error('SNEAKY THROWS ERROR DETECTED');
     console.error('='.repeat(80));
-    console.error(`📅 Timestamp: ${logData.timestamp}`);
-    console.error(`🏢 Service: ${logData.service}`);
-    console.error(`⚙️  Operation: ${logData.operation}`);
-    console.error(`📍 Context: ${logData.context}`);
-    console.error(`🔢 Status Code: ${logData.statusCode} ${logData.error}`);
-    console.error(`💬 Message: ${logData.message}`);
+    console.error(`Timestamp: ${logData.timestamp}`);
+    console.error(`Service: ${logData.service}`);
+    console.error(`Operation: ${logData.operation}`);
+    console.error(`Context: ${logData.context}`);
+    console.error(`Status Code: ${logData.statusCode} ${logData.error}`);
+    console.error(`Message: ${logData.message}`);
     
     if (logData.field) {
-      console.error(`🏷️  Field: ${logData.field}`);
+      console.error(`Field: ${logData.field}`);
     }
     
     if (logData.line) {
-      console.error(`📍 Line: ${logData.line}`);
+      console.error(`Line: ${logData.line}`);
     }
     
     if (logData.path) {
-      console.error(`🛤️  Path: ${logData.path}`);
+      console.error(`Path: ${logData.path}`);
     }
 
     if (logData.originalError) {
@@ -90,14 +88,13 @@ export class BaseHttpException extends HttpException {
     }
 
     console.error('='.repeat(80));
-    console.error('🚨 END SNEAKY THROWS ERROR\n');
+    console.error('END SNEAKY THROWS ERROR\n');
   }
 
   private static getCurrentPath(): string {
     try {
       const stack = new Error().stack;
       const lines = stack?.split('\n');
-      // Buscar la línea que no sea de este archivo
       const callerLine = lines?.find(line => 
         !line.includes('base-http.exception.ts') && 
         !line.includes('Error.captureStackTrace')
@@ -108,7 +105,6 @@ export class BaseHttpException extends HttpException {
     }
   }
 
-  // Métodos estáticos para lanzar errores específicos (SneakyThrows style)
   static notFound(resource: string, identifier?: any, service?: string, line?: number): never {
     const message = identifier 
       ? `${resource} con identificador ${identifier} no encontrado`
@@ -216,29 +212,26 @@ export class BaseHttpException extends HttpException {
     throw new BaseHttpException(message, HttpStatus.BAD_REQUEST, undefined, 'InsufficientStock', service, undefined, undefined, line);
   }
 
-  // Método helper para manejar errores genéricos
   static handle(error: any, service?: string, operation?: string, line?: number): never {
     if (error instanceof BaseHttpException) {
       throw error;
     }
 
-    // Logging del error original antes de manejarlo
     console.error('\n' + '='.repeat(80));
-    console.error('🔧 SNEAKY THROWS - HANDLING ERROR');
+    console.error('SNEAKY THROWS - HANDLING ERROR');
     console.error('='.repeat(80));
-    console.error(`📅 Timestamp: ${new Date().toISOString()}`);
-    console.error(`🏢 Service: ${service || 'Unknown'}`);
-    console.error(`⚙️  Operation: ${operation || 'Unknown'}`);
-    console.error(`📍 Line: ${line || 'Unknown'}`);
-    console.error(`🔍 Original Error: ${error.name || 'Unknown'}`);
-    console.error(`💬 Message: ${error.message || 'No message'}`);
-    console.error(`📊 Code: ${error.code || 'No code'}`);
-    console.error(`🛤️  Stack: ${error.stack || 'No stack'}`);
-    console.error(`📋 Full Error Object:`, JSON.stringify(error, null, 2));
+    console.error(`Timestamp: ${new Date().toISOString()}`);
+    console.error(`Service: ${service || 'Unknown'}`);
+    console.error(`Operation: ${operation || 'Unknown'}`);
+    console.error(`Line: ${line || 'Unknown'}`);
+    console.error(`Original Error: ${error.name || 'Unknown'}`);
+    console.error(`Message: ${error.message || 'No message'}`);
+    console.error(`Code: ${error.code || 'No code'}`);
+    console.error(`Stack: ${error.stack || 'No stack'}`);
+    console.error(`Full Error Object:`, JSON.stringify(error, null, 2));
     console.error('='.repeat(80));
-    console.error('🔧 END ERROR HANDLING\n');
+    console.error('END ERROR HANDLING\n');
 
-    // Detectar errores de microservicios con mensaje genérico "Internal server error"
     if (error.message === 'Internal server error' || error.message?.includes('Internal server error')) {
       throw BaseHttpException.microserviceError(
         service || 'Unknown', 
@@ -248,7 +241,6 @@ export class BaseHttpException extends HttpException {
       );
     }
 
-    // Manejar errores comunes de Node.js/NestJS
     if (error.code === 'ECONNREFUSED') {
       throw BaseHttpException.serviceUnavailable(service || 'Unknown', operation, error, line);
     }
@@ -265,13 +257,27 @@ export class BaseHttpException extends HttpException {
       throw BaseHttpException.validation(error.message, undefined, service, line);
     }
 
-    if (error.code === 11000) {
-      const field = Object.keys(error.keyPattern)[0];
-      const value = error.keyValue[field];
+    if (error.code === 11000 || error.code === 'E11000' || error.message?.includes('duplicate key')) {
+      let field = 'unknown';
+      let value = 'unknown';
+      
+      if (error.keyPattern) {
+        field = Object.keys(error.keyPattern)[0];
+        value = error.keyValue[field];
+      } else if (error.key) {
+        field = error.key;
+        value = error.errmsg?.match(/"([^"]+)"/)?.[1] || 'unknown';
+      } else if (error.message?.includes('dup key')) {
+        const match = error.message.match(/dup key:\s*\{\s*([^:]+):\s*"([^"]+)"/);
+        if (match) {
+          field = match[1];
+          value = match[2];
+        }
+      }
+      
       throw BaseHttpException.duplicateKey(field, value, service, line);
     }
 
-    // Error genérico
     throw BaseHttpException.internalServerError(
       error.message || 'Error desconocido',
       service,

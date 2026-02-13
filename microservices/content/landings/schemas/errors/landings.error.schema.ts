@@ -5,8 +5,8 @@ export type LandingErrorDocument = LandingError & Document;
 
 @Schema({ timestamps: true, collection: 'logs_landings' })
 export class LandingError {
-    @Prop({ type: Types.ObjectId, ref: 'Landing', required: true, index: true })
-    landingId: Types.ObjectId;
+    @Prop({ type: Types.ObjectId, ref: 'Landing', index: true })
+    landingId?: Types.ObjectId;
 
     @Prop({ required: true })
     errorCode: string;
@@ -35,7 +35,6 @@ export class LandingError {
 
 export const LandingErrorSchema = SchemaFactory.createForClass(LandingError);
 
-// Índices para mejor rendimiento en consultas de errores
 LandingErrorSchema.index({ landingId: 1 });
 LandingErrorSchema.index({ errorCode: 1 });
 LandingErrorSchema.index({ createdAt: -1 });

@@ -19,7 +19,7 @@ export class LandingErrorService {
   ): Promise<void> {
     try {
       const errorLog = new this.landingErrorModel({
-        landingId: landingId ? new Types.ObjectId(landingId) : null,
+        landingId: landingId ? new Types.ObjectId(landingId) : undefined,
         errorCode: error.name || 'UNKNOWN_ERROR',
         message: error.message || 'Error desconocido',
         context: context || {},
@@ -27,7 +27,7 @@ export class LandingErrorService {
         path: operation || 'unknown',
         operation: operation || 'unknown',
         requestPayload: context || {},
-        userId: context?.userId || null,
+        userId: context?.userId ? new Types.ObjectId(context.userId) : undefined,
       });
 
       await errorLog.save();
