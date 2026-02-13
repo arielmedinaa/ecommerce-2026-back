@@ -8,6 +8,7 @@ import { PaymentsModule } from '@gateway/modules/payments/payments.module';
 import { PaymentsController } from '@gateway/modules/payments/controllers/payments.controller';
 import { AuthController } from './modules/auth/controllers/auth.controller';
 import { AuthModule } from './modules/auth/auth.module';
+import { ContentModule } from './modules/content/content.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { AuthModule } from './modules/auth/auth.module';
     ]),
     PaymentsModule,
     AuthModule,
+    ContentModule,
   ],
   controllers: [AppController, ProductsController, CartController, PaymentsController, AuthController],
 })

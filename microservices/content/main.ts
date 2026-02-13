@@ -1,11 +1,11 @@
-import { HomeModule } from '@home/home.module';
+import { ContentModule } from './content.module';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { SERVICE_PORTS } from '@shared/config/microservice/microservice.config';
 import { Transport } from '@nestjs/microservices';
 
 async function bootstrap() {
-  const app = await NestFactory.create(HomeModule);
+  const app = await NestFactory.create(ContentModule);
   const configService = app.get(ConfigService);
   const port = configService.get<number>('CONTENT_PORT', SERVICE_PORTS.CONTENT);
 

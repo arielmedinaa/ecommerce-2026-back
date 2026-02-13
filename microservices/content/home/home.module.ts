@@ -7,7 +7,11 @@ import { MicroserviceModule } from '@shared/config/microservice/microservice.mod
 @Module({
   imports: [
     MicroserviceModule.register('CONTENT'),
-    ImageModule],
+    MicroserviceModule.forRoot([
+      'PRODUCTS_SERVICE',
+    ]),
+    ImageModule,
+  ],
   controllers: [HomeController],
   providers: [HomeService],
   exports: [HomeService],

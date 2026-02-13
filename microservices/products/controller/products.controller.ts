@@ -6,22 +6,20 @@ import { ProductsService } from '@products/service/products.service';
 export class ProductsController {
   private readonly logger = new Logger(ProductsController.name);
   constructor(private readonly productsService: ProductsService) {}
-  
 
-    @MessagePattern({ cmd: 'get_products' })
-    async findAll(@Body() filters: { offset: number; limit: number }) {
-        try {
-            const products = await this.productsService.findAll(filters);
-            return products;
-        } catch (error) {
-            this.logger.error('Error in get_products:', error);
-            throw error;
-        }
+  @MessagePattern({ cmd: 'get_products' })
+  async findAll(@Body() filters: { offset: number; limit: number }) {
+    try {
+      const products = await this.productsService.findAll(filters);
+      return products;
+    } catch (error) {
+      this.logger.error('Error in get_products:', error);
+      throw error;
     }
-
+  }
 
   @MessagePattern({ cmd: 'get_products_by_promos' })
-  async findByPromos(filters: any = {}){
+  async findByPromos(filters: any = {}) {
     try {
       return await this.productsService.findByPromos(filters);
     } catch (error) {
@@ -31,7 +29,7 @@ export class ProductsController {
   }
 
   @MessagePattern({ cmd: 'search_products' })
-  async searchProducts(filters: any = {}){
+  async searchProducts(filters: any = {}) {
     try {
       return await this.productsService.searchProducts(filters);
     } catch (error) {
@@ -40,8 +38,18 @@ export class ProductsController {
     }
   }
 
-  @MessagePattern({cmd: 'search_combo_by_codigo'})
+  @MessagePattern({ cmd: 'search_combo_by_codigo' })
   async searchComboByCodigo(codigo: string) {
     return await this.productsService.findComboByCodigo(codigo);
+  }
+
+  @MessagePattern({ cmd: 'get_categories' })
+  async getCategories() {
+    try {
+      return await this.productsService.getCategories();
+    } catch (error) {
+      this.logger.error('Error in get_categories:', error);
+      throw error;
+    }
   }
 }

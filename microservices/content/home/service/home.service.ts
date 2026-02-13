@@ -1,16 +1,16 @@
-import { Injectable } from '@nestjs/common';
-import { Model } from 'mongoose';
+import { Injectable, Inject } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
 import { FilterHomeDto } from '@content/home/dto/filter.home';
 import { HomeData } from '@content/home/interfaces/home.interface';
 import { ResponseData } from '@gateway/common/response/response.data';
 import { ImageService } from '@image/image.service';
-import { Product } from '@products/schemas/product.schema';
 
 @Injectable()
 export class HomeService {
   constructor(
     private readonly imageService: ImageService,
-    private readonly productModel: Model<Product>,
+    @Inject('PRODUCTS_SERVICE') private readonly productsClient: ClientProxy,
   ) {}
 
   private get mockBanners() {
@@ -45,17 +45,16 @@ export class HomeService {
       this.categoriasCache.length === 0 ||
       now - this.lastCacheUpdate > this.CACHE_TTL
     ) {
-      const pipeline: any[] = [
-        { $unwind: '$categorias' },
-        { $group: { _id: '$categorias' } },
-        { $sort: { _id: 1 } },
-        { $limit: 20 },
-        { $project: { _id: 0, categoria: '$_id' } },
-      ];
-
-      const result = await this.productModel.aggregate(pipeline).exec();
-      this.categoriasCache = result.map((item) => item.categoria);
-      this.lastCacheUpdate = now;
+      try {
+        const result = await firstValueFrom(
+          this.productsClient.send({ cmd: 'get_categories' }, {}),
+        );
+        this.categoriasCache = result.categorias || [];
+        this.lastCacheUpdate = now;
+      } catch (error) {
+        console.error('Error al obtener categorías:', error);
+        this.categoriasCache = [];
+      }
     }
 
     return this.categoriasCache;
@@ -65,38 +64,38 @@ export class HomeService {
     const limit = filter.limit || 6;
     const offset = filter.offset || 0;
 
-    const query: any = {};
-    if (filter.category) {
-      query.categorias = filter.category;
+    try {
+      const [productos, categorias] = await Promise.all([
+        firstValueFrom(
+          this.productsClient.send(
+            { cmd: 'get_products' },
+            { limit, offset, categoria: filter.category },
+          ),
+        ),
+        this.getCachedCategorias(),
+      ]);
+
+      const response = new ResponseData<HomeData>();
+      response.data = {
+        banners: this.mockBanners,
+        productos: productos.data || [],
+        categorias: categorias,
+      };
+      response.status = 200;
+      response.register = productos.total || 0;
+
+      return response;
+    } catch (error) {
+      console.error('Error en getHomeData:', error);
+      const response = new ResponseData<HomeData>();
+      response.data = {
+        banners: this.mockBanners,
+        productos: [],
+        categorias: [],
+      };
+      response.status = 500;
+      response.register = 0;
+      return response;
     }
-
-    const productosPromise = this.productModel
-      .find()
-      .limit(limit)
-      .skip(offset)
-      .sort({ tiempo: -1 })
-      .lean();
-
-    const countPromise =
-      offset === 0 && !filter.category
-        ? Promise.resolve(1000)
-        : this.productModel.countDocuments(query);
-
-    const [productos, total, categorias] = await Promise.all([
-      productosPromise,
-      countPromise,
-      this.getCachedCategorias(),
-    ]);
-
-    const response = new ResponseData<HomeData>();
-    response.data = {
-      banners: this.mockBanners,
-      productos: productos as any,
-      categorias: categorias,
-    };
-    response.status = 200;
-    response.register = total;
-
-    return response;
   }
 }
