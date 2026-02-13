@@ -2,7 +2,7 @@ import { Controller, Post, Body, UsePipes, ValidationPipe, Inject, Req, Query, G
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { Request } from 'express';
-import { SneakyThrows } from '../../../common/decorators';
+import { SneakyThrows } from '@decorators/sneaky-throws-new.decorator';
 
 @Controller('cart')
 export class CartController {

@@ -14,11 +14,11 @@ export class Landing {
   @Prop({ required: true })
   content: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
-  createdBy: Types.ObjectId;
+  @Prop({ type: String, required: true, index: true })
+  createdBy: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User' })
-  updatedBy?: Types.ObjectId;
+  @Prop({ type: String })
+  updatedBy?: string;
 
   @Prop({ default: true })
   isActive: boolean;
