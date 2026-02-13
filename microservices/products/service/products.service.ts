@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { Product } from '@products/schemas/product.schema';
 import { PromosService } from './promos.service';
 import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
@@ -8,6 +8,8 @@ import { Combos } from '@products/schemas/combos.schema';
 
 @Injectable()
 export class ProductsService {
+  private readonly logger = new Logger(ProductsService.name);
+
   constructor(
     @InjectModel(Product.name) private readonly productModel: Model<Product>,
     @InjectModel(Combos.name) private readonly combosModel: Model<Combos>,
@@ -294,5 +296,25 @@ export class ProductsService {
     return this.combosModel
       .findOne(filtro)
       .lean();
+  }
+
+  async getCategories(): Promise<{ categorias: string[] }> {
+    try {
+      const pipeline: any[] = [
+        { $unwind: '$categorias' },
+        { $group: { _id: '$categorias' } },
+        { $sort: { _id: 1 } },
+        { $limit: 20 },
+        { $project: { _id: 0, categoria: '$_id' } },
+      ];
+
+      const result = await this.productModel.aggregate(pipeline).exec();
+      const categorias = result.map((item) => item.categoria);
+      
+      return { categorias };
+    } catch (error) {
+      this.logger.error('Error al obtener categorías:', error);
+      return { categorias: [] };
+    }
   }
 }
