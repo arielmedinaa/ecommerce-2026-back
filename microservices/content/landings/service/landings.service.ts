@@ -23,11 +23,18 @@ export class LandingsService {
     private readonly landingErrorService: LandingErrorService,
   ) {}
 
-  async crearLanding(createLandingDto: any, userId: string): Promise<Landing> {
+  async crearLanding(
+    createLandingDto: any,
+    usuario: string,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    data: Landing[];
+  }> {
     const validation =
       await this.landingValidationService.validateCreateLanding(
         createLandingDto,
-        userId,
+        usuario,
       );
 
     if (!validation.isValid) {
@@ -37,28 +44,40 @@ export class LandingsService {
     try {
       const titleExists = await this.titleExists(createLandingDto.title);
       if (titleExists) {
-        throw new BadRequestException(
-          'Ya existe una landing con un título similar. Por favor, usa un título diferente.',
-        );
+        this.logger.error('Ya existe una landing con un título similar');
+        return {
+          success: false,
+          message: 'Ya existe una landing con un título similar',
+          data: [],
+        };
       }
 
       const landing = new this.landingModel({
         ...createLandingDto,
-        createdBy: new Types.ObjectId(userId),
+        createdBy: usuario,
         slug: this.generateUniqueSlug(createLandingDto.title),
         tituloRelacionado: this.normalizeText(createLandingDto.title),
       });
 
       const savedLanding = await landing.save();
-      return savedLanding;
+      return {
+        success: true,
+        message: 'Landing creada exitosamente',
+        data: [savedLanding],
+      };
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
         error,
         '',
         'crearLanding',
-        { createLandingDto, userId },
+        { createLandingDto, usuario },
       );
-      throw new BadRequestException('Error al crear la landing');
+
+      return {
+        success: false,
+        message: 'Error al crear la landing',
+        data: [],
+      };
     }
   }
 
@@ -716,8 +735,6 @@ export class LandingsService {
     excludeId?: string,
   ): Promise<boolean> {
     const normalizedTitle = this.normalizeText(title);
-    console.log('normalized', normalizedTitle);
-
     const regexPattern = normalizedTitle
       .split(' ')
       .filter((word) => word.length > 0)
@@ -733,10 +750,7 @@ export class LandingsService {
       query._id = { $ne: new Types.ObjectId(excludeId) };
     }
 
-    console.log('query caching', query);
-
     const existing = await this.landingModel.findOne(query).lean().exec();
-    console.log('existing', existing);
     return !!existing;
   }
 }

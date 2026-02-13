@@ -1,1 +1,1 @@
-export * from './sneaky-throws.decorator';
+export * from './sneaky-throws-new.decorator';

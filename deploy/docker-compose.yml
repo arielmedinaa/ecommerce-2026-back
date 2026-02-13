@@ -118,26 +118,6 @@ services:
     networks:
       - app-network
 
-  # Orders Service
-  orders:
-    build: 
-      context: ..
-      dockerfile: deploy/Dockerfile.dev
-    environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - PORT=3104
-      - ORDERS_PORT=3104
-      - MONGO_URL=${MONGO_URL}
-      - IS_DOCKER=true
-    ports:
-      - "3104:3104"
-    volumes:
-      - ../:/usr/src/app
-      - /usr/src/app/node_modules
-    command: yarn start:dev:orders
-    networks:
-      - app-network
-
   # Payments Service
   payments:
     build: 

@@ -96,7 +96,7 @@ export class BaseHttpException extends HttpException {
       const stack = new Error().stack;
       const lines = stack?.split('\n');
       const callerLine = lines?.find(line => 
-        !line.includes('base-http.exception.ts') && 
+        !line.includes('base-http-exception.ts') && 
         !line.includes('Error.captureStackTrace')
       );
       return callerLine?.trim() || 'unknown';
@@ -217,6 +217,18 @@ export class BaseHttpException extends HttpException {
       throw error;
     }
 
+    // Extraer mensaje de múltiples fuentes
+    const errorMessage = error.message || '';
+    const microserviceError = error.response?.data || error;
+    const microserviceMessage = microserviceError?.message || '';
+    const microserviceErrorType = microserviceError?.error || '';
+    const causeMessage = error.cause?.message || '';
+    const responseMessage = error.response?.data?.message || '';
+    const innerMessage = error.innerError?.message || '';
+    const detailMessage = error.details?.message || '';
+    
+    const fullErrorText = `${errorMessage} ${causeMessage} ${responseMessage} ${innerMessage} ${detailMessage} ${microserviceMessage}`.trim();
+
     console.error('\n' + '='.repeat(80));
     console.error('SNEAKY THROWS - HANDLING ERROR');
     console.error('='.repeat(80));
@@ -225,66 +237,70 @@ export class BaseHttpException extends HttpException {
     console.error(`Operation: ${operation || 'Unknown'}`);
     console.error(`Line: ${line || 'Unknown'}`);
     console.error(`Original Error: ${error.name || 'Unknown'}`);
-    console.error(`Message: ${error.message || 'No message'}`);
+    console.error(`Message: ${errorMessage}`);
+    console.error(`Microservice Error Type: ${microserviceErrorType}`);
+    console.error(`Microservice Message: ${microserviceMessage}`);
     console.error(`Code: ${error.code || 'No code'}`);
-    console.error(`Stack: ${error.stack || 'No stack'}`);
-    console.error(`Full Error Object:`, JSON.stringify(error, null, 2));
+    console.error(`Full Error Text: ${fullErrorText}`);
     console.error('='.repeat(80));
     console.error('END ERROR HANDLING\n');
 
-    if (error.name === 'BadRequestException' || 
+    // Detectar errores específicos de microservicios
+    if (microserviceErrorType === 'BadRequestException' ||
+        microserviceError?.statusCode === 400 ||
+        fullErrorText.includes('Ya existe una landing') ||
+        fullErrorText.includes('Por favor, usa un título diferente') ||
+        fullErrorText.includes('Registro duplicado') ||
+        fullErrorText.includes('BadRequestException') ||
+        error.name === 'BadRequestException' || 
         error.constructor?.name === 'BadRequestException' ||
-        error.status === 400 ||
-        error.message?.includes('Ya existe una landing') ||
-        error.message?.includes('Por favor, usa un título diferente') ||
-        error.message?.includes('Registro duplicado')) {
-      throw BaseHttpException.badRequest(error.message, undefined, service, line);
+        error.status === 400) {
+      
+      // Extraer el mensaje real del error original
+      let realMessage = microserviceMessage || errorMessage;
+      
+      // Si el error tiene una respuesta con mensaje, usar ese
+      if (responseMessage) {
+        realMessage = responseMessage;
+      } else if (causeMessage) {
+        realMessage = causeMessage;
+      } else if (innerMessage) {
+        realMessage = innerMessage;
+      } else if (detailMessage) {
+        realMessage = detailMessage;
+      }
+      
+      // Si el mensaje contiene "Internal server error", buscar el mensaje real en el error original
+      if (realMessage === 'Internal server error' && errorMessage) {
+        const originalErrorMatch = errorMessage.match(/BadRequestException: (.+)$/);
+        if (originalErrorMatch) {
+          realMessage = originalErrorMatch[1];
+        }
+      }
+      
+      throw BaseHttpException.badRequest(realMessage, undefined, service, line);
     }
 
     if (error.name === 'UnauthorizedException' || 
         error.constructor?.name === 'UnauthorizedException' ||
         error.status === 401) {
-      throw BaseHttpException.unauthorized(error.message, service, line);
+      throw BaseHttpException.unauthorized(errorMessage, service, line);
     }
 
     if (error.name === 'ForbiddenException' || 
         error.constructor?.name === 'ForbiddenException' ||
         error.status === 403) {
-      throw BaseHttpException.forbidden(error.message, service, line);
+      throw BaseHttpException.forbidden(errorMessage, service, line);
     }
 
     if (error.name === 'NotFoundException' || 
         error.constructor?.name === 'NotFoundException' ||
         error.status === 404) {
-      throw BaseHttpException.notFound('Resource', error.message, service, line);
+      throw BaseHttpException.notFound('Resource', errorMessage, service, line);
     }
 
-    if (error.message === 'Internal server error' || error.message?.includes('Internal server error')) {
-      throw BaseHttpException.microserviceError(
-        service || 'Unknown', 
-        operation || 'Unknown', 
-        error, 
-        line
-      );
-    }
-
-    if (error.code === 'ECONNREFUSED') {
-      throw BaseHttpException.serviceUnavailable(service || 'Unknown', operation, error, line);
-    }
-
-    if (error.code === 'ETIMEDOUT' || error.message?.includes('timeout')) {
-      throw BaseHttpException.timeout(operation || 'Unknown', undefined, service, error, line);
-    }
-
-    if (error.name === 'CastError') {
-      throw BaseHttpException.invalidFormat(error.path, 'valid type', error.value, service, line);
-    }
-
-    if (error.name === 'ValidationError') {
-      throw BaseHttpException.validation(error.message, undefined, service, line);
-    }
-
-    if (error.code === 11000 || error.code === 'E11000' || error.message?.includes('duplicate key')) {
+    // Errores de MongoDB
+    if (error.code === 11000 || error.code === 'E11000' || fullErrorText.includes('duplicate key')) {
       let field = 'unknown';
       let value = 'unknown';
       
@@ -294,8 +310,8 @@ export class BaseHttpException extends HttpException {
       } else if (error.key) {
         field = error.key;
         value = error.errmsg?.match(/"([^"]+)"/)?.[1] || 'unknown';
-      } else if (error.message?.includes('dup key')) {
-        const match = error.message.match(/dup key:\s*\{\s*([^:]+):\s*"([^"]+)"/);
+      } else if (fullErrorText.includes('dup key')) {
+        const match = fullErrorText.match(/dup key:\s*\{\s*([^:]+):\s*"([^"]+)"/);
         if (match) {
           field = match[1];
           value = match[2];
@@ -305,8 +321,33 @@ export class BaseHttpException extends HttpException {
       throw BaseHttpException.duplicateKey(field, value, service, line);
     }
 
+    // Errores de conexión
+    if (error.code === 'ECONNREFUSED') {
+      throw BaseHttpException.serviceUnavailable(service || 'Unknown', operation, error, line);
+    }
+
+    if (error.code === 'ETIMEDOUT' || fullErrorText.includes('timeout')) {
+      throw BaseHttpException.timeout(operation || 'Unknown', undefined, service, error, line);
+    }
+
+    // Errores de validación de Mongoose
+    if (error.name === 'ValidationError' || error.name === 'CastError') {
+      throw BaseHttpException.validation(errorMessage, undefined, service, line);
+    }
+
+    // Error genérico de microservicio
+    if (errorMessage === 'Internal server error' || errorMessage?.includes('Internal server error')) {
+      throw BaseHttpException.microserviceError(
+        service || 'Unknown', 
+        operation || 'Unknown', 
+        error, 
+        line
+      );
+    }
+
+    // Error por defecto
     throw BaseHttpException.internalServerError(
-      error.message || 'Error desconocido',
+      errorMessage || 'Error desconocido',
       service,
       operation,
       error,

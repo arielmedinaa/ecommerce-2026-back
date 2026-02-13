@@ -8,9 +8,11 @@ export class LandingsController {
   constructor(private readonly landingsService: LandingsService) {}
 
   @MessagePattern({ cmd: 'crearLanding' })
-  async crearLanding(@Payload() payload: any): Promise<Landing> {
-    const { createLandingDto, userId } = payload;
-    return this.landingsService.crearLanding(createLandingDto, userId);
+  async crearLanding(
+    @Payload() payload: any,
+  ): Promise<{ success: boolean; message: string; data: Landing[] }> {
+    const { createLandingDto, usuario } = payload;
+    return this.landingsService.crearLanding(createLandingDto, usuario);
   }
 
   @MessagePattern({ cmd: 'getAllLandings' })
@@ -28,9 +30,7 @@ export class LandingsController {
   }
 
   @MessagePattern({ cmd: 'updateLanding' })
-  async updateLanding(
-    @Payload() payload: any,
-  ): Promise<Landing> {
+  async updateLanding(@Payload() payload: any): Promise<Landing> {
     const { id, updateLandingDto, userId } = payload;
     return this.landingsService.updateLanding(id, updateLandingDto, userId);
   }

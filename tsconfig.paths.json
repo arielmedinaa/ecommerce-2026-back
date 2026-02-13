@@ -19,7 +19,8 @@
       "@microservices/*": ["microservices/*"],
       "@config/*": ["shared/config/*"],
       "@microservice-config/*": ["shared/config/microservice/*"],
-      "@home/*": ["microservices/content/home/*"]
+      "@home/*": ["microservices/content/home/*"],
+      "@decorators/*": ["api-gateway/src/common/decorators/*"],
     }
   }
 }

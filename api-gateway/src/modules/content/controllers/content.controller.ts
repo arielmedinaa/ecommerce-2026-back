@@ -1,4 +1,4 @@
-import { SneakyThrows } from '@gateway/common/decorators';
+import { SneakyThrows } from '@decorators/sneaky-throws-new.decorator';
 import {
   Controller,
   Get,
@@ -40,8 +40,8 @@ export class ContentController {
   }
 
   @Post('landing')
-  @SneakyThrows('ContentController', 'createLanding')
-  async createLanding(@Body() body: { createLandingDto: any; userId: string }) {
+  @SneakyThrows('ContentService', 'createLanding')
+  async createLanding(@Body() body: { createLandingDto: any; usuario: string }) {
     const landing = await firstValueFrom(
       this.contentClient.send({ cmd: 'crearLanding' }, body),
     );
@@ -49,7 +49,7 @@ export class ContentController {
   }
 
   @Get('landings')
-  @SneakyThrows('ContentController', 'getAllLandings')
+  @SneakyThrows('ContentService', 'getAllLandings')
   async getAllLandings(
     @Query('page', ParseIntPipe) page: number = 1,
     @Query('limit', ParseIntPipe) limit: number = 10,
@@ -66,7 +66,7 @@ export class ContentController {
   }
 
   @Get('landings/active')
-  @SneakyThrows('ContentController', 'getActiveLandings')
+  @SneakyThrows('ContentService', 'getActiveLandings')
   async getActiveLandings(
     @Query('page', ParseIntPipe) page: number = 1,
     @Query('limit', ParseIntPipe) limit: number = 10,
@@ -78,7 +78,7 @@ export class ContentController {
   }
 
   @Get('landing/:id')
-  @SneakyThrows('ContentController', 'getLandingById')
+  @SneakyThrows('ContentService', 'getLandingById')
   async getLandingById(@Param('id') id: string) {
     const landing = await firstValueFrom(
       this.contentClient.send({ cmd: 'getLandingById' }, { id }),
