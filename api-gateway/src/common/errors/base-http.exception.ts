@@ -232,6 +232,33 @@ export class BaseHttpException extends HttpException {
     console.error('='.repeat(80));
     console.error('END ERROR HANDLING\n');
 
+    if (error.name === 'BadRequestException' || 
+        error.constructor?.name === 'BadRequestException' ||
+        error.status === 400 ||
+        error.message?.includes('Ya existe una landing') ||
+        error.message?.includes('Por favor, usa un título diferente') ||
+        error.message?.includes('Registro duplicado')) {
+      throw BaseHttpException.badRequest(error.message, undefined, service, line);
+    }
+
+    if (error.name === 'UnauthorizedException' || 
+        error.constructor?.name === 'UnauthorizedException' ||
+        error.status === 401) {
+      throw BaseHttpException.unauthorized(error.message, service, line);
+    }
+
+    if (error.name === 'ForbiddenException' || 
+        error.constructor?.name === 'ForbiddenException' ||
+        error.status === 403) {
+      throw BaseHttpException.forbidden(error.message, service, line);
+    }
+
+    if (error.name === 'NotFoundException' || 
+        error.constructor?.name === 'NotFoundException' ||
+        error.status === 404) {
+      throw BaseHttpException.notFound('Resource', error.message, service, line);
+    }
+
     if (error.message === 'Internal server error' || error.message?.includes('Internal server error')) {
       throw BaseHttpException.microserviceError(
         service || 'Unknown', 

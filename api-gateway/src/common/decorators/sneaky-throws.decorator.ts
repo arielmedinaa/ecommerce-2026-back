@@ -15,6 +15,19 @@ export function SneakyThrows(serviceName?: string, operation?: string, lineNumbe
 
         const line = lineNumber || SneakyThrows.detectLine(target, propertyName);
 
+        // Detectar si es un error de microservicio con mensaje específico
+        if (error.message && 
+            (error.message.includes('Ya existe una landing') ||
+             error.message.includes('Por favor, usa un título diferente') ||
+             error.message.includes('Registro duplicado') ||
+             error.message.includes('BadRequestException'))) {
+          // Extraer el mensaje real del error del microservicio
+          const realMessage = error.response?.data?.message || 
+                           error.cause?.message || 
+                           error.message;
+          throw BaseHttpException.badRequest(realMessage, undefined, serviceName, line);
+        }
+
         BaseHttpException.handle(error, serviceName, operation, line);
       }
     };
@@ -37,6 +50,19 @@ export function SneakyThrowsSync(serviceName?: string, operation?: string, lineN
         }
 
         const line = lineNumber || SneakyThrows.detectLine(target, propertyName);
+
+        // Detectar si es un error de microservicio con mensaje específico
+        if (error.message && 
+            (error.message.includes('Ya existe una landing') ||
+             error.message.includes('Por favor, usa un título diferente') ||
+             error.message.includes('Registro duplicado') ||
+             error.message.includes('BadRequestException'))) {
+          // Extraer el mensaje real del error del microservicio
+          const realMessage = error.response?.data?.message || 
+                           error.cause?.message || 
+                           error.message;
+          throw BaseHttpException.badRequest(realMessage, undefined, serviceName, line);
+        }
 
         BaseHttpException.handle(error, serviceName, operation, line);
       }
