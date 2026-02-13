@@ -35,10 +35,18 @@ export class LandingsService {
     }
 
     try {
+      const titleExists = await this.titleExists(createLandingDto.title);
+      if (titleExists) {
+        throw new BadRequestException(
+          'Ya existe una landing con un título similar. Por favor, usa un título diferente.',
+        );
+      }
+
       const landing = new this.landingModel({
         ...createLandingDto,
         createdBy: new Types.ObjectId(userId),
         slug: this.generateUniqueSlug(createLandingDto.title),
+        tituloRelacionado: this.normalizeText(createLandingDto.title),
       });
 
       const savedLanding = await landing.save();
@@ -620,11 +628,7 @@ export class LandingsService {
   }
 
   private generateUniqueSlug(title: string, prefix = 'landing'): string {
-    const baseSlug = title
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .trim();
+    const baseSlug = this.normalizeText(title).replace(/\s+/g, '-').trim();
 
     const timestamp = Date.now().toString(36);
     return `${prefix}-${baseSlug}-${timestamp}`;
@@ -695,5 +699,44 @@ export class LandingsService {
     }
 
     return query;
+  }
+
+  private normalizeText(text: string): string {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private async titleExists(
+    title: string,
+    excludeId?: string,
+  ): Promise<boolean> {
+    const normalizedTitle = this.normalizeText(title);
+    console.log('normalized', normalizedTitle);
+
+    const regexPattern = normalizedTitle
+      .split(' ')
+      .filter((word) => word.length > 0)
+      .map((word) => word.replace(/[^a-z0-9]/g, ''))
+      .join('.*');
+    const query: any = {
+      tituloRelacionado: {
+        $regex: new RegExp(`^${regexPattern}$`, 'i'),
+      },
+    };
+
+    if (excludeId) {
+      query._id = { $ne: new Types.ObjectId(excludeId) };
+    }
+
+    console.log('query caching', query);
+
+    const existing = await this.landingModel.findOne(query).lean().exec();
+    console.log('existing', existing);
+    return !!existing;
   }
 }
