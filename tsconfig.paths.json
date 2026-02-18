@@ -21,6 +21,7 @@
       "@microservice-config/*": ["shared/config/microservice/*"],
       "@home/*": ["microservices/content/home/*"],
       "@decorators/*": ["api-gateway/src/common/decorators/*"],
+      "@landings/*": ["microservices/content/landings/*"],
     }
   }
 }

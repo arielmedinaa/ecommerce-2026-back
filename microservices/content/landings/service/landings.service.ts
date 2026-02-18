@@ -6,9 +6,9 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Landing, LandingDocument } from '../schemas/landings.schemas';
-import { Formato, FormatoDocument } from '../schemas/formatos.schema';
-import { FORMATOS_TEMPLATES } from '../const/formatos.const';
+import { Landing, LandingDocument } from '@landings/schemas/landings.schemas';
+import { Formato, FormatoDocument } from '@landings/schemas/formatos.schema';
+import { FORMATOS_TEMPLATES } from '@landings/const/formatos.const';
 import { LandingValidationService } from './landings.service.spec';
 import { LandingErrorService } from './errors/landings-error.service';
 
@@ -23,18 +23,11 @@ export class LandingsService {
     private readonly landingErrorService: LandingErrorService,
   ) {}
 
-  async crearLanding(
-    createLandingDto: any,
-    usuario: string,
-  ): Promise<{
-    success: boolean;
-    message: string;
-    data: Landing[];
-  }> {
+  async crearLanding(createLandingDto: any, userId: string): Promise<Landing> {
     const validation =
       await this.landingValidationService.validateCreateLanding(
         createLandingDto,
-        usuario,
+        userId,
       );
 
     if (!validation.isValid) {
@@ -44,40 +37,33 @@ export class LandingsService {
     try {
       const titleExists = await this.titleExists(createLandingDto.title);
       if (titleExists) {
-        this.logger.error('Ya existe una landing con un título similar');
-        return {
-          success: false,
-          message: 'Ya existe una landing con un título similar',
-          data: [],
-        };
+        throw new BadRequestException(
+          'Ya existe una landing con un título similar. Por favor, usa un título diferente.',
+        );
       }
 
       const landing = new this.landingModel({
         ...createLandingDto,
-        createdBy: usuario,
+        createdBy: userId,
         slug: this.generateUniqueSlug(createLandingDto.title),
         tituloRelacionado: this.normalizeText(createLandingDto.title),
       });
 
       const savedLanding = await landing.save();
-      return {
-        success: true,
-        message: 'Landing creada exitosamente',
-        data: [savedLanding],
-      };
+      return savedLanding;
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
         error,
         '',
         'crearLanding',
-        { createLandingDto, usuario },
+        { createLandingDto, userId },
       );
-
-      return {
-        success: false,
-        message: 'Error al crear la landing',
-        data: [],
-      };
+      
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      
+      throw new BadRequestException('Error al crear la landing');
     }
   }
 
@@ -106,6 +92,8 @@ export class LandingsService {
           .exec(),
         this.landingModel.countDocuments(query),
       ]);
+
+      console.log('Landings:', landings);
 
       return {
         landings,

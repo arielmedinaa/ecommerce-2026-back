@@ -41,7 +41,7 @@ export class ContentController {
 
   @Post('landing')
   @SneakyThrows('ContentService', 'createLanding')
-  async createLanding(@Body() body: { createLandingDto: any; usuario: string }) {
+  async createLanding(@Body() body: { createLandingDto: any; userId: string }) {
     const landing = await firstValueFrom(
       this.contentClient.send({ cmd: 'crearLanding' }, body),
     );
@@ -141,7 +141,7 @@ export class ContentController {
     const parsedFilters = filters ? JSON.parse(filters) : {};
     const formats = await firstValueFrom(
       this.contentClient.send(
-        { cmd: 'getAllFormats' },
+        { cmd: 'getAllFormatos' },
         { page, limit, filters: parsedFilters },
       ),
     );
