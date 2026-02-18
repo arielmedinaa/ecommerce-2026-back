@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { LandingError, LandingErrorDocument } from '../../schemas/errors/landings.error.schema';
+import { LandingError, LandingErrorDocument } from '@landings/schemas/errors/landings.error.schema';
 
 @Injectable()
 export class LandingErrorService {
@@ -18,8 +18,35 @@ export class LandingErrorService {
     context?: Record<string, any>,
   ): Promise<void> {
     try {
+      // Validar y convertir landingId si existe
+      let landingObjectId: Types.ObjectId | undefined;
+      if (landingId) {
+        try {
+          landingObjectId = new Types.ObjectId(landingId);
+        } catch (e) {
+          // Si landingId no es un ObjectId válido, lo dejamos como undefined
+          this.logger.warn(`landingId inválido: ${landingId}`);
+        }
+      }
+
+      // Validar y convertir userId si existe
+      let userObjectId: Types.ObjectId | undefined;
+      if (context?.userId) {
+        try {
+          // Si ya es un ObjectId, usarlo directamente
+          if (typeof context.userId === 'object' && context.userId._bsontype === 'ObjectId') {
+            userObjectId = context.userId;
+          } else {
+            userObjectId = new Types.ObjectId(context.userId);
+          }
+        } catch (e) {
+          // Si userId no es un ObjectId válido, lo dejamos como undefined
+          this.logger.warn(`userId inválido: ${context.userId}`);
+        }
+      }
+
       const errorLog = new this.landingErrorModel({
-        landingId: landingId ? new Types.ObjectId(landingId) : undefined,
+        landingId: landingObjectId,
         errorCode: error.name || 'UNKNOWN_ERROR',
         message: error.message || 'Error desconocido',
         context: context || {},
@@ -27,7 +54,7 @@ export class LandingErrorService {
         path: operation || 'unknown',
         operation: operation || 'unknown',
         requestPayload: context || {},
-        userId: context?.userId ? new Types.ObjectId(context.userId) : undefined,
+        userId: userObjectId,
       });
 
       await errorLog.save();
@@ -88,8 +115,15 @@ export class LandingErrorService {
 
   async getErrorsByLandingId(landingId: string): Promise<LandingError[]> {
     try {
+      let landingObjectId: Types.ObjectId;
+      try {
+        landingObjectId = new Types.ObjectId(landingId);
+      } catch (e) {
+        throw new Error(`landingId inválido: ${landingId}`);
+      }
+      
       return await this.landingErrorModel
-        .find({ landingId: new Types.ObjectId(landingId) })
+        .find({ landingId: landingObjectId })
         .sort({ createdAt: -1 })
         .exec();
     } catch (error) {
@@ -155,7 +189,11 @@ export class LandingErrorService {
     const query: any = {};
 
     if (filters?.landingId) {
-      query.landingId = new Types.ObjectId(filters.landingId);
+      try {
+        query.landingId = new Types.ObjectId(filters.landingId);
+      } catch (e) {
+        this.logger.warn(`landingId inválido en filtros: ${filters.landingId}`);
+      }
     }
 
     if (filters?.errorCode) {
@@ -167,7 +205,11 @@ export class LandingErrorService {
     }
 
     if (filters?.userId) {
-      query.userId = new Types.ObjectId(filters.userId);
+      try {
+        query.userId = new Types.ObjectId(filters.userId);
+      } catch (e) {
+        this.logger.warn(`userId inválido en filtros: ${filters.userId}`);
+      }
     }
 
     if (filters?.startDate || filters?.endDate) {
