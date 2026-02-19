@@ -1,6 +1,6 @@
 import { Cart } from '../schemas/cart.schema';
 import { Transaccion } from '../schemas/transaccion.schema';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ObtenerClaveService } from '@shared/common/utils/obtenerClave';
@@ -9,16 +9,22 @@ import {
   NEW_SOLICITUD_INITIAL_STATE,
 } from '@cart/constants/cart.constants';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
+import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
+import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
 import { CartValidationService } from './cart.service.spec';
 import { CartErrorService } from './errors/cart-error.service';
 import moment from 'moment-timezone';
 import * as https from 'https';
 import * as mysql from 'mysql2/promise';
 import { ESTADO_SOLICITUD_MAP } from '@cart/constants/cart.constants';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class CartContadoService {
+  private readonly logger = new Logger(CartContadoService.name);
+  private cartCache: Map<string, { data: Cart; timestamp: number }> = new Map();
+  private readonly cacheTTL = 30 * 1000;
+
   constructor(
     @InjectModel(Cart.name) private readonly carrito: Model<Cart>,
     @InjectModel(Transaccion.name)
@@ -29,6 +35,8 @@ export class CartContadoService {
     private readonly obtenerClaveService: ObtenerClaveService,
     private readonly cartValidationService: CartValidationService,
     private readonly cartErrorService: CartErrorService,
+    private readonly resilientService: ResilientService,
+    private readonly cacheService: CachePersistenteService,
   ) {}
 
   async addCart(
@@ -176,11 +184,22 @@ export class CartContadoService {
     clienteToken: string,
     cuenta?: string,
     codigo?: 0,
-  ): Promise<{ data: Cart[]; success: boolean; message: string }> {
+  ): Promise<{ data: Record<string, any>; success: boolean; message: string }> {
     const filtro: any = {
       $or: [{ 'cliente.equipo': clienteToken }, { 'cliente.correo': cuenta }],
     };
     codigo === 0 ? (filtro.estado = 1) : (filtro.codigo = codigo);
+    const cacheKey = `cart_${clienteToken}_${cuenta}_${codigo}`;
+    const now = Date.now();
+    const cached = this.cartCache.get(cacheKey);
+
+    if (cached && now - cached.timestamp < this.cacheTTL) {
+      return {
+        data: cached.data,
+        success: true,
+        message: 'Carrito recuperado',
+      };
+    }
     const resultado = await this.carrito
       .findOne(filtro, { _id: 0, proceso: 0, transaccion: 0, __v: 0 })
       .sort({ codigo: -1 })
@@ -191,20 +210,44 @@ export class CartContadoService {
 
     const articulosRaw = [...(resultado.articulos?.contado || [])];
     const codigos = [...new Set(articulosRaw.map((a) => String(a.codigo)))];
+    
+    const productsCacheKey = `cart_products_${codigos.join('_')}`;
+    
     try {
-      const productos = await firstValueFrom(
-        this.productsService.send(
-          { cmd: 'get_products' },
-          {
-            ids: codigos,
-            fields: 'codigo,marca,categorias,subcategorias,promos',
-          },
-        ),
+      const [productos]: any = await this.cacheService.getWithFallback(
+        productsCacheKey,
+        async () => {
+          return await Promise.all([
+            this.resilientService.sendWithResilience(
+              this.productsService,
+              { cmd: 'get_products' },
+              {
+                ids: codigos,
+                fields: 'codigo,marca,categorias,subcategorias,promos',
+              },
+              {
+                retries: 3,
+                delay: 1000,
+                fallback: async () => {
+                  this.logger.warn('Using fallback products for cart');
+                  return [];
+                },
+                circuitBreaker: {
+                  failureThreshold: 3,
+                  resetTimeout: 30000,
+                },
+              },
+            ),
+          ]);
+        },
+        this.cacheTTL,
       );
 
       const enriquecerArticulos = (lista: any[]) => {
         return lista.map((art) => {
-          const p = productos.find((ip) => ip.codigo === String(art.codigo));
+          const p = productos.find(
+            (ip: any) => ip.codigo === String(art.codigo),
+          );
 
           return {
             ...art,
@@ -218,6 +261,7 @@ export class CartContadoService {
           };
         });
       };
+      
       if (resultado.articulos) {
         if (resultado.articulos.contado) {
           resultado.articulos.contado = enriquecerArticulos(
@@ -225,17 +269,29 @@ export class CartContadoService {
           );
         }
       }
+
       return {
-        data: [resultado],
+        data: {
+          codigo: resultado.codigo,
+          articulos: resultado.articulos,
+        },
         success: true,
         message: 'Carrito recuperado',
       };
     } catch (error) {
       return {
-        data: [resultado],
+        data: {
+          codigo: resultado.codigo,
+          articulos: resultado.articulos,
+        },
         success: true,
         message: 'Carrito recuperado (sin información adicional de productos)',
       };
+    } finally {
+      this.cartCache.set(cacheKey, {
+        data: resultado,
+        timestamp: Date.now(),
+      });
     }
   }
 
@@ -580,21 +636,17 @@ export class CartContadoService {
               processedItem.is_promo = 0;
               processedItem.id_promo = null;
               processedItem.nombrePromo = null;
-            }
-
-            else if (!item.isCombo && item.isPromo) {
+            } else if (!item.isCombo && item.isPromo) {
               processedItem.is_combo = 0;
               processedItem.is_promo = 1;
               processedItem.id_promo = item.promoCodigo || null;
               processedItem.nombrePromo = item.promoNombre || null;
-            }
-            else if (item.isCombo && item.isPromo) {
+            } else if (item.isCombo && item.isPromo) {
               processedItem.is_combo = 1;
               processedItem.is_promo = 1;
               processedItem.id_promo = item.promoCodigo || null;
               processedItem.nombrePromo = item.promoNombre || null;
-            }
-            else {
+            } else {
               processedItem.is_combo = 0;
               processedItem.is_promo = 0;
               processedItem.id_promo = null;
@@ -613,7 +665,6 @@ export class CartContadoService {
           articulosCount: datos.articulos.contado.length,
         });
       }
-
 
       for (const [cuotas, articulos] of solicitudesPorCuota.entries()) {
         if (cuotas === 0) continue;
@@ -655,20 +706,17 @@ export class CartContadoService {
               processedItem.is_promo = 0;
               processedItem.id_promo = null;
               processedItem.nombrePromo = null;
-            }
-            else if (!articulo.isCombo && articulo.isPromo) {
+            } else if (!articulo.isCombo && articulo.isPromo) {
               processedItem.is_combo = 0;
               processedItem.is_promo = 1;
               processedItem.id_promo = articulo.promoCodigo || null;
               processedItem.nombrePromo = articulo.promoNombre || null;
-            }
-            else if (articulo.isCombo && articulo.isPromo) {
+            } else if (articulo.isCombo && articulo.isPromo) {
               processedItem.is_combo = 1;
               processedItem.is_promo = 1;
               processedItem.id_promo = articulo.promoCodigo || null;
               processedItem.nombrePromo = articulo.promoNombre || null;
-            }
-            else {
+            } else {
               processedItem.is_combo = 0;
               processedItem.is_promo = 0;
               processedItem.id_promo = null;

@@ -1,6 +1,5 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
 import { FilterHomeDto } from '@content/home/dto/filter.home';
 import { HomeData } from '@content/home/interfaces/home.interface';
 import { ResponseData } from '@gateway/common/response/response.data';
