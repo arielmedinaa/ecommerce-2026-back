@@ -35,6 +35,12 @@ export class HomeService {
     ];
   }
 
+  private homeDataCache: Map<
+    string,
+    { data: ResponseData<HomeData>; timestamp: number }
+  > = new Map();
+  private readonly HOME_TTL = 30 * 1000;
+
   private categoriasCache: string[] = [];
   private lastCacheUpdate: number = 0;
   private readonly CACHE_TTL = 5 * 60 * 1000;
@@ -63,13 +69,34 @@ export class HomeService {
   async getHomeData(filter: FilterHomeDto): Promise<ResponseData<HomeData>> {
     const limit = filter.limit || 6;
     const offset = filter.offset || 0;
+    const category = filter.category || 'all';
+
+    const cacheKey = `home_${category}_${limit}_${offset}`;
+    const now = Date.now();
+
+    const cached = this.homeDataCache.get(cacheKey);
+    if (cached && now - cached.timestamp < this.HOME_TTL) {
+      return cached.data;
+    }
 
     try {
       const [productos, categorias] = await Promise.all([
         firstValueFrom(
           this.productsClient.send(
             { cmd: 'get_products' },
-            { limit, offset, categoria: filter.category },
+            {
+              limit,
+              offset,
+              categoria: filter.category,
+              fields: [
+                'nombre',
+                'precio',
+                'venta',
+                'ruta',
+                'imagenes',
+                'descuento',
+              ],
+            },
           ),
         ),
         this.getCachedCategorias(),
@@ -84,6 +111,7 @@ export class HomeService {
       response.status = 200;
       response.register = productos.total || 0;
 
+      this.homeDataCache.set(cacheKey, { data: response, timestamp: now });
       return response;
     } catch (error) {
       console.error('Error en getHomeData:', error);

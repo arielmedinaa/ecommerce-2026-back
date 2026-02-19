@@ -23,7 +23,10 @@ export class LandingsService {
     private readonly landingErrorService: LandingErrorService,
   ) {}
 
-  async crearLanding(createLandingDto: any, userId: string): Promise<Landing> {
+  async crearLanding(createLandingDto: any, userId: string): Promise<{
+    data: {};
+    message?: any;
+  }> {
     const validation =
       await this.landingValidationService.validateCreateLanding(
         createLandingDto,
@@ -31,7 +34,10 @@ export class LandingsService {
       );
 
     if (!validation.isValid) {
-      return validation.error;
+      return {
+        data: {},
+        message: validation.error,
+      };
     }
 
     try {
@@ -50,7 +56,10 @@ export class LandingsService {
       });
 
       const savedLanding = await landing.save();
-      return savedLanding;
+      return {
+        data: savedLanding,
+        message: 'LANDING CREADA EXITOSAMENTE',
+      };
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
         error,
@@ -92,8 +101,6 @@ export class LandingsService {
           .exec(),
         this.landingModel.countDocuments(query),
       ]);
-
-      console.log('Landings:', landings);
 
       return {
         landings,

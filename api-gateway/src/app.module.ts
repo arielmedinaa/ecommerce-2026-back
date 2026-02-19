@@ -9,12 +9,18 @@ import { PaymentsController } from '@gateway/modules/payments/controllers/paymen
 import { AuthController } from './modules/auth/controllers/auth.controller';
 import { AuthModule } from './modules/auth/auth.module';
 import { ContentModule } from './modules/content/content.module';
+import { JwtModule } from '@nestjs/jwt';
+import { JwtAuthGuard } from '@gateway/common/guards/jwt-auth.guard';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+    }),
+    JwtModule.register({
+      secret: process.env.JWT_SECRET || 'your-secret-key',
+      signOptions: { expiresIn: '1d' },
     }),
     MicroserviceModule.forRoot([
       'AUTH_SERVICE',
@@ -29,5 +35,6 @@ import { ContentModule } from './modules/content/content.module';
     ContentModule,
   ],
   controllers: [AppController, ProductsController, CartController, PaymentsController, AuthController],
+  providers: [JwtAuthGuard],
 })
 export class AppModule {}

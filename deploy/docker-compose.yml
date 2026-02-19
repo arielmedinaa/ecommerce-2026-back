@@ -2,13 +2,25 @@
 version: '3.8'
 
 services:
+
+  # Balanceador de Carga (Nginx)
+  nginx-lb:
+    image: nginx:latest
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "3100:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - app-network
   # API Gateway
   api-gateway:
     build: 
       context: ..
       dockerfile: deploy/Dockerfile.dev
-    ports:
-      - "3100:3100"
+    # ports:
+    #   - "3100:3100"
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - PORT=3100
@@ -47,8 +59,8 @@ services:
       - PORT=3101
       - AUTH_PORT=3101
       - IS_DOCKER=true
-    ports:
-      - "3101:3101"
+    # ports:
+    #   - "3101:3101"
     volumes:
       - ../:/usr/src/app
       - /usr/src/app/node_modules
@@ -69,8 +81,8 @@ services:
       - PRODUCTS_PORT=3106
       #- MONGO_URL=${MONGO_URL}
       - IS_DOCKER=true
-    ports:
-      - "3106:3106"
+    # ports:
+    #   - "3106:3106"
     volumes:
       - ../:/usr/src/app
       - /usr/src/app/node_modules
@@ -89,8 +101,8 @@ services:
       - CART_PORT=3102
       #- MONGO_URL=${MONGO_URL}
       - IS_DOCKER=true
-    ports:
-      - "3102:3102"
+    # ports:
+    #   - "3102:3102"
     volumes:
       - ../:/usr/src/app
       - /usr/src/app/node_modules
@@ -109,8 +121,8 @@ services:
       - CONTENT_PORT=3103
       #- MONGO_URL=${MONGO_URL}
       - IS_DOCKER=true
-    ports:
-      - "3103:3103"
+    # ports:
+    #   - "3103:3103"
     volumes:
       - ../:/usr/src/app
       - /usr/src/app/node_modules
@@ -129,8 +141,8 @@ services:
       - PAYMENTS_PORT=3105
       #- MONGO_URL=${MONGO_URL}
       - IS_DOCKER=true
-    ports:
-      - "3105:3105"
+    # ports:
+    #   - "3105:3105"
     volumes:
       - ../:/usr/src/app
       - /usr/src/app/node_modules

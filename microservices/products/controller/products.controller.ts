@@ -1,11 +1,25 @@
 import { Body, Controller, Logger } from '@nestjs/common';
 import { MessagePattern } from '@nestjs/microservices';
+import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
 import { ProductsService } from '@products/service/products.service';
+import { Product } from '@products/schemas/product.schema';
+import { CreateComboDto } from '@products/schemas/dto/create-combo.dto';
+import { Combos } from '@products/schemas/combos.schema';
 
 @Controller()
 export class ProductsController {
   private readonly logger = new Logger(ProductsController.name);
   constructor(private readonly productsService: ProductsService) {}
+
+  @MessagePattern({ cmd: 'createProducts' })
+  public createProduct (createProductDto: CreateProductDto): Promise<Product> {
+    return this.productsService.create(createProductDto);
+  }
+
+  @MessagePattern({ cmd: 'createCombo' })
+  public createCombo (createComboDto: CreateComboDto): Promise<Combos> {
+    return this.productsService.createCombo(createComboDto);
+  }
 
   @MessagePattern({ cmd: 'get_products' })
   async findAll(@Body() filters: { offset: number; limit: number }) {
