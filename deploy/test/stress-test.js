@@ -3,8 +3,8 @@ import { sleep } from 'k6';
 
 export const options = {
   stages: [
-    { duration: '30s', target: 50 },
-    { duration: '1m', target: 50 },
+    { duration: '30s', target: 100 },
+    { duration: '1m', target: 500 },
     { duration: '30s', target: 0 },
   ],
 };
@@ -12,7 +12,7 @@ export const options = {
 export default function () {
   const url = 'http://host.docker.internal:3100/api/content/home';
   const payload = JSON.stringify({
-    limit: 100,
+    limit: 6,
     offset: 0,
   });
 

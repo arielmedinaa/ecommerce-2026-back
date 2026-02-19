@@ -1,0 +1,438 @@
+{
+  "cart_products_80171": {
+    "data": [
+      {
+        "data": [
+          {
+            "_id": "63cafd1a4d7dd8f152494054",
+            "codigo": "10994",
+            "nombre": "AURICULAR KOLKE GAMER EROS KGA-492 7.1 C/LUZ RGB",
+            "ruta": "piscina-bestway-redonda-6.473-lts-c/estructura-metalica366-x-76-cm-steel-pro-max-ref-56416-",
+            "precio": 159000,
+            "categorias": [
+              {
+                "nombre": "Tecnología y Gaming"
+              }
+            ],
+            "imagenes": [
+              {
+                "url": {
+                  "300": "10994/jgacdafbia/300.png"
+                }
+              }
+            ],
+            "descuento": 0,
+            "venta": 159000
+          },
+          {
+            "_id": "63cafd1b4d7dd8f1524940ab",
+            "codigo": "11480",
+            "nombre": "ANAFE MIDEA A INDUCCON 2H NEGRO",
+            "ruta": "anafe-midea-a-induccon-2h-negro",
+            "precio": 923000,
+            "categorias": [
+              {
+                "nombre": "Electrodomésticos"
+              }
+            ],
+            "imagenes": [
+              {
+                "url": {
+                  "300": "11480/dcbajfddch/300.png"
+                }
+              }
+            ],
+            "descuento": 0,
+            "venta": 923000
+          },
+          {
+            "_id": "63cafd1b4d7dd8f1524940cc",
+            "codigo": "2602",
+            "nombre": "PLACA  INFRARROJA TOKYO 1H TOK3106 1200W 220V/50HZ T2088 - COTOK3106-N",
+            "ruta": "placa--infrarroja-tokyo-1h-tok3106-1200w-220v50hz-t2088",
+            "precio": 197000,
+            "categorias": [
+              {
+                "nombre": "Cocinas y Anafes"
+              }
+            ],
+            "imagenes": [
+              {
+                "url": {
+                  "300": "2602/iggehcacaj/300.png"
+                }
+              }
+            ],
+            "descuento": 0,
+            "venta": 197000
+          },
+          {
+            "_id": "63cafd1b4d7dd8f1524940d0",
+            "codigo": "5360",
+            "nombre": "PARLANTE AIWA BLUETOOTH MOD AW-20H-BK NEGRO AW35",
+            "ruta": "parlante-aiwa-bluetooth-mod-aw-20h-bk-negro-aw35",
+            "precio": 429000,
+            "categorias": [
+              {
+                "nombre": "Televisores y Audio"
+              }
+            ],
+            "imagenes": [
+              {
+                "url": {
+                  "300": "5360/bgbdjdaeef/300.png"
+                }
+              }
+            ],
+            "descuento": 0,
+            "venta": 429000
+          },
+          {
+            "_id": "63cafd1b4d7dd8f1524940ee",
+            "codigo": "2097",
+            "nombre": "HORNO ELECTRICO TOKYO 46LTS. C/ROTISSERIE/CONVECTOR 2000W ELITE 46RE T1511",
+            "ruta": "horno-electrico-tokyo-46lts-crotisserieconvector-2000w-elite-46re-t1511",
+            "precio": 690000,
+            "categorias": [
+              {
+                "nombre": "Electrodomésticos"
+              }
+            ],
+            "imagenes": [
+              {
+                "url": {
+                  "300": "2097/cdiegaajbi/300.png"
+                }
+              }
+            ],
+            "descuento": 0,
+            "venta": 690000
+          },
+          {
+            "_id": "63cafd1b4d7dd8f1524940f6",
+            "codigo": "11105",
+            "nombre": "MICROONDAS GOODWEATHER 28LTS DIGITAL GW-AG928 900W",
+            "ruta": "microondas-goodweather-28lts-digital-gw-ag928-900w",
+            "precio": 883000,
+            "categorias": [
+              {
+                "nombre": "Electrodomésticos"
+              }
+            ],
+            "imagenes": [
+              {
+                "url": {
+                  "300": "11105/0243257986/300.png"
+                }
+              }
+            ],
+            "descuento": 0,
+            "venta": 883000
+          },
+          {
+            "_id": "63cafd1b4d7dd8f1524940fc",
+            "codigo": "11492",
+            "nombre": "MICROONDAS MIDEA 20LTS DIGITAL SILVER",
+            "ruta": "microondas-midea-20lts-digital-silver",
+            "precio": 598000,
+            "categorias": [
+              {
+                "nombre": "Electrodomésticos"
+              }
+            ],
+            "imagenes": [
+              {
+                "url": {
+                  "300": "11492/ibdhiacgca/300.png"
+                }
+              }
+            ],
+            "descuento": 0,
+            "venta": 598000
+          },
+          {
+            "_id": "63cafd1b4d7dd8f152494100",
+            "codigo": "2140",
+            "nombre": "MICROONDAS MIDEA 20 LTS BLANCO MANUAL MM720CJ9",
+            "ruta": "microondas-midea-20-lts-blanco-manual-mm720cj9",
+            "precio": 463000,
+            "categorias": [
+              {
+                "nombre": "Electrodomésticos"
+              }
+            ],
+            "imagenes": [
+              {
+                "url": {
+                  "300": "2140/fhgfjdbbce/300.png"
+                }
+              }
+            ],
+            "descuento": 0,
+            "venta": 463000
+          },
+          {
+            "_id": "63cafd1b4d7dd8f152494108",
+            "codigo": "4662",
+            "nombre": "MICROONDAS JAM 20LTS CON PANEL DIGITAL ESPEJADO INOX",
+            "ruta": "microondas-jam-20lts-con-panel-digital-espejado-inox-con-grill-ag720c3d-cod-3912",
+            "precio": 606000,
+            "categorias": [
+              {
+                "nombre": "Electrodomésticos"
+              }
+            ],
+            "imagenes": [
+              {
+                "url": {
+                  "300": "4662/4368707/300.png"
+                }
+              }
+            ],
+            "descuento": 0,
+            "venta": 606000
+          },
+          {
+            "_id": "63cafd1b4d7dd8f15249410c",
+            "codigo": "5100",
+            "nombre": "MICROONDAS GOODWEATHER GW-20AP 20LTS",
+            "ruta": "microondas-goodweather-gw-mm720-20lts",
+            "precio": 554000,
+            "categorias": [
+              {
+                "nombre": "Electrodomésticos"
+              }
+            ],
+            "imagenes": [
+              {
+                "url": {
+                  "300": "5100/cebgegeieh/300.png"
+                }
+              }
+            ],
+            "descuento": 0,
+            "venta": 554000
+          },
+          {
+            "_id": "63cafd1b4d7dd8f152494112",
+            "codigo": "5237",
+            "nombre": "ESTUFA TOKYO CALOVENTOR ALBA 220V/50HZ T2344",
+            "ruta": "estufa-tokyo-caloventor-alba-220v50hz-t2344",
+            "precio": 147000,
+            "categorias": [
+              {
+                "nombre": "Electrodomésticos"
+              }
+            ],
+            "imagenes": [
+              {
+                "url": {
+                  "300": "5237/gfgjfcafje/300.png"
+                }
+              }
+            ],
+            "descuento": 0,
+            "venta": 147000
+          },
+          {
+            "_id": "63cafd1b4d7dd8f152494116",
+            "codigo": "2604",
+            "nombre": "SECARROPAS MUELLER SUN 8KG R/H COLGANTE",
+            "ruta": "secarropas-mueller-sun-8kg-rh-colgante-ref-076",
+            "precio": 740000,
+            "categorias": [
+              {
+                "nombre": "Electrodomésticos"
+              }
+            ],
+            "imagenes": [
+              {
+                "url": {
+                  "300": "2604/hbgfcafjjd/300.png"
+                }
+              }
+            ],
+            "descuento": 0,
+            "venta": 740000
+          },
+          {
+            "_id": "63cafd1b4d7dd8f152494118",
+            "codigo": "10494",
+            "nombre": "LAVARROPAS BEKO WTA8612 XSW 8KG",
+            "ruta": "lavarropas-beko-wta8612-xsw-8kg",
+            "precio": 3321000,
+            "categorias": [
+              {
+                "nombre": "Electrodomésticos"
+              }
+            ],
+            "imagenes": [
+              {
+                "url": {
+                  "300": "10494/gjcahjejgc/300.png"
+                }
+              }
+            ],
+            "descuento": 0,
+            "venta": 3321000
+          },
+          {
+            "_id": "63cafd1b4d7dd8f15249411a",
+            "codigo": "10923",
+            "nombre": "LAVARROPAS BEKO 10,5KG WTE10744XBOM",
+            "ruta": "lavarropas-beko-105kg-wte10744xbom",
+            "precio": 4840000,
+            "categorias": [
+              {
+                "nombre": "Electrodomésticos"
+              }
+            ],
+            "imagenes": [
+              {
+                "url": {
+                  "300": "10923/icceffidjj/300.png"
+                }
+              }
+            ],
+            "descuento": 0,
+            "venta": 4840000
+          },
+          {
+            "_id": "63cafd1b4d7dd8f15249411c",
+            "codigo": "4677",
+            "nombre": "LAVARROPAS WHIRLPOOL 7.5KG FRESHCARE INVERTER C/F EDWLF752B-N W438",
+            "ruta": "lavarropas-whirlpool-75kg-freshcare-inverter-cf-edwlf752b-n-w438",
+            "precio": 3202000,
+            "categorias": [
+              {
+                "nombre": "Electrodomésticos"
+              }
+            ],
+            "imagenes": [
+              {
+                "url": {
+                  "300": "4677/7837763286/300.png"
+                }
+              }
+            ],
+            "descuento": 0,
+            "venta": 3202000
+          },
+          {
+            "_id": "63cafd1b4d7dd8f152494120",
+            "codigo": "13404",
+            "nombre": "LAVARROPAS COBRASA 5KG SEMI AUTO LS 01 BLANCO",
+            "ruta": "lavarropas-cobrasa-5kg-semi-auto-ls-01-blanco",
+            "precio": 491000,
+            "categorias": [
+              {
+                "nombre": "Electrodomésticos"
+              }
+            ],
+            "imagenes": [
+              {
+                "url": {
+                  "300": "13404/jeajiggdji/300.png"
+                }
+              }
+            ],
+            "descuento": 0,
+            "venta": 491000
+          },
+          {
+            "_id": "63cafd1b4d7dd8f152494130",
+            "codigo": "11090",
+            "nombre": "ASPIRADORA WASKO GTPROFI 1200W 18L GTPROFIW 220VAG-PLV-S",
+            "ruta": "aspiradora-wasko-gtprofi-1200w-18l-gtprofiw-220vag-plv-s",
+            "precio": 527000,
+            "categorias": [
+              {
+                "nombre": "Electrodomésticos"
+              }
+            ],
+            "imagenes": [
+              {
+                "url": {
+                  "300": "11090/790763/300.jpg"
+                }
+              },
+              {
+                "url": {
+                  "300": "11090/3537370671/300.jpg"
+                }
+              }
+            ],
+            "descuento": 0,
+            "venta": 527000
+          },
+          {
+            "_id": "63cafd1b4d7dd8f152494132",
+            "codigo": "16372",
+            "nombre": "VENTILADOR DE PIE COBRASA 24\" 3VEL NEGRO 147W",
+            "ruta": "ventilador-de-pie-cobrasa-24-3vel-negro-147w",
+            "precio": 150000,
+            "categorias": [
+              {
+                "nombre": "Electrodomésticos"
+              }
+            ],
+            "imagenes": [
+              {
+                "url": {
+                  "300": "16372/gdgcjdhbcf/300.png"
+                }
+              }
+            ],
+            "descuento": 0,
+            "venta": 150000
+          },
+          {
+            "_id": "63cafd1c4d7dd8f15249413c",
+            "codigo": "5238",
+            "nombre": "ASPIRADORA TOKYO SKINNY DE POLVO 2 EN 1 EDTASSK601-N 600W 0.8LTS T2458",
+            "ruta": "aspiradora-tokyo-skinny-de-polvo-2-en-1-edtassk601-n-600w-08lts-t2458",
+            "precio": 239000,
+            "categorias": [
+              {
+                "nombre": "Electrodomésticos"
+              }
+            ],
+            "imagenes": [
+              {
+                "url": {
+                  "300": "5238/bgghcbdfjg/300.png"
+                }
+              }
+            ],
+            "descuento": 0,
+            "venta": 239000
+          },
+          {
+            "_id": "63cafd1c4d7dd8f152494144",
+            "codigo": "8391",
+            "nombre": "ASPIRADORA ARIETE HANDY FORCE 29/721",
+            "ruta": "aspiradora-ariete-handy-force-29721",
+            "precio": 564000,
+            "categorias": [
+              {
+                "nombre": "Electrodomésticos"
+              }
+            ],
+            "imagenes": [
+              {
+                "url": {
+                  "300": "8391/cdijhhibhd/300.png"
+                }
+              }
+            ],
+            "descuento": 0,
+            "venta": 564000
+          }
+        ],
+        "total": 3440
+      }
+    ],
+    "timestamp": 1771531028949,
+    "ttl": 30000
+  }
+}

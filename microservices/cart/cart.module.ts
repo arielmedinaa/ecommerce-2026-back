@@ -14,6 +14,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ErrorLoggingInterceptor } from './interceptors/error-logging.interceptor';
+import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
+import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
 
 @Module({
   imports: [
@@ -39,6 +41,8 @@ import { ErrorLoggingInterceptor } from './interceptors/error-logging.intercepto
     CartContadoService,
     CartErrorService,
     CartValidationService,
+    ResilientService,
+    CachePersistenteService,
     {
       provide: APP_INTERCEPTOR,
       useClass: ErrorLoggingInterceptor,
