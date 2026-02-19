@@ -1,15 +1,21 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { FilterHomeDto } from '@content/home/dto/filter.home';
 import { HomeData } from '@content/home/interfaces/home.interface';
 import { ResponseData } from '@gateway/common/response/response.data';
 import { ImageService } from '@image/image.service';
+import { ResilientService, ResilientOptions } from '@shared/common/decorators/resilient-client.decorator';
+import { FallbackDataService } from '@shared/common/services/fallback-data.service';
 
 @Injectable()
 export class HomeService {
+  private readonly logger = new Logger(HomeService.name);
+
   constructor(
     private readonly imageService: ImageService,
+    private readonly resilientService: ResilientService,
+    private readonly fallbackDataService: FallbackDataService,
     @Inject('PRODUCTS_SERVICE') private readonly productsClient: ClientProxy,
   ) {}
 
@@ -52,14 +58,32 @@ export class HomeService {
       now - this.lastCacheUpdate > this.CACHE_TTL
     ) {
       try {
-        const result = await firstValueFrom(
-          this.productsClient.send({ cmd: 'get_categories' }, {}),
+        const resilientOptions: ResilientOptions = {
+          retries: 3,
+          delay: 1000,
+          fallback: async () => {
+            this.logger.warn('Using fallback categories');
+            return this.fallbackDataService.getFallbackCategories();
+          },
+          circuitBreaker: {
+            failureThreshold: 3,
+            resetTimeout: 30000,
+          },
+        };
+
+        const result: any = await this.resilientService.sendWithResilience(
+          this.productsClient,
+          { cmd: 'get_categories' },
+          {},
+          resilientOptions,
         );
+        
         this.categoriasCache = result.categorias || [];
         this.lastCacheUpdate = now;
+        this.fallbackDataService.saveSuccessfulResponse(result, 'categories');
       } catch (error) {
-        console.error('Error al obtener categorías:', error);
-        this.categoriasCache = [];
+        this.logger.error('Error al obtener categorías:', error);
+        this.categoriasCache = this.fallbackDataService.getFallbackCategories();
       }
     }
 
@@ -80,28 +104,45 @@ export class HomeService {
     }
 
     try {
+      const resilientOptions: ResilientOptions = {
+        retries: 3,
+        delay: 1000,
+        fallback: async () => {
+          this.logger.warn('Using fallback products');
+          return {
+            data: this.fallbackDataService.getFallbackProducts(limit),
+            total: this.fallbackDataService.getFallbackProducts().length,
+          };
+        },
+        circuitBreaker: {
+          failureThreshold: 3,
+          resetTimeout: 30000,
+        },
+      };
+
       const [productos, categorias] = await Promise.all([
-        firstValueFrom(
-          this.productsClient.send(
-            { cmd: 'get_products' },
-            {
-              limit,
-              offset,
-              categoria: filter.category,
-              fields: [
-                'nombre',
-                'precio',
-                'venta',
-                'ruta',
-                'imagenes',
-                'descuento',
-              ],
-            },
-          ),
-        ),
+        this.resilientService.sendWithResilience(
+          this.productsClient,
+          { cmd: 'get_products' },
+          {
+            limit,
+            offset,
+            categoria: filter.category,
+            fields: [
+              'nombre',
+              'precio',
+              'venta',
+              'ruta',
+              'imagenes',
+              'descuento',
+            ],
+          },
+          resilientOptions,
+        ) as Promise<any>,
         this.getCachedCategorias(),
       ]);
 
+      this.fallbackDataService.saveSuccessfulResponse(productos, 'products');
       const response = new ResponseData<HomeData>();
       response.data = {
         banners: this.mockBanners,
@@ -110,19 +151,22 @@ export class HomeService {
       };
       response.status = 200;
       response.register = productos.total || 0;
-
       this.homeDataCache.set(cacheKey, { data: response, timestamp: now });
       return response;
     } catch (error) {
-      console.error('Error en getHomeData:', error);
+      this.logger.error('Error en getHomeData:', error);
+      const fallbackProducts = this.fallbackDataService.getFallbackProducts(limit);
+      const fallbackCategories = this.fallbackDataService.getFallbackCategories();
+      
       const response = new ResponseData<HomeData>();
       response.data = {
         banners: this.mockBanners,
-        productos: [],
-        categorias: [],
+        productos: fallbackProducts,
+        categorias: fallbackCategories,
       };
-      response.status = 500;
-      response.register = 0;
+      response.status = 200;
+      response.register = fallbackProducts.length;
+      
       return response;
     }
   }

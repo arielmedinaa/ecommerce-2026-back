@@ -1,0 +1,248 @@
+{
+  "productos": [
+    {
+      "_id": "63cafd1a4d7dd8f152494054",
+      "codigo": "10994",
+      "nombre": "AURICULAR KOLKE GAMER EROS KGA-492 7.1 C/LUZ RGB",
+      "ruta": "piscina-bestway-redonda-6.473-lts-c/estructura-metalica366-x-76-cm-steel-pro-max-ref-56416-",
+      "precio": 159000,
+      "categorias": [
+        {
+          "nombre": "Tecnología y Gaming"
+        }
+      ],
+      "imagenes": [
+        {
+          "url": {
+            "300": "10994/jgacdafbia/300.png"
+          }
+        }
+      ],
+      "descuento": 0,
+      "venta": 159000
+    },
+    {
+      "_id": "63cafd1b4d7dd8f1524940ab",
+      "codigo": "11480",
+      "nombre": "ANAFE MIDEA A INDUCCON 2H NEGRO",
+      "ruta": "anafe-midea-a-induccon-2h-negro",
+      "precio": 923000,
+      "categorias": [
+        {
+          "nombre": "Electrodomésticos"
+        }
+      ],
+      "imagenes": [
+        {
+          "url": {
+            "300": "11480/dcbajfddch/300.png"
+          }
+        }
+      ],
+      "descuento": 0,
+      "venta": 923000
+    },
+    {
+      "_id": "63cafd1b4d7dd8f1524940cc",
+      "codigo": "2602",
+      "nombre": "PLACA  INFRARROJA TOKYO 1H TOK3106 1200W 220V/50HZ T2088 - COTOK3106-N",
+      "ruta": "placa--infrarroja-tokyo-1h-tok3106-1200w-220v50hz-t2088",
+      "precio": 197000,
+      "categorias": [
+        {
+          "nombre": "Cocinas y Anafes"
+        }
+      ],
+      "imagenes": [
+        {
+          "url": {
+            "300": "2602/iggehcacaj/300.png"
+          }
+        }
+      ],
+      "descuento": 0,
+      "venta": 197000
+    },
+    {
+      "_id": "63cafd1b4d7dd8f1524940d0",
+      "codigo": "5360",
+      "nombre": "PARLANTE AIWA BLUETOOTH MOD AW-20H-BK NEGRO AW35",
+      "ruta": "parlante-aiwa-bluetooth-mod-aw-20h-bk-negro-aw35",
+      "precio": 429000,
+      "categorias": [
+        {
+          "nombre": "Televisores y Audio"
+        }
+      ],
+      "imagenes": [
+        {
+          "url": {
+            "300": "5360/bgbdjdaeef/300.png"
+          }
+        }
+      ],
+      "descuento": 0,
+      "venta": 429000
+    },
+    {
+      "_id": "63cafd1b4d7dd8f1524940ee",
+      "codigo": "2097",
+      "nombre": "HORNO ELECTRICO TOKYO 46LTS. C/ROTISSERIE/CONVECTOR 2000W ELITE 46RE T1511",
+      "ruta": "horno-electrico-tokyo-46lts-crotisserieconvector-2000w-elite-46re-t1511",
+      "precio": 690000,
+      "categorias": [
+        {
+          "nombre": "Electrodomésticos"
+        }
+      ],
+      "imagenes": [
+        {
+          "url": {
+            "300": "2097/cdiegaajbi/300.png"
+          }
+        }
+      ],
+      "descuento": 0,
+      "venta": 690000
+    },
+    {
+      "_id": "63cafd1b4d7dd8f1524940f6",
+      "codigo": "11105",
+      "nombre": "MICROONDAS GOODWEATHER 28LTS DIGITAL GW-AG928 900W",
+      "ruta": "microondas-goodweather-28lts-digital-gw-ag928-900w",
+      "precio": 883000,
+      "categorias": [
+        {
+          "nombre": "Electrodomésticos"
+        }
+      ],
+      "imagenes": [
+        {
+          "url": {
+            "300": "11105/0243257986/300.png"
+          }
+        }
+      ],
+      "descuento": 0,
+      "venta": 883000
+    }
+  ],
+  "categorias": [
+    {
+      "_id": "680789d326bc4a0eedb705c5",
+      "nombre": "Periféricos",
+      "ruta": "perifericos"
+    },
+    {
+      "nombre": "",
+      "ruta": ""
+    },
+    {
+      "nombre": "Accesorios",
+      "ruta": "accesorios"
+    },
+    {
+      "nombre": "Accesorios",
+      "ruta": "accesorios",
+      "_id": "6807857326bc4a0eedb54292"
+    },
+    {
+      "nombre": "Accesorios",
+      "ruta": "accesorios",
+      "_id": "6807861626bc4a0eedb5827b"
+    },
+    {
+      "nombre": "Accesorios",
+      "ruta": "accesorios",
+      "_id": "6807873726bc4a0eedb5eed4"
+    },
+    {
+      "nombre": "Accesorios",
+      "ruta": "accesorios",
+      "_id": "6807874c26bc4a0eedb5fc1d"
+    },
+    {
+      "nombre": "Accesorios",
+      "ruta": "accesorios",
+      "_id": "6807878026bc4a0eedb6191f"
+    },
+    {
+      "nombre": "Accesorios",
+      "ruta": "accesorios",
+      "_id": "680787af26bc4a0eedb63226"
+    },
+    {
+      "nombre": "Accesorios",
+      "ruta": "accesorios",
+      "_id": "6807880c26bc4a0eedb66037"
+    },
+    {
+      "nombre": "Accesorios",
+      "ruta": "accesorios",
+      "_id": "6807886f26bc4a0eedb68a34"
+    },
+    {
+      "nombre": "Accesorios",
+      "ruta": "accesorios",
+      "_id": "680788eb26bc4a0eedb6b9b7"
+    },
+    {
+      "nombre": "Accesorios",
+      "ruta": "accesorios",
+      "_id": "680788eb26bc4a0eedb6b9bc"
+    },
+    {
+      "nombre": "Accesorios",
+      "ruta": "accesorios",
+      "_id": "680788fd26bc4a0eedb6c057"
+    },
+    {
+      "nombre": "Accesorios",
+      "ruta": "accesorios",
+      "_id": "6807892c26bc4a0eedb6d133"
+    },
+    {
+      "nombre": "Accesorios",
+      "ruta": "accesorios",
+      "_id": "6807896926bc4a0eedb6e58d"
+    },
+    {
+      "nombre": "Accesorios",
+      "ruta": "accesorios",
+      "_id": "6807896f26bc4a0eedb6e776"
+    },
+    {
+      "nombre": "Accesorios",
+      "ruta": "accesorios",
+      "_id": "6807897e26bc4a0eedb6ebb3"
+    },
+    {
+      "nombre": "Accesorios",
+      "ruta": "accesorios",
+      "_id": "6807898026bc4a0eedb6ec68"
+    },
+    {
+      "nombre": "Accesorios",
+      "ruta": "accesorios",
+      "_id": "6807898826bc4a0eedb6eee5"
+    }
+  ],
+  "banners": [
+    {
+      "id": "1",
+      "title": "Bienvenidos",
+      "description": "Las mejores ofertas te esperan",
+      "imageUrl": "https://via.placeholder.com/1200x400/cccccc/000000?text=Bienvenidos",
+      "url": "/",
+      "order": 1
+    },
+    {
+      "id": "2",
+      "title": "Promociones",
+      "description": "Hasta 50% de descuento",
+      "imageUrl": "https://via.placeholder.com/1200x400/cccccc/000000?text=Promociones",
+      "url": "/promos",
+      "order": 2
+    }
+  ]
+}
