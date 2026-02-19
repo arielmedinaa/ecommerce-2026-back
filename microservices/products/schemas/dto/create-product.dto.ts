@@ -48,17 +48,7 @@ export class CreateProductDto {
 
     @IsArray()
     @IsOptional()
-    imagenes?: Array<{
-        variante: string;
-        formato: string;
-        url: {
-            '60': string;
-            '100': string;
-            '300': string;
-            '600': string;
-            '1000': string;
-        };
-    }>;
+    imagenes?: string[];
 
     @IsNumber()
     @IsOptional()

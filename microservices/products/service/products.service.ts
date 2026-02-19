@@ -5,6 +5,7 @@ import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Combos } from '@products/schemas/combos.schema';
+import { CreateComboDto } from '@products/schemas/dto/create-combo.dto';
 
 @Injectable()
 export class ProductsService {
@@ -27,6 +28,16 @@ export class ProductsService {
   private readonly CACHE_TTL = 5 * 60 * 1000;
   private readonly PRODUCT_CACHE_TTL = 5 * 60 * 1000;
   private readonly MAX_CACHE_ENTRIES = 50;
+  private readonly camposNecesarios = {
+    nombre: 1,
+    precio: 1,
+    venta: 1,
+    ruta: 1,
+    codigo: 1,
+    'imagenes.url.300': 1,
+    'categorias.nombre': 1,
+    descuento: 1,
+  };
 
   private getCacheKey(filters: any): string {
     return JSON.stringify({
@@ -57,10 +68,10 @@ export class ProductsService {
       return { data: cached.data, total: cached.total };
     }
 
-    const query: any = { 
+    const query: any = {
       estado: { $ne: 0 },
       imagenes: { $exists: true, $ne: [] },
-      dias_ultimo_movimiento: { $lte: 30 }
+      dias_ultimo_movimiento: { $lte: 30 },
     };
     if (filters.categoria) query['categorias._id'] = filters.categoria;
     if (filters.subcategoria) query['subcategorias._id'] = filters.subcategoria;
@@ -71,9 +82,7 @@ export class ProductsService {
     }
 
     if (filters.search) {
-      query.$or = [
-        { codigo: filters.search },
-      ];
+      query.$or = [{ codigo: filters.search }];
     }
 
     if (filters.nombre) {
@@ -83,7 +92,8 @@ export class ProductsService {
     const [data, total] = await Promise.all([
       this.productModel
         .find(query)
-        .sort({ prioridad: -1, _id: 1 })
+        .select(this.camposNecesarios)
+        .sort({ _id: 1 })
         .skip(Number(filters.offset) || 0)
         .limit(Number(filters.limit) || 20)
         .lean(),
@@ -111,7 +121,7 @@ export class ProductsService {
         _id: id,
         estado: { $ne: 0 },
         imagenes: { $exists: true, $ne: [] },
-        dias_ultimo_movimiento: { $lte: 30 }
+        dias_ultimo_movimiento: { $lte: 30 },
       })
       .lean();
 
@@ -122,12 +132,14 @@ export class ProductsService {
   }
 
   async findByCode(codigo: string): Promise<Product | null> {
-    return this.productModel.findOne({ 
-      codigo, 
-      estado: { $ne: 0 },
-      imagenes: { $exists: true, $ne: [] },
-      dias_ultimo_movimiento: { $lte: 30 }
-    }).lean();
+    return this.productModel
+      .findOne({
+        codigo,
+        estado: { $ne: 0 },
+        imagenes: { $exists: true, $ne: [] },
+        dias_ultimo_movimiento: { $lte: 30 },
+      })
+      .lean();
   }
 
   async create(createProductDto: CreateProductDto): Promise<Product> {
@@ -139,6 +151,10 @@ export class ProductsService {
     });
     this.invalidateCache();
     return createdProduct.save();
+  }
+
+  async createCombo(createCombo: CreateComboDto): Promise<Combos> {
+    return await this.combosModel.create(createCombo);
   }
 
   async update(
@@ -168,7 +184,7 @@ export class ProductsService {
       estado: 1,
       web: 1,
       imagenes: { $exists: true, $ne: [] },
-      dias_ultimo_movimiento: { $lte: 30 }
+      dias_ultimo_movimiento: { $lte: 30 },
     };
 
     const total = await this.productModel.countDocuments(query);
@@ -186,12 +202,12 @@ export class ProductsService {
     limit: number = 10,
     offset: number = 0,
   ) {
-    const query = { 
-      'categorias._id': categoryId, 
-      estado: 1, 
+    const query = {
+      'categorias._id': categoryId,
+      estado: 1,
       web: 1,
       imagenes: { $exists: true, $ne: [] },
-      dias_ultimo_movimiento: { $lte: 30 }
+      dias_ultimo_movimiento: { $lte: 30 },
     };
     const [data, total] = await Promise.all([
       this.productModel
@@ -234,11 +250,11 @@ export class ProductsService {
     if (codigosFaltantes.length > 0) {
       productosDB = await this.productModel
         .find(
-          { 
-            codigo: { $in: codigosFaltantes }, 
+          {
+            codigo: { $in: codigosFaltantes },
             estado: { $ne: 0 },
             imagenes: { $exists: true, $ne: [] },
-            dias_ultimo_movimiento: { $lte: 30 }
+            dias_ultimo_movimiento: { $lte: 30 },
           },
           projection,
         )
@@ -290,12 +306,10 @@ export class ProductsService {
       web: 1,
       $or: [
         { cantidad: { $gt: 0 }, dias_ultimo_movimiento: { $lte: 30 } },
-        { cantidad: 0, dias_ultimo_movimiento: { $lt: 30 } }
-      ]
-    }
-    return this.combosModel
-      .findOne(filtro)
-      .lean();
+        { cantidad: 0, dias_ultimo_movimiento: { $lt: 30 } },
+      ],
+    };
+    return this.combosModel.findOne(filtro).lean();
   }
 
   async getCategories(): Promise<{ categorias: string[] }> {
@@ -310,7 +324,7 @@ export class ProductsService {
 
       const result = await this.productModel.aggregate(pipeline).exec();
       const categorias = result.map((item) => item.categoria);
-      
+
       return { categorias };
     } catch (error) {
       this.logger.error('Error al obtener categorías:', error);

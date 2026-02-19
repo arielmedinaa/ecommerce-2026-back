@@ -1,13 +1,32 @@
-import { Body, Controller, Post, Inject, Get } from '@nestjs/common';
+import { Body, Controller, Post, Inject, Get, UseGuards } from '@nestjs/common';
 import { ClientProxy, Payload } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { timeout, catchError } from 'rxjs/operators';
+import { CreateComboDto } from '@products/schemas/dto/create-combo.dto';
+import { JwtAuthGuard } from '@gateway/common/guards/jwt-auth.guard';
+import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
 
 @Controller('products')
 export class ProductsController {
   constructor(
     @Inject('PRODUCTS_SERVICE') private readonly productsClient: ClientProxy,
   ) {}
+
+  @UseGuards(JwtAuthGuard)
+  @Post('/create')
+  async createProduct(@Body() createProductDto: CreateProductDto) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'createProducts' }, createProductDto)
+    )
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('/combos')
+  async createCombos(@Body() createComboDto: CreateComboDto) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'createCombo' }, createComboDto)
+    )
+  }
 
   @Post()
   async getProducts(

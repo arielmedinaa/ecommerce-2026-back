@@ -9,7 +9,10 @@ export class LandingsController {
   constructor(private readonly landingsService: LandingsService) {}
 
   @MessagePattern({ cmd: 'crearLanding' })
-  async crearLanding(@Payload() payload: any): Promise<Landing> {
+  async crearLanding(@Payload() payload: any): Promise<{
+    data: {};
+    message?: any;
+  }> {
     const { createLandingDto, usuario } = payload;
     return this.landingsService.crearLanding(createLandingDto, usuario);
   }
@@ -45,11 +48,29 @@ export class LandingsController {
     return this.landingsService.updateLanding(id, updateLandingDto, userId);
   }
 
+  @MessagePattern({ cmd: 'deleteLanding' })
+  async deleteLanding(@Payload() payload: any): Promise<void> {
+    const { id } = payload;
+    return this.landingsService.deleteLanding(id);
+  }
+
   @MessagePattern({ cmd: 'getAllFormatos' })
   async getAllFormatos(
     @Payload() payload: any,
   ): Promise<{ formatos: Formato[]; total: number; pages: number }> {
     const { page, limit, filters } = payload;
     return this.landingsService.getAllFormatos(page, limit, filters);
+  }
+
+  @MessagePattern({ cmd: 'getFormatoById' })
+  async getFormatoById(@Payload() payload: any): Promise<Formato> {
+    const { id } = payload;
+    return this.landingsService.getFormatoById(id);
+  }
+
+
+  @MessagePattern({ cmd: 'getPredefinedTemplates' })
+  async getPredefinedTemplates(): Promise<any> {
+    return this.landingsService.getPredefinedTemplates();
   }
 }
