@@ -66,4 +66,9 @@ export class ProductsController {
       throw error;
     }
   }
+
+  @MessagePattern({ cmd: 'get_products_jota' })
+  async getProductsJota() {
+    return await this.productsService.getProductsJota();
+  }
 }

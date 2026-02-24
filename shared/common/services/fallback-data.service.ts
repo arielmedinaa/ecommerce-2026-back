@@ -15,6 +15,7 @@ export interface FallbackProduct {
 
 export interface FallbackHomeData {
   productos: FallbackProduct[];
+  jota: FallbackProduct[];
   categorias: string[];
   banners: Array<{
     id: string;
@@ -39,6 +40,7 @@ export class FallbackDataService {
     if (!existsSync(this.fallbackDataPath)) {
       const defaultFallbackData: FallbackHomeData = {
         productos: this.getDefaultProducts(),
+        jota: this.getDefaultProducts(),
         categorias: ['Electrónica', 'Ropa', 'Hogar', 'Deportes'],
         banners: this.getDefaultBanners(),
       };
@@ -134,12 +136,18 @@ export class FallbackDataService {
       productos: this.getDefaultProducts(),
       categorias: ['Electrónica', 'Ropa', 'Hogar', 'Deportes'],
       banners: this.getDefaultBanners(),
+      jota: this.getDefaultProducts(),
     };
   }
 
   getFallbackProducts(limit: number = 6): FallbackProduct[] {
     const data = this.getFallbackHomeData();
     return data.productos.slice(0, limit);
+  }
+
+  getFallbackJota(): FallbackProduct[] {
+    const data = this.getFallbackHomeData();
+    return data.jota;
   }
 
   getFallbackCategories(): string[] {
@@ -171,7 +179,7 @@ export class FallbackDataService {
     }
   }
 
-  saveSuccessfulResponse(data: any, type: 'products' | 'categories') {
+  saveSuccessfulResponse(data: any, type: 'products' | 'categories' | 'jota') {
     try {
       const currentData = this.getFallbackHomeData();
       
@@ -179,6 +187,8 @@ export class FallbackDataService {
         currentData.productos = data.data.slice(0, 10);
       } else if (type === 'categories' && data.categorias) {
         currentData.categorias = data.categorias;
+      } else if (type === 'jota' && data.data) {
+        currentData.jota = data.data.slice(0, 10);
       }
       
       this.saveFallbackData(currentData);

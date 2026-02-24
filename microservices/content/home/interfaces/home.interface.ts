@@ -12,6 +12,8 @@ export interface Banner {
 export interface HomeData {
   banners: Banner[];
   productos: any[];
+  jota: any[];
+  ofertasExpress: any[];
   categorias: string[];
 }
 

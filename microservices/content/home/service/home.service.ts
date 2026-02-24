@@ -4,7 +4,10 @@ import { FilterHomeDto } from '@content/home/dto/filter.home';
 import { HomeData } from '@content/home/interfaces/home.interface';
 import { ResponseData } from '@gateway/common/response/response.data';
 import { ImageService } from '@image/image.service';
-import { ResilientService, ResilientOptions } from '@shared/common/decorators/resilient-client.decorator';
+import {
+  ResilientService,
+  ResilientOptions,
+} from '@shared/common/decorators/resilient-client.decorator';
 import { FallbackDataService } from '@shared/common/services/fallback-data.service';
 
 @Injectable()
@@ -76,7 +79,7 @@ export class HomeService {
           {},
           resilientOptions,
         );
-        
+
         this.categoriasCache = result.categorias || [];
         this.lastCacheUpdate = now;
         this.fallbackDataService.saveSuccessfulResponse(result, 'categories');
@@ -119,6 +122,15 @@ export class HomeService {
         },
       };
 
+      const [jota] = await Promise.all([
+        this.resilientService.sendWithResilience(
+          this.productsClient,
+          { cmd: 'get_products_jota' },
+          {},
+          resilientOptions,
+        ) as Promise<any>,
+      ]);
+
       const [productos, categorias] = await Promise.all([
         this.resilientService.sendWithResilience(
           this.productsClient,
@@ -142,10 +154,13 @@ export class HomeService {
       ]);
 
       this.fallbackDataService.saveSuccessfulResponse(productos, 'products');
+      this.fallbackDataService.saveSuccessfulResponse(jota, 'jota');
       const response = new ResponseData<HomeData>();
       response.data = {
         banners: this.mockBanners,
         productos: productos.data || [],
+        jota: jota || [],
+        ofertasExpress: [],
         categorias: categorias,
       };
       response.status = 200;
@@ -154,18 +169,22 @@ export class HomeService {
       return response;
     } catch (error) {
       this.logger.error('Error en getHomeData:', error);
-      const fallbackProducts = this.fallbackDataService.getFallbackProducts(limit);
-      const fallbackCategories = this.fallbackDataService.getFallbackCategories();
-      
+      const fallbackProducts =
+        this.fallbackDataService.getFallbackProducts(limit);
+      const fallbackCategories =
+        this.fallbackDataService.getFallbackCategories();
+      const fallbackJota = this.fallbackDataService.getFallbackJota();
       const response = new ResponseData<HomeData>();
       response.data = {
         banners: this.mockBanners,
         productos: fallbackProducts,
+        jota: fallbackJota,
+        ofertasExpress: [],
         categorias: fallbackCategories,
       };
       response.status = 200;
       response.register = fallbackProducts.length;
-      
+
       return response;
     }
   }

@@ -244,5 +244,227 @@
       "url": "/promos",
       "order": 2
     }
+  ],
+  "jota": [
+    {
+      "_id": "65de22d0388cab50ea8bff8d",
+      "codigo": "25801",
+      "nombre": "LAVARROPAS JOTA 7KG SEMI AUTO C/S",
+      "ruta": "lavarropas-jota-7kg-semi-auto-cs",
+      "venta": 661000,
+      "precio": 661000,
+      "descuento": 0,
+      "categorias": [
+        {
+          "nombre": "Electrodomésticos"
+        }
+      ],
+      "imagenes": [
+        {
+          "url": {
+            "300": "25801/5396516992/300.png"
+          }
+        }
+      ]
+    },
+    {
+      "_id": "672d1aba7b4a9f447b6cd7c4",
+      "codigo": "31136",
+      "nombre": "AIRE SPLIT JOTA 12.000BTU",
+      "ruta": "aire-split-jota-12000btu",
+      "venta": 2184000,
+      "precio": 2184000,
+      "descuento": 0,
+      "categorias": [
+        {
+          "nombre": "Climatización"
+        }
+      ],
+      "imagenes": [
+        {
+          "url": {
+            "300": "31136/85227836/300.jpeg"
+          }
+        }
+      ]
+    },
+    {
+      "_id": "65de2bd5388cab50ea8bff93",
+      "codigo": "25802",
+      "nombre": "LAVARROPAS JOTA 12KG SEMI AUTO C/S",
+      "ruta": "lavarropas-jota-12kg-semi-auto-cs",
+      "venta": 874000,
+      "precio": 874000,
+      "descuento": 0,
+      "categorias": [
+        {
+          "nombre": "Electrodomésticos"
+        }
+      ],
+      "imagenes": [
+        {
+          "url": {
+            "300": "25802/5259575774/300.png"
+          }
+        }
+      ]
+    },
+    {
+      "_id": "6648eba78b28516009896faf",
+      "codigo": "27261",
+      "nombre": "HELADERA JOTA 300LTS F/H 2PTAS BLANCO",
+      "ruta": "heladera-jota-300lts-fh-2ptas-blanco",
+      "venta": 1933000,
+      "precio": 1933000,
+      "descuento": 0,
+      "categorias": [
+        {
+          "nombre": "Electrodomésticos"
+        }
+      ],
+      "imagenes": [
+        {
+          "url": {
+            "300": "27261/704989424/300.png"
+          }
+        }
+      ]
+    },
+    {
+      "_id": "672d1aba7b4a9f447b6cd7c5",
+      "codigo": "31137",
+      "nombre": "AIRE SPLIT JOTA 18.000BTU",
+      "ruta": "aire-split-jota-18000btu",
+      "venta": 3529000,
+      "precio": 3529000,
+      "descuento": 0,
+      "categorias": [
+        {
+          "nombre": "Climatización"
+        }
+      ],
+      "imagenes": [
+        {
+          "url": {
+            "300": "31137/13895446/300.jpeg"
+          }
+        }
+      ]
+    },
+    {
+      "_id": "6734bed81866c5192ce6f833",
+      "codigo": "31359",
+      "nombre": "COCINA JOTA 4 HORNALLAS SIRIUS BLANCO",
+      "ruta": "cocina-jota-4-hornallas-sirius-blanco",
+      "venta": 661000,
+      "precio": 661000,
+      "descuento": 0,
+      "categorias": [
+        {
+          "nombre": "Electrodomésticos"
+        }
+      ],
+      "imagenes": [
+        {
+          "url": {
+            "300": "31359/07514295/300.png"
+          }
+        },
+        {
+          "url": {
+            "300": "31359/15152124/300.png"
+          }
+        }
+      ]
+    },
+    {
+      "_id": "67379ec3ceb63ccc3e220877",
+      "codigo": "31446",
+      "nombre": "ANAFE 4H POP JOTA NEGRO",
+      "ruta": "anafe-4h-pop-jota-negro",
+      "venta": 616000,
+      "precio": 616000,
+      "descuento": 0,
+      "categorias": [
+        {
+          "nombre": "Electrodomésticos"
+        }
+      ],
+      "imagenes": [
+        {
+          "url": {
+            "300": "31446/3463121696/300.png"
+          }
+        }
+      ]
+    },
+    {
+      "_id": "65de2bd5388cab50ea8bff92",
+      "codigo": "25800",
+      "nombre": "LAVARROPAS JOTA 10KG SEMI AUTO C/S",
+      "ruta": "lavarropas-jota-10kg-semi-auto-cs",
+      "venta": 751000,
+      "precio": 751000,
+      "descuento": 0,
+      "categorias": [
+        {
+          "nombre": "Electrodomésticos"
+        }
+      ],
+      "imagenes": [
+        {
+          "url": {
+            "300": "25800/1120568213/300.png"
+          }
+        }
+      ]
+    },
+    {
+      "_id": "67379ec3ceb63ccc3e220878",
+      "codigo": "31447",
+      "nombre": "ANAFE 5H POP JOTA NEGRO",
+      "ruta": "anafe-5h-pop-jota-negro",
+      "venta": 801000,
+      "precio": 801000,
+      "descuento": 0,
+      "categorias": [
+        {
+          "nombre": "Electrodomésticos"
+        }
+      ],
+      "imagenes": [
+        {
+          "url": {
+            "300": "31447/367421198/300.png"
+          }
+        }
+      ]
+    },
+    {
+      "_id": "68f1811a229cfb1e5627b969",
+      "codigo": "41169",
+      "nombre": "LAVARROPAS JOTA 6KG C/F AUTOMATICO BLANCO REF JL-KG60-1021U",
+      "ruta": "lavarropas-jota-6kg-cf-automatico-blanco-ref-jl-kg60-1021u",
+      "venta": 1544000,
+      "precio": 1544000,
+      "descuento": 0,
+      "categorias": [
+        {
+          "nombre": "Lavado Y Limpieza"
+        }
+      ],
+      "imagenes": [
+        {
+          "url": {
+            "300": "41169/533504422/300.png"
+          }
+        },
+        {
+          "url": {
+            "300": "41169/1102218/300.png"
+          }
+        }
+      ]
+    }
   ]
 }

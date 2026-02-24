@@ -221,6 +221,26 @@ export class ProductsService {
     return { data, total };
   }
 
+  async getProductsJota() {
+    const query = {
+      nombre: RegExp('jota', 'i'),
+      estado: 1,
+      web: 1,
+      imagenes: { $exists: true, $ne: [] },
+      dias_ultimo_movimiento: { $lte: 30 },
+    };
+    const [data, total] = await Promise.all([
+      this.productModel
+        .find(query)
+        .select(this.camposNecesarios)
+        .sort({ prioridad: -1, _id: 1 })
+        .limit(10)
+        .lean(),
+      this.productModel.countDocuments(query),
+    ]);
+    return { data, total };
+  }
+
   async findByIds(ids: string[], fields?: string, filters: any = {}) {
     if (!ids || ids.length === 0) return [];
     const now = Date.now();
