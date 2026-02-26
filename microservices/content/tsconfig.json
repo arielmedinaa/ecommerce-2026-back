@@ -19,7 +19,8 @@
     "noFallthroughCasesInSwitch": false,
     "paths": {
       "@shared/*": ["../../shared/*"],
-      "@content/*": ["./content/*"]
+      "@content/*": ["./*"],
+      "@gateway/*": ["../../api-gateway/*"]
     }
   }
 }

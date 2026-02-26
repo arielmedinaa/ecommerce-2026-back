@@ -19,7 +19,8 @@
     "noFallthroughCasesInSwitch": false,
     "paths": {
       "@shared/*": ["../../shared/*"],
-      "@cart/*": ["./cart/*"]
+      "@cart/*": ["./*"],
+      "@gateway/*": ["../../gateway/*"]
     }
   }
 }

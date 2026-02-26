@@ -2,7 +2,7 @@ import { Body, Controller, Post, Get, Query, UseInterceptors } from '@nestjs/com
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { HomeService } from '@content/home/service/home.service';
 import { FilterHomeDto } from '@content/home/dto/filter.home';
-import { ResponseData } from '@response/response.data';
+import { ResponseData } from '@gateway/src/common/response/response.data';
 import { HomeData } from '@content/home/interfaces/home.interface';
 import { MicroserviceErrorInterceptor } from '@shared/common/interceptors/microservice-error.interceptor';
 

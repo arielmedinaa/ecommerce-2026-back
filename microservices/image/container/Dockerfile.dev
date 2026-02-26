@@ -11,21 +11,20 @@ RUN apk add --no-cache \
 
 RUN npm install -g nodemon ts-node tsconfig-paths
 
+# Copiar solo los archivos del servicio image
 COPY package*.json ./
-COPY yarn.lock ./
 COPY tsconfig.json ./
-COPY tsconfig.paths.json ./
 
-RUN yarn install
+# Instalar dependencias del servicio
+RUN npm install
 
-RUN yarn add -D tsconfig-paths
-
+# Copiar código fuente del servicio image
 COPY . .
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 RUN chown -R appuser:appgroup /usr/src/app
 USER appuser
 
-EXPOSE 4093
+EXPOSE 3107
 
-CMD ["yarn", "start:dev:image"]
+CMD ["npm", "run", "start:dev"]

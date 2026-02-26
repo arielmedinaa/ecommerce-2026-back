@@ -1,0 +1,231 @@
+# deploy/docker-compose.yml - Configuración para modo ALL (todos los servicios juntos)
+version: '3.8'
+
+services:
+
+  # Balanceador de Carga (Nginx)
+  nginx-lb:
+    image: nginx:latest
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "3100:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - app-network
+
+  # API Gateway
+  api-gateway:
+    build: 
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3100
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:5173}
+      - IS_DOCKER=true
+      - RUN_MODE=all
+      # Service ports
+      - AUTH_PORT=3101
+      - CART_PORT=3102
+      - CONTENT_PORT=3103
+      - ORDERS_PORT=3104
+      - PAYMENTS_PORT=3105
+      - PRODUCTS_PORT=3106
+      - IMAGE_PORT=3107
+      # Service URLs (modo Docker)
+      - AUTH_SERVICE_URL=deploy-auth-1
+      - CART_SERVICE_URL=deploy-cart-1
+      - CONTENT_SERVICE_URL=deploy-content-1
+      - PAYMENTS_SERVICE_URL=deploy-payments-1
+      - PRODUCTS_SERVICE_URL=deploy-products-1
+      - IMAGE_SERVICE_URL=deploy-image-1
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+      - ../imagesEcommerce:/home/appuser/Documents/projects/newEcommerce2026/imagesEcommerce
+    command: yarn start:dev:gateway
+    depends_on:
+      - auth
+      - products
+      - cart
+      - content
+      - payments
+      - image
+    networks:
+      - app-network
+
+  # Auth Service
+  auth:
+    build: 
+      context: ../microservices/auth
+      dockerfile: container/Dockerfile.dev
+    env_file:
+      - ../.env
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3101
+      - AUTH_PORT=3101
+      - IS_DOCKER=true
+      - RUN_MODE=all
+      - SERVICE_NAME=AUTH_SERVICE
+      # URLs de otros servicios (comunicación Docker)
+      - AUTH_SERVICE_URL=deploy-auth-1
+      - CART_SERVICE_URL=deploy-cart-1
+      - CONTENT_SERVICE_URL=deploy-content-1
+      - PAYMENTS_SERVICE_URL=deploy-payments-1
+      - PRODUCTS_SERVICE_URL=deploy-products-1
+      - IMAGE_SERVICE_URL=deploy-image-1
+    volumes:
+      - ../microservices/auth:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run start:dev
+    networks:
+      - app-network
+
+  # Products Service
+  products:
+    build: 
+      context: ../microservices/products
+      dockerfile: container/Dockerfile.dev
+    env_file:
+      - ../.env
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3106
+      - PRODUCTS_PORT=3106
+      - IS_DOCKER=true
+      - RUN_MODE=all
+      - SERVICE_NAME=PRODUCTS_SERVICE
+      # URLs de otros servicios (comunicación Docker)
+      - AUTH_SERVICE_URL=deploy-auth-1
+      - CART_SERVICE_URL=deploy-cart-1
+      - CONTENT_SERVICE_URL=deploy-content-1
+      - PAYMENTS_SERVICE_URL=deploy-payments-1
+      - PRODUCTS_SERVICE_URL=deploy-products-1
+      - IMAGE_SERVICE_URL=deploy-image-1
+    volumes:
+      - ../microservices/products:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run start:dev
+    networks:
+      - app-network
+
+  # Cart Service
+  cart:
+    build: 
+      context: ../microservices/cart
+      dockerfile: container/Dockerfile.dev
+    env_file:
+      - ../.env
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3102
+      - CART_PORT=3102
+      - IS_DOCKER=true
+      - RUN_MODE=all
+      - SERVICE_NAME=CART_SERVICE
+      # URLs de otros servicios (comunicación Docker)
+      - AUTH_SERVICE_URL=deploy-auth-1
+      - CART_SERVICE_URL=deploy-cart-1
+      - CONTENT_SERVICE_URL=deploy-content-1
+      - PAYMENTS_SERVICE_URL=deploy-payments-1
+      - PRODUCTS_SERVICE_URL=deploy-products-1
+      - IMAGE_SERVICE_URL=deploy-image-1
+    volumes:
+      - ../microservices/cart:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run start:dev
+    networks:
+      - app-network
+  
+  # Content Service
+  content:
+    build: 
+      context: ../microservices/content
+      dockerfile: container/Dockerfile.dev
+    env_file:
+      - ../.env
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3103
+      - CONTENT_PORT=3103
+      - IS_DOCKER=true
+      - RUN_MODE=all
+      - SERVICE_NAME=CONTENT_SERVICE
+      # URLs de otros servicios (comunicación Docker)
+      - AUTH_SERVICE_URL=deploy-auth-1
+      - CART_SERVICE_URL=deploy-cart-1
+      - CONTENT_SERVICE_URL=deploy-content-1
+      - PAYMENTS_SERVICE_URL=deploy-payments-1
+      - PRODUCTS_SERVICE_URL=deploy-products-1
+      - IMAGE_SERVICE_URL=deploy-image-1
+    volumes:
+      - ../microservices/content:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run start:dev
+    networks:
+      - app-network
+
+  # Payments Service
+  payments:
+    build: 
+      context: ../microservices/payments
+      dockerfile: container/Dockerfile.dev
+    env_file:
+      - ../.env
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3105
+      - PAYMENTS_PORT=3105
+      - IS_DOCKER=true
+      - RUN_MODE=all
+      - SERVICE_NAME=PAYMENTS_SERVICE
+      # URLs de otros servicios (comunicación Docker)
+      - AUTH_SERVICE_URL=deploy-auth-1
+      - CART_SERVICE_URL=deploy-cart-1
+      - CONTENT_SERVICE_URL=deploy-content-1
+      - PAYMENTS_SERVICE_URL=deploy-payments-1
+      - PRODUCTS_SERVICE_URL=deploy-products-1
+      - IMAGE_SERVICE_URL=deploy-image-1
+    volumes:
+      - ../microservices/payments:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run start:dev
+    networks:
+      - app-network
+
+  # Image Service
+  image:
+    build: 
+      context: ../microservices/image
+      dockerfile: container/Dockerfile.dev
+    env_file:
+      - ../.env
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=4093
+      - IMAGE_PORT=3107
+      - IS_DOCKER=true
+      - RUN_MODE=all
+      - SERVICE_NAME=IMAGE_SERVICE
+      # URLs de otros servicios (comunicación Docker)
+      - AUTH_SERVICE_URL=deploy-auth-1
+      - CART_SERVICE_URL=deploy-cart-1
+      - CONTENT_SERVICE_URL=deploy-content-1
+      - PAYMENTS_SERVICE_URL=deploy-payments-1
+      - PRODUCTS_SERVICE_URL=deploy-products-1
+      - IMAGE_SERVICE_URL=deploy-image-1
+    volumes:
+      - ../microservices/image:/usr/src/app
+      - /usr/src/app/node_modules
+      - ../imagesEcommerce:/home/appuser/Documents/projects/newEcommerce2026/imagesEcommerce
+    command: npm run start:dev
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+    attachable: true

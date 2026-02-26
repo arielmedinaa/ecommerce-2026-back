@@ -19,12 +19,7 @@
     "noFallthroughCasesInSwitch": false,
     "paths": {
       "@shared/*": ["../../shared/*"],
-      "@content/*": ["./content/*"],
-      "@auth/*": ["./auth/*"],
-      "@cart/*": ["./cart/*"],
-      "@image/*": ["./image/*"],
-      "@payments/*": ["./payments/*"],
-      "@products/*": ["./products/*"]
+      "@auth/*": ["./*"]
     }
   }
 }

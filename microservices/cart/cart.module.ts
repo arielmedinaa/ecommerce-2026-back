@@ -9,7 +9,6 @@ import { CartContadoService } from './service/cart.service';
 import { CartErrorService } from './service/errors/cart-error.service';
 import { CartValidationService } from './service/cart.service.spec';
 import { CartController } from "./controller/cart.controller";
-import { CommonModule } from '@gateway/common/common.module';
 import { JwtModule } from '@nestjs/jwt';
 import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
@@ -34,7 +33,6 @@ import { CachePersistenteService } from '@shared/common/services/cache-persisten
       'PAYMENTS_SERVICE',
     ]),
     DatabaseModule.forRoot(),
-    CommonModule,
   ],
   controllers: [CartController],
   providers: [

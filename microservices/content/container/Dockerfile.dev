@@ -3,7 +3,6 @@ FROM node:20-alpine
 WORKDIR /usr/src/app
 
 RUN apk add --no-cache \
-    vips-dev \
     python3 \
     make \
     g++ \
@@ -11,15 +10,14 @@ RUN apk add --no-cache \
 
 RUN npm install -g nodemon ts-node tsconfig-paths
 
+# Copiar solo los archivos del servicio content
 COPY package*.json ./
-COPY yarn.lock ./
 COPY tsconfig.json ./
-COPY tsconfig.paths.json ./
 
-RUN yarn install
+# Instalar dependencias del servicio
+RUN npm install
 
-RUN yarn add -D tsconfig-paths
-
+# Copiar código fuente del servicio content
 COPY . .
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
@@ -28,4 +26,4 @@ USER appuser
 
 EXPOSE 3103
 
-CMD ["yarn", "start:dev:content"]
+CMD ["npm", "run", "start:dev"]

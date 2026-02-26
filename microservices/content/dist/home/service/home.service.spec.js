@@ -1,0 +1,57 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const testing_1 = require("@nestjs/testing");
+const home_service_1 = require("./home.service");
+const image_service_1 = require("../../image/image.service");
+class MockImageService {
+    constructor() {
+        this.getImageUrl = jest.fn().mockImplementation((filename) => `http://localhost:3002/images/${filename}`);
+    }
+}
+describe('HomeService', () => {
+    let service;
+    let imageService;
+    beforeEach(async () => {
+        const module = await testing_1.Test.createTestingModule({
+            providers: [
+                home_service_1.HomeService,
+                { provide: image_service_1.ImageService, useClass: MockImageService }
+            ],
+        }).compile();
+        service = module.get(home_service_1.HomeService);
+        imageService = module.get(image_service_1.ImageService);
+    });
+    it('debería estar definido', () => {
+        expect(service).toBeDefined();
+    });
+    describe('getHomeData', () => {
+        it('debería retornar datos del home con productos paginados', async () => {
+            const filter = {
+                limit: 2,
+                offset: 0
+            };
+            const result = await service.getHomeData(filter);
+            expect(result).toHaveProperty('data');
+            expect(result).toHaveProperty('message');
+            expect(result).toHaveProperty('status', 200);
+            expect(result).toHaveProperty('register');
+            expect(result.data).toHaveProperty('banners');
+            expect(result.data).toHaveProperty('productos');
+            expect(result.data).toHaveProperty('categorias');
+            expect(result.data.productos.length).toBeLessThanOrEqual(2);
+        });
+        it('debería filtrar por categoría cuando se especifica', async () => {
+            const filter = {
+                category: 'electronics'
+            };
+            const result = await service.getHomeData(filter);
+            const allElectronics = result.data.productos.every((p) => p.category === 'electronics');
+            expect(allElectronics).toBeTruthy();
+        });
+        it('debería retornar un mensaje de éxito', async () => {
+            const result = await service.getHomeData({});
+            expect(result.message).toContain('successfully');
+        });
+    });
+});
+//# sourceMappingURL=home.service.spec.js.map
