@@ -49,13 +49,19 @@ export declare class Payments {
     procesado: Date;
     expira: Date;
 }
-export declare const PaymentsSchema: import("mongoose").Schema<Payments, import("mongoose").Model<Payments, any, any, any, Document<unknown, any, Payments, any, import("mongoose").DefaultSchemaOptions> & Payments & {
+export declare const PaymentsSchema: import("mongoose").Schema<Payments, import("mongoose").Model<Payments, any, any, any, (Document<unknown, any, Payments, any, import("mongoose").DefaultSchemaOptions> & Payments & {
     _id: Types.ObjectId;
 } & {
     __v: number;
-}, any, Payments>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Payments, Document<unknown, {}, Payments, {
+} & {
     id: string;
-}, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+}) | (Document<unknown, any, Payments, any, import("mongoose").DefaultSchemaOptions> & Payments & {
+    _id: Types.ObjectId;
+} & {
+    __v: number;
+}), any, Payments>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Payments, Document<unknown, {}, Payments, {
+    id: string;
+}, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
     _id: Types.ObjectId;
 } & {
     __v: number;
@@ -64,7 +70,7 @@ export declare const PaymentsSchema: import("mongoose").Schema<Payments, import(
 }, {
     createdAt?: import("mongoose").SchemaDefinitionProperty<Date, Payments, Document<unknown, {}, Payments, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -73,7 +79,7 @@ export declare const PaymentsSchema: import("mongoose").Schema<Payments, import(
     }>;
     updatedAt?: import("mongoose").SchemaDefinitionProperty<Date, Payments, Document<unknown, {}, Payments, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -82,7 +88,7 @@ export declare const PaymentsSchema: import("mongoose").Schema<Payments, import(
     }>;
     codigoCarrito?: import("mongoose").SchemaDefinitionProperty<number, Payments, Document<unknown, {}, Payments, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -91,7 +97,7 @@ export declare const PaymentsSchema: import("mongoose").Schema<Payments, import(
     }>;
     carrito?: import("mongoose").SchemaDefinitionProperty<Record<string, any>, Payments, Document<unknown, {}, Payments, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -100,7 +106,7 @@ export declare const PaymentsSchema: import("mongoose").Schema<Payments, import(
     }>;
     estado?: import("mongoose").SchemaDefinitionProperty<string, Payments, Document<unknown, {}, Payments, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -109,7 +115,7 @@ export declare const PaymentsSchema: import("mongoose").Schema<Payments, import(
     }>;
     metodoPago?: import("mongoose").SchemaDefinitionProperty<string, Payments, Document<unknown, {}, Payments, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -118,7 +124,7 @@ export declare const PaymentsSchema: import("mongoose").Schema<Payments, import(
     }>;
     monto?: import("mongoose").SchemaDefinitionProperty<number, Payments, Document<unknown, {}, Payments, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -127,7 +133,7 @@ export declare const PaymentsSchema: import("mongoose").Schema<Payments, import(
     }>;
     moneda?: import("mongoose").SchemaDefinitionProperty<string, Payments, Document<unknown, {}, Payments, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -143,7 +149,7 @@ export declare const PaymentsSchema: import("mongoose").Schema<Payments, import(
         respuesta?: any;
     }, Payments, Document<unknown, {}, Payments, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -158,7 +164,7 @@ export declare const PaymentsSchema: import("mongoose").Schema<Payments, import(
         respuesta?: any;
     }, Payments, Document<unknown, {}, Payments, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -167,7 +173,7 @@ export declare const PaymentsSchema: import("mongoose").Schema<Payments, import(
     }>;
     idTransaccion?: import("mongoose").SchemaDefinitionProperty<string, Payments, Document<unknown, {}, Payments, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -176,7 +182,7 @@ export declare const PaymentsSchema: import("mongoose").Schema<Payments, import(
     }>;
     descripcion?: import("mongoose").SchemaDefinitionProperty<string, Payments, Document<unknown, {}, Payments, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -192,7 +198,7 @@ export declare const PaymentsSchema: import("mongoose").Schema<Payments, import(
         nroDocumento: string;
     }, Payments, Document<unknown, {}, Payments, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -201,7 +207,7 @@ export declare const PaymentsSchema: import("mongoose").Schema<Payments, import(
     }>;
     metadatos?: import("mongoose").SchemaDefinitionProperty<Record<string, any>, Payments, Document<unknown, {}, Payments, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -210,7 +216,7 @@ export declare const PaymentsSchema: import("mongoose").Schema<Payments, import(
     }>;
     finalizado?: import("mongoose").SchemaDefinitionProperty<Date, Payments, Document<unknown, {}, Payments, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -219,7 +225,7 @@ export declare const PaymentsSchema: import("mongoose").Schema<Payments, import(
     }>;
     motivoFallo?: import("mongoose").SchemaDefinitionProperty<string, Payments, Document<unknown, {}, Payments, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -228,7 +234,7 @@ export declare const PaymentsSchema: import("mongoose").Schema<Payments, import(
     }>;
     intentosReintentar?: import("mongoose").SchemaDefinitionProperty<number, Payments, Document<unknown, {}, Payments, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -237,7 +243,7 @@ export declare const PaymentsSchema: import("mongoose").Schema<Payments, import(
     }>;
     proximoReintento?: import("mongoose").SchemaDefinitionProperty<Date, Payments, Document<unknown, {}, Payments, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -252,7 +258,7 @@ export declare const PaymentsSchema: import("mongoose").Schema<Payments, import(
         idReembolso?: string;
     }[], Payments, Document<unknown, {}, Payments, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -261,7 +267,7 @@ export declare const PaymentsSchema: import("mongoose").Schema<Payments, import(
     }>;
     procesado?: import("mongoose").SchemaDefinitionProperty<Date, Payments, Document<unknown, {}, Payments, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -270,7 +276,7 @@ export declare const PaymentsSchema: import("mongoose").Schema<Payments, import(
     }>;
     expira?: import("mongoose").SchemaDefinitionProperty<Date, Payments, Document<unknown, {}, Payments, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Payments & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Payments & {
         _id: Types.ObjectId;
     } & {
         __v: number;

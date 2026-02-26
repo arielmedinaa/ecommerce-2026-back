@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const testing_1 = require("@nestjs/testing");
 const home_service_1 = require("./home.service");
-const image_service_1 = require("../../image/image.service");
 class MockImageService {
     constructor() {
         this.getImageUrl = jest.fn().mockImplementation((filename) => `http://localhost:3002/images/${filename}`);
@@ -15,11 +14,11 @@ describe('HomeService', () => {
         const module = await testing_1.Test.createTestingModule({
             providers: [
                 home_service_1.HomeService,
-                { provide: image_service_1.ImageService, useClass: MockImageService }
+                { provide: MockImageService, useClass: MockImageService }
             ],
         }).compile();
         service = module.get(home_service_1.HomeService);
-        imageService = module.get(image_service_1.ImageService);
+        imageService = module.get(MockImageService);
     });
     it('debería estar definido', () => {
         expect(service).toBeDefined();

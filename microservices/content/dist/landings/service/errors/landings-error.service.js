@@ -17,7 +17,7 @@ exports.LandingErrorService = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
-const landings_error_schema_1 = require("@landings/schemas/errors/landings.error.schema");
+const landings_error_schema_1 = require("../../schemas/errors/landings.error.schema");
 let LandingErrorService = LandingErrorService_1 = class LandingErrorService {
     constructor(landingErrorModel) {
         this.landingErrorModel = landingErrorModel;

@@ -1,0 +1,633 @@
+content-2      | 
+cart-1         | cart.module.ts:2:32 - error TS2307: Cannot find module '@shared/config/database/database.module' or its corresponding type declarations.
+cart-1         | 
+cart-1         | 2 import { DatabaseModule } from '@shared/config/database/database.module';
+cart-1         |                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cart-1         | 
+cart-1         | cart.module.ts:13:36 - error TS2307: Cannot find module '@shared/config/microservice/microservice.module' or its corresponding type declarations.
+cart-1         | 
+cart-1         | 13 import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
+cart-1         |                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cart-1         | 
+cart-1         | cart.module.ts:16:34 - error TS2307: Cannot find module '@shared/common/decorators/resilient-client.decorator' or its corresponding type declarations.
+cart-1         | 
+cart-1         | 16 import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
+cart-1         |                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cart-1         | 
+cart-1         | cart.module.ts:17:41 - error TS2307: Cannot find module '@shared/common/services/cache-persistente.service' or its corresponding type declarations.
+cart-1         | 
+cart-1         | 17 import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
+cart-1         |                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cart-1         | 
+cart-1         | main.ts:3:31 - error TS2307: Cannot find module '@nestjs/config' or its corresponding type declarations.
+cart-1         | 
+cart-1         | 3 import { ConfigService } from "@nestjs/config";
+cart-1         |                                 ~~~~~~~~~~~~~~~~
+cart-1         | 
+cart-1         | main.ts:5:31 - error TS2307: Cannot find module '@shared/config/microservice/microservice.config' or its corresponding type declarations.
+cart-1         | 
+cart-1         | 5 import { SERVICE_PORTS } from "@shared/config/microservice/microservice.config";
+cart-1         |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cart-1         | 
+cart-1         | main.ts:10:18 - error TS2347: Untyped function calls may not accept type arguments.
+cart-1         | 
+cart-1         | 10     const port = configService.get<number>('CART_PORT', SERVICE_PORTS.CART);
+cart-1         |                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cart-1         | 
+cart-1         | service/cart.service.ts:6:37 - error TS2307: Cannot find module '@shared/common/utils/obtenerClave' or its corresponding type declarations.
+cart-1         | 
+cart-1         | 6 import { ObtenerClaveService } from '@shared/common/utils/obtenerClave';
+cart-1         |                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cart-1         | 
+cart-1         | service/cart.service.ts:12:34 - error TS2307: Cannot find module '@shared/common/decorators/resilient-client.decorator' or its corresponding type declarations.
+cart-1         | 
+cart-1         | 12 import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
+cart-1         |                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cart-1         | 
+cart-1         | service/cart.service.ts:13:41 - error TS2307: Cannot find module '@shared/common/services/cache-persistente.service' or its corresponding type declarations.
+cart-1         | 
+cart-1         | 13 import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
+cart-1         |                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cart-1         | 
+cart-1         | [7:36:59 PM] Found 10 errors. Watching for file changes.
+cart-1         | 
+api-gateway-1  | Configuring PAYMENTS_SERVICE microservice at deploy-payments-1:3105
+image-1        | image.module.ts:10:32 - error TS2307: Cannot find module '@shared/config/database/database.module' or its corresponding type declarations.
+image-1        | 
+image-1        | 10 import { DatabaseModule } from '@shared/config/database/database.module';
+image-1        |                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+image-1        | 
+image-1        | main.ts:3:31 - error TS2307: Cannot find module '@nestjs/config' or its corresponding type declarations.
+image-1        | 
+image-1        | 3 import { ConfigService } from "@nestjs/config";
+image-1        |                                 ~~~~~~~~~~~~~~~~
+image-1        | 
+image-1        | main.ts:5:31 - error TS2307: Cannot find module '@shared/config/microservice/microservice.config' or its corresponding type declarations.
+image-1        | 
+image-1        | 5 import { SERVICE_PORTS } from "@shared/config/microservice/microservice.config";
+image-1        |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+image-1        | 
+image-1        | main.ts:10:18 - error TS2347: Untyped function calls may not accept type arguments.
+image-1        | 
+image-1        | 10     const port = configService.get<number>('IMAGE_PORT', SERVICE_PORTS.IMAGE);
+image-1        |                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+image-1        | 
+image-1        | service/image.banners.service.ts:16:10 - error TS2305: Module '"multer"' has no exported member 'FileUpload'.
+image-1        | 
+image-1        | 16 import { FileUpload } from 'multer';
+image-1        |             ~~~~~~~~~~
+image-1        | 
+image-1        | [7:37:01 PM] Found 5 errors. Watching for file changes.
+image-1        | 
+auth-1         | auth.module.ts:8:32 - error TS2307: Cannot find module '@shared/config/database/database.module' or its corresponding type declarations.
+auth-1         | 
+auth-1         | 8 import { DatabaseModule } from '@shared/config/database/database.module';
+auth-1         |                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+auth-1         | 
+auth-1         | main.ts:5:31 - error TS2307: Cannot find module '@shared/config/microservice/microservice.config' or its corresponding type declarations.
+auth-1         | 
+auth-1         | 5 import { SERVICE_PORTS } from '@shared/config/microservice/microservice.config';
+auth-1         |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+auth-1         | 
+auth-1         | main.ts:6:31 - error TS2307: Cannot find module '@nestjs/config' or its corresponding type declarations.
+auth-1         | 
+auth-1         | 6 import { ConfigService } from '@nestjs/config';
+auth-1         |                                 ~~~~~~~~~~~~~~~~
+auth-1         | 
+auth-1         | main.ts:11:28 - error TS2347: Untyped function calls may not accept type arguments.
+auth-1         | 
+auth-1         | 11   const microservicePort = configService.get<number>('AUTH_PORT', SERVICE_PORTS.AUTH);
+auth-1         |                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+auth-1         | 
+auth-1         | strategies/google.strategy.ts:4:31 - error TS2307: Cannot find module '@nestjs/config' or its corresponding type declarations.
+auth-1         | 
+auth-1         | 4 import { ConfigService } from '@nestjs/config';
+auth-1         |                                 ~~~~~~~~~~~~~~~~
+auth-1         | 
+auth-1         | strategies/jwt.strategy.ts:4:31 - error TS2307: Cannot find module '@nestjs/config' or its corresponding type declarations.
+auth-1         | 
+auth-1         | 4 import { ConfigService } from '@nestjs/config';
+auth-1         |                                 ~~~~~~~~~~~~~~~~
+auth-1         | 
+auth-1         | [7:37:01 PM] Found 6 errors. Watching for file changes.
+auth-1         | 
+api-gateway-2  | Configuring PAYMENTS_SERVICE microservice at deploy-payments-1:3105
+api-gateway-1  | Configuring AUTH_SERVICE microservice at deploy-auth-1:3101
+payments-1     | main.ts:4:31 - error TS2307: Cannot find module '@nestjs/config' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 4 import { ConfigService } from "@nestjs/config";
+payments-1     |                                 ~~~~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | main.ts:5:31 - error TS2307: Cannot find module '@shared/config/microservice/microservice.config' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 5 import { SERVICE_PORTS } from "@shared/config/microservice/microservice.config";
+payments-1     |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | main.ts:11:18 - error TS2347: Untyped function calls may not accept type arguments.
+payments-1     | 
+payments-1     | 11     const port = configService.get<number>('PAYMENTS_PORT', SERVICE_PORTS.PAYMENTS);
+payments-1     |                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | payments.module.ts:2:32 - error TS2307: Cannot find module '@shared/config/database/database.module' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 2 import { DatabaseModule } from '@shared/config/database/database.module';
+payments-1     |                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | service/errors/payment-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 5 import moment from 'moment-timezone';
+payments-1     |                      ~~~~~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | service/payments.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 5 import moment from 'moment-timezone';
+payments-1     |                      ~~~~~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | [7:37:03 PM] Found 6 errors. Watching for file changes.
+payments-1     | 
+api-gateway-1  | Configuring CONTENT_SERVICE microservice at deploy-content-1:3103
+api-gateway-2  | Configuring AUTH_SERVICE microservice at deploy-auth-1:3101
+api-gateway-2  | Configuring CONTENT_SERVICE microservice at deploy-content-1:3103
+cart-1         | node:internal/modules/cjs/loader:1210
+cart-1         |   throw err;
+cart-1         |   ^
+cart-1         | 
+cart-1         | Error: Cannot find module '@shared/config/database/database.module'
+cart-1         | Require stack:
+cart-1         | - /usr/src/app/dist/cart.module.js
+cart-1         | - /usr/src/app/dist/main.js
+cart-1         |     at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+cart-1         |     at Module._load (node:internal/modules/cjs/loader:1038:27)
+cart-1         |     at Module.require (node:internal/modules/cjs/loader:1289:19)
+cart-1         |     at require (node:internal/modules/helpers:182:18)
+cart-1         |     at Object.<anonymous> (/usr/src/app/cart.module.ts:2:1)
+cart-1         |     at Module._compile (node:internal/modules/cjs/loader:1521:14)
+cart-1         |     at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+cart-1         |     at Module.load (node:internal/modules/cjs/loader:1266:32)
+cart-1         |     at Module._load (node:internal/modules/cjs/loader:1091:12)
+cart-1         |     at Module.require (node:internal/modules/cjs/loader:1289:19) {
+cart-1         |   code: 'MODULE_NOT_FOUND',
+cart-1         |   requireStack: [ '/usr/src/app/dist/cart.module.js', '/usr/src/app/dist/main.js' ]
+cart-1         | }
+cart-1         | 
+cart-1         | Node.js v20.20.0
+products-1     | main.ts:5:31 - error TS2307: Cannot find module '@shared/config/microservice/microservice.config' or its corresponding type declarations.
+products-1     | 
+products-1     | 5 import { SERVICE_PORTS } from '@shared/config/microservice/microservice.config';
+products-1     |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+products-1     | 
+products-1     | main.ts:6:31 - error TS2307: Cannot find module '@nestjs/config' or its corresponding type declarations.
+products-1     | 
+products-1     | 6 import { ConfigService } from '@nestjs/config';
+products-1     |                                 ~~~~~~~~~~~~~~~~
+products-1     | 
+products-1     | main.ts:12:28 - error TS2347: Untyped function calls may not accept type arguments.
+products-1     | 
+products-1     | 12   const microservicePort = configService.get<number>('PRODUCTS_PORT', SERVICE_PORTS.PRODUCTS);
+products-1     |                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+products-1     | 
+products-1     | products.module.ts:9:32 - error TS2307: Cannot find module '@shared/config/database/database.module' or its corresponding type declarations.
+products-1     | 
+products-1     | 9 import { DatabaseModule } from '@shared/config/database/database.module';
+products-1     |                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+products-1     | 
+products-1     | [7:37:12 PM] Found 4 errors. Watching for file changes.
+products-1     | 
+api-gateway-1  | Configuring AUTH_SERVICE microservice at deploy-auth-1:3101
+api-gateway-1  | Configuring CART_SERVICE microservice at deploy-cart-1:3102
+api-gateway-1  | Configuring CONTENT_SERVICE microservice at deploy-content-1:3103
+api-gateway-1  | Configuring ORDERS_SERVICE microservice at deploy-orders-1:3104
+api-gateway-1  | Configuring PAYMENTS_SERVICE microservice at deploy-payments-1:3105
+api-gateway-1  | Configuring PRODUCTS_SERVICE microservice at deploy-products-1:3106
+api-gateway-1  | Configuring IMAGE_SERVICE microservice at deploy-image-1:3107
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:12 PM     LOG [NestFactory] Starting Nest application...
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] MicroserviceModule dependencies initialized +333ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] ClientsModule dependencies initialized +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] MicroserviceModule dependencies initialized +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] ClientsModule dependencies initialized +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] MicroserviceModule dependencies initialized +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] ClientsModule dependencies initialized +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] PassportModule dependencies initialized +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] MicroserviceModule dependencies initialized +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] ClientsModule dependencies initialized +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] ClientsModule dependencies initialized +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] ConfigHostModule dependencies initialized +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] JwtModule dependencies initialized +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] ConfigModule dependencies initialized +13ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] PaymentsModule dependencies initialized +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] ContentModule dependencies initialized +8ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] ImageModule dependencies initialized +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] AppModule dependencies initialized +6ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] AuthModule dependencies initialized +1ms
+api-gateway-2  | Configuring AUTH_SERVICE microservice at deploy-auth-1:3101
+api-gateway-2  | Configuring CART_SERVICE microservice at deploy-cart-1:3102
+api-gateway-2  | Configuring CONTENT_SERVICE microservice at deploy-content-1:3103
+api-gateway-2  | Configuring ORDERS_SERVICE microservice at deploy-orders-1:3104
+api-gateway-2  | Configuring PAYMENTS_SERVICE microservice at deploy-payments-1:3105
+api-gateway-2  | Configuring PRODUCTS_SERVICE microservice at deploy-products-1:3106
+api-gateway-2  | Configuring IMAGE_SERVICE microservice at deploy-image-1:3107
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [NestFactory] Starting Nest application...
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RoutesResolver] AppController {/api}: +421ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/health, GET} route +8ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RoutesResolver] ProductsController {/api/products}: +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/products/create, POST} route +2ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/products/combos, POST} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/products, POST} route +3ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/products/listar/promos, POST} route +7ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/products/searchProducts, POST} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/products/searchComboByCodigo, GET} route +2ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/products/createOferta, POST} route +2ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RoutesResolver] CartController {/api/cart}: +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/cart, POST} route +2ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/cart/getCart, GET} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/cart/getAllCart, POST} route +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/cart/finishCart, POST} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RoutesResolver] PaymentsController {/api/payments}: +6ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/payments/registrar, POST} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/payments/listar/:codigoCarrito, GET} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/payments/reembolsos/:codigoCarrito, GET} route +8ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/payments/motivoRechazo/:codigoCarrito, GET} route +7ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/payments/actualizarEstado, POST} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/payments/health, GET} route +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RoutesResolver] AuthController {/api/auth}: +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/auth/guest, POST} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/auth/google, GET} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/auth/google/callback, GET} route +2ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/auth/me, GET} route +7ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/auth/logout, POST} route +2ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/auth/validate-token, POST} route +2ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RoutesResolver] ImageController {/api/image}: +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/image/banner/upload, POST} route +3ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:nombre/:device, GET} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/image/banner/list, POST} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id, GET} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/update, POST} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/delete, POST} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/toggle, POST} route +2ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/image/banner/dimensions, GET} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RoutesResolver] PaymentsController {/api/payments}: +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/payments/registrar, POST} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/payments/listar/:codigoCarrito, GET} route +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/payments/reembolsos/:codigoCarrito, GET} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/payments/motivoRechazo/:codigoCarrito, GET} route +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/payments/actualizarEstado, POST} route +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/payments/health, GET} route +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RoutesResolver] AuthController {/api/auth}: +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/auth/guest, POST} route +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/auth/google, GET} route +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/auth/google/callback, GET} route +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/auth/me, GET} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/auth/logout, POST} route +0ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] MicroserviceModule dependencies initialized +185ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] ClientsModule dependencies initialized +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] MicroserviceModule dependencies initialized +0ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] ClientsModule dependencies initialized +0ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] MicroserviceModule dependencies initialized +0ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] ClientsModule dependencies initialized +0ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] PassportModule dependencies initialized +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] MicroserviceModule dependencies initialized +0ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] ClientsModule dependencies initialized +2ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] ClientsModule dependencies initialized +0ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] ConfigHostModule dependencies initialized +5ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] JwtModule dependencies initialized +0ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] ConfigModule dependencies initialized +14ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] PaymentsModule dependencies initialized +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] ContentModule dependencies initialized +5ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] ImageModule dependencies initialized +0ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] AppModule dependencies initialized +6ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [InstanceLoader] AuthModule dependencies initialized +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/auth/validate-token, POST} route +89ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RoutesResolver] ContentController {/api/content}: +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/content/home, POST} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/content/landing, POST} route +13ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/content/landings, GET} route +14ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/content/landings/active, GET} route +9ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/content/landing/:id, GET} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/content/landing/slug/:slug, GET} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/content/landing/:id, PUT} route +3ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/content/landing/:id, DELETE} route +29ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/content/landing/:id/toggle-publish, PUT} route +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/content/formats, GET} route +3ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/content/formats/active, GET} route +6ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/content/format/:id, GET} route +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/content/format/slug/:slug, GET} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/content/format, POST} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/content/format/:id, PUT} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/content/format/:id, DELETE} route +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/content/formats/templates, GET} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/content/formats/import-template, POST} route +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/content/landings/stats, GET} route +15ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/content/formats/stats, GET} route +3ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RoutesResolver] ImageController {/api/image}: +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/image/banner/upload, POST} route +2ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:nombre/:device, GET} route +2ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/image/banner/list, POST} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id, GET} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/update, POST} route +0ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/delete, POST} route +9ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/toggle, POST} route +1ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [RouterExplorer] Mapped {/api/image/banner/dimensions, GET} route +3ms
+api-gateway-1  | [Nest] 28  - 02/26/2026, 7:37:13 PM     LOG [NestApplication] Nest application successfully started +53ms
+api-gateway-1  | API Gateway is running on: http://[::1]:3100
+api-gateway-1  | Swagger documentation: http://[::1]:3100/api/docs
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RoutesResolver] AppController {/api}: +472ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/health, GET} route +11ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RoutesResolver] ProductsController {/api/products}: +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/products/create, POST} route +9ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/products/combos, POST} route +2ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/products, POST} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/products/listar/promos, POST} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/products/searchProducts, POST} route +9ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/products/searchComboByCodigo, GET} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/products/createOferta, POST} route +6ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RoutesResolver] CartController {/api/cart}: +3ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/cart, POST} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/cart/getCart, GET} route +12ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/cart/getAllCart, POST} route +2ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/cart/finishCart, POST} route +2ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RoutesResolver] PaymentsController {/api/payments}: +2ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/payments/registrar, POST} route +4ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/payments/listar/:codigoCarrito, GET} route +4ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/payments/reembolsos/:codigoCarrito, GET} route +6ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/payments/motivoRechazo/:codigoCarrito, GET} route +4ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/payments/actualizarEstado, POST} route +2ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/payments/health, GET} route +2ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RoutesResolver] AuthController {/api/auth}: +0ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/auth/guest, POST} route +2ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/auth/google, GET} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/auth/google/callback, GET} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/auth/me, GET} route +0ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/auth/logout, POST} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/auth/validate-token, POST} route +2ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RoutesResolver] ImageController {/api/image}: +0ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/image/banner/upload, POST} route +2ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:nombre/:device, GET} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/image/banner/list, POST} route +6ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id, GET} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/update, POST} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/delete, POST} route +3ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/toggle, POST} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/image/banner/dimensions, GET} route +3ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RoutesResolver] PaymentsController {/api/payments}: +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/payments/registrar, POST} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/payments/listar/:codigoCarrito, GET} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/payments/reembolsos/:codigoCarrito, GET} route +0ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/payments/motivoRechazo/:codigoCarrito, GET} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/payments/actualizarEstado, POST} route +5ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/payments/health, GET} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RoutesResolver] AuthController {/api/auth}: +4ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/auth/guest, POST} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/auth/google, GET} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/auth/google/callback, GET} route +6ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/auth/me, GET} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/auth/logout, POST} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/auth/validate-token, POST} route +0ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RoutesResolver] ContentController {/api/content}: +0ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/content/home, POST} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/content/landing, POST} route +6ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/content/landings, GET} route +4ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/content/landings/active, GET} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/content/landing/:id, GET} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/content/landing/slug/:slug, GET} route +0ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/content/landing/:id, PUT} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/content/landing/:id, DELETE} route +4ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/content/landing/:id/toggle-publish, PUT} route +3ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/content/formats, GET} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/content/formats/active, GET} route +0ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/content/format/:id, GET} route +11ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/content/format/slug/:slug, GET} route +8ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/content/format, POST} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/content/format/:id, PUT} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/content/format/:id, DELETE} route +8ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/content/formats/templates, GET} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/content/formats/import-template, POST} route +0ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/content/landings/stats, GET} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/content/formats/stats, GET} route +0ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RoutesResolver] ImageController {/api/image}: +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/image/banner/upload, POST} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:nombre/:device, GET} route +4ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/image/banner/list, POST} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id, GET} route +3ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/update, POST} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/delete, POST} route +1ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/toggle, POST} route +4ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [RouterExplorer] Mapped {/api/image/banner/dimensions, GET} route +2ms
+api-gateway-2  | [Nest] 28  - 02/26/2026, 7:37:14 PM     LOG [NestApplication] Nest application successfully started +105ms
+api-gateway-2  | API Gateway is running on: http://[::1]:3100
+api-gateway-2  | Swagger documentation: http://[::1]:3100/api/docs
+content-3      | content.module.ts:4:32 - error TS2307: Cannot find module '@shared/config/database/database.module' or its corresponding type declarations.
+content-3      | 
+content-3      | 4 import { DatabaseModule } from '@shared/config/database/database.module';
+content-3      |                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 
+content-3      | home/controller/home.controller.ts:5:30 - error TS2307: Cannot find module '@shared/common/response/response.data' or its corresponding type declarations.
+content-3      | 
+content-3      | 5 import { ResponseData } from '@shared/common/response/response.data';
+content-3      |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 
+content-3      | home/controller/home.controller.ts:7:46 - error TS2307: Cannot find module '@shared/common/interceptors/microservice-error.interceptor' or its corresponding type declarations.
+content-3      | 
+content-3      | 7 import { MicroserviceErrorInterceptor } from '@shared/common/interceptors/microservice-error.interceptor';
+content-3      |                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 
+content-3      | home/home.module.ts:4:36 - error TS2307: Cannot find module '@shared/config/microservice/microservice.module' or its corresponding type declarations.
+content-3      | 
+content-3      | 4 import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
+content-3      |                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 
+content-3      | home/home.module.ts:5:34 - error TS2307: Cannot find module '@shared/common/decorators/resilient-client.decorator' or its corresponding type declarations.
+content-3      | 
+content-3      | 5 import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
+content-3      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 
+content-3      | home/home.module.ts:6:37 - error TS2307: Cannot find module '@shared/common/services/fallback-data.service' or its corresponding type declarations.
+content-3      | 
+content-3      | 6 import { FallbackDataService } from '@shared/common/services/fallback-data.service';
+content-3      |                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 
+content-3      | home/interfaces/home.interface.ts:1:30 - error TS2307: Cannot find module '@shared/common/response/response.data' or its corresponding type declarations.
+content-3      | 
+content-3      | 1 import { ResponseData } from '@shared/common/response/response.data';
+content-3      |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 
+content-3      | home/service/home.service.ts:5:30 - error TS2307: Cannot find module '@shared/common/response/response.data' or its corresponding type declarations.
+content-3      | 
+content-3      | 5 import { ResponseData } from '@shared/common/response/response.data';
+content-3      |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 
+content-3      | home/service/home.service.ts:9:8 - error TS2307: Cannot find module '@shared/common/decorators/resilient-client.decorator' or its corresponding type declarations.
+content-3      | 
+content-3      | 9 } from '@shared/common/decorators/resilient-client.decorator';
+content-3      |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 
+content-3      | home/service/home.service.ts:10:37 - error TS2307: Cannot find module '@shared/common/services/fallback-data.service' or its corresponding type declarations.
+content-3      | 
+content-3      | 10 import { FallbackDataService } from '@shared/common/services/fallback-data.service';
+content-3      |                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 
+content-3      | landings/landings.module.ts:7:36 - error TS2307: Cannot find module '@shared/config/microservice/microservice.module' or its corresponding type declarations.
+content-3      | 
+content-3      | 7 import { MicroserviceModule } from "@shared/config/microservice/microservice.module";
+content-3      |                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 
+content-3      | main.ts:3:31 - error TS2307: Cannot find module '@nestjs/config' or its corresponding type declarations.
+content-3      | 
+content-3      | 3 import { ConfigService } from '@nestjs/config';
+content-3      |                                 ~~~~~~~~~~~~~~~~
+content-3      | 
+content-3      | main.ts:4:31 - error TS2307: Cannot find module '@shared/config/microservice/microservice.config' or its corresponding type declarations.
+content-3      | 
+content-3      | 4 import { SERVICE_PORTS } from '@shared/config/microservice/microservice.config';
+content-3      |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 
+content-3      | main.ts:10:16 - error TS2347: Untyped function calls may not accept type arguments.
+content-3      | 
+content-3      | 10   const port = configService.get<number>('CONTENT_PORT', SERVICE_PORTS.CONTENT);
+content-3      |                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 
+content-3      | [7:37:15 PM] Found 14 errors. Watching for file changes.
+content-3      | 
+content-1      | content.module.ts:4:32 - error TS2307: Cannot find module '@shared/config/database/database.module' or its corresponding type declarations.
+content-1      | 
+content-1      | 4 import { DatabaseModule } from '@shared/config/database/database.module';
+content-1      |                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | home/controller/home.controller.ts:5:30 - error TS2307: Cannot find module '@shared/common/response/response.data' or its corresponding type declarations.
+content-1      | 
+content-1      | 5 import { ResponseData } from '@shared/common/response/response.data';
+content-1      |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | home/controller/home.controller.ts:7:46 - error TS2307: Cannot find module '@shared/common/interceptors/microservice-error.interceptor' or its corresponding type declarations.
+content-1      | 
+content-1      | 7 import { MicroserviceErrorInterceptor } from '@shared/common/interceptors/microservice-error.interceptor';
+content-1      |                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | home/home.module.ts:4:36 - error TS2307: Cannot find module '@shared/config/microservice/microservice.module' or its corresponding type declarations.
+content-1      | 
+content-1      | 4 import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
+content-1      |                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | home/home.module.ts:5:34 - error TS2307: Cannot find module '@shared/common/decorators/resilient-client.decorator' or its corresponding type declarations.
+content-1      | 
+content-1      | 5 import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
+content-1      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | home/home.module.ts:6:37 - error TS2307: Cannot find module '@shared/common/services/fallback-data.service' or its corresponding type declarations.
+content-1      | 
+content-1      | 6 import { FallbackDataService } from '@shared/common/services/fallback-data.service';
+content-1      |                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | home/interfaces/home.interface.ts:1:30 - error TS2307: Cannot find module '@shared/common/response/response.data' or its corresponding type declarations.
+content-1      | 
+content-1      | 1 import { ResponseData } from '@shared/common/response/response.data';
+content-1      |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | home/service/home.service.ts:5:30 - error TS2307: Cannot find module '@shared/common/response/response.data' or its corresponding type declarations.
+content-1      | 
+content-1      | 5 import { ResponseData } from '@shared/common/response/response.data';
+content-1      |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | home/service/home.service.ts:9:8 - error TS2307: Cannot find module '@shared/common/decorators/resilient-client.decorator' or its corresponding type declarations.
+content-1      | 
+content-1      | 9 } from '@shared/common/decorators/resilient-client.decorator';
+content-1      |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | home/service/home.service.ts:10:37 - error TS2307: Cannot find module '@shared/common/services/fallback-data.service' or its corresponding type declarations.
+content-1      | 
+content-1      | 10 import { FallbackDataService } from '@shared/common/services/fallback-data.service';
+content-1      |                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | landings/landings.module.ts:7:36 - error TS2307: Cannot find module '@shared/config/microservice/microservice.module' or its corresponding type declarations.
+content-1      | 
+content-1      | 7 import { MicroserviceModule } from "@shared/config/microservice/microservice.module";
+content-1      |                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | main.ts:3:31 - error TS2307: Cannot find module '@nestjs/config' or its corresponding type declarations.
+content-1      | 
+content-1      | 3 import { ConfigService } from '@nestjs/config';
+content-1      |                                 ~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | main.ts:4:31 - error TS2307: Cannot find module '@shared/config/microservice/microservice.config' or its corresponding type declarations.
+content-1      | 
+content-1      | 4 import { SERVICE_PORTS } from '@shared/config/microservice/microservice.config';
+content-1      |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | main.ts:10:16 - error TS2347: Untyped function calls may not accept type arguments.
+content-1      | 
+content-1      | 10   const port = configService.get<number>('CONTENT_PORT', SERVICE_PORTS.CONTENT);
+content-1      |                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | [7:37:16 PM] Found 14 errors. Watching for file changes.
+content-1      | 
+content-2      | content.module.ts:4:32 - error TS2307: Cannot find module '@shared/config/database/database.module' or its corresponding type declarations.
+content-2      | 
+content-2      | 4 import { DatabaseModule } from '@shared/config/database/database.module';
+content-2      |                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 
+content-2      | home/controller/home.controller.ts:5:30 - error TS2307: Cannot find module '@shared/common/response/response.data' or its corresponding type declarations.
+content-2      | 
+content-2      | 5 import { ResponseData } from '@shared/common/response/response.data';
+content-2      |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 
+content-2      | home/controller/home.controller.ts:7:46 - error TS2307: Cannot find module '@shared/common/interceptors/microservice-error.interceptor' or its corresponding type declarations.
+content-2      | 
+content-2      | 7 import { MicroserviceErrorInterceptor } from '@shared/common/interceptors/microservice-error.interceptor';
+content-2      |                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 
+content-2      | home/home.module.ts:4:36 - error TS2307: Cannot find module '@shared/config/microservice/microservice.module' or its corresponding type declarations.
+content-2      | 
+content-2      | 4 import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
+content-2      |                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 
+content-2      | home/home.module.ts:5:34 - error TS2307: Cannot find module '@shared/common/decorators/resilient-client.decorator' or its corresponding type declarations.
+content-2      | 
+content-2      | 5 import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
+content-2      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 
+content-2      | home/home.module.ts:6:37 - error TS2307: Cannot find module '@shared/common/services/fallback-data.service' or its corresponding type declarations.
+content-2      | 
+content-2      | 6 import { FallbackDataService } from '@shared/common/services/fallback-data.service';
+content-2      |                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 
+content-2      | home/interfaces/home.interface.ts:1:30 - error TS2307: Cannot find module '@shared/common/response/response.data' or its corresponding type declarations.
+content-2      | 
+content-2      | 1 import { ResponseData } from '@shared/common/response/response.data';
+content-2      |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 
+content-2      | home/service/home.service.ts:5:30 - error TS2307: Cannot find module '@shared/common/response/response.data' or its corresponding type declarations.
+content-2      | 
+content-2      | 5 import { ResponseData } from '@shared/common/response/response.data';
+content-2      |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 
+content-2      | home/service/home.service.ts:9:8 - error TS2307: Cannot find module '@shared/common/decorators/resilient-client.decorator' or its corresponding type declarations.
+content-2      | 
+content-2      | 9 } from '@shared/common/decorators/resilient-client.decorator';
+content-2      |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 
+content-2      | home/service/home.service.ts:10:37 - error TS2307: Cannot find module '@shared/common/services/fallback-data.service' or its corresponding type declarations.
+content-2      | 
+content-2      | 10 import { FallbackDataService } from '@shared/common/services/fallback-data.service';
+content-2      |                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 
+content-2      | landings/landings.module.ts:7:36 - error TS2307: Cannot find module '@shared/config/microservice/microservice.module' or its corresponding type declarations.
+content-2      | 
+content-2      | 7 import { MicroserviceModule } from "@shared/config/microservice/microservice.module";
+content-2      |                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 
+content-2      | main.ts:3:31 - error TS2307: Cannot find module '@nestjs/config' or its corresponding type declarations.
+content-2      | 
+content-2      | 3 import { ConfigService } from '@nestjs/config';
+content-2      |                                 ~~~~~~~~~~~~~~~~
+content-2      | 
+content-2      | main.ts:4:31 - error TS2307: Cannot find module '@shared/config/microservice/microservice.config' or its corresponding type declarations.
+content-2      | 
+content-2      | 4 import { SERVICE_PORTS } from '@shared/config/microservice/microservice.config';
+content-2      |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 
+content-2      | main.ts:10:16 - error TS2347: Untyped function calls may not accept type arguments.
+content-2      | 
+content-2      | 10   const port = configService.get<number>('CONTENT_PORT', SERVICE_PORTS.CONTENT);
+content-2      |                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 
+content-2      | [7:37:18 PM] Found 14 errors. Watching for file changes.
+content-2      

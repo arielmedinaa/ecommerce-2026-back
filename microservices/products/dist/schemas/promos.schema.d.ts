@@ -13,13 +13,19 @@ export declare class Promo {
     estado: Object;
     cantidadCliente: Number;
 }
-export declare const PromoSchema: import("mongoose").Schema<Promo, import("mongoose").Model<Promo, any, any, any, import("mongoose").Document<unknown, any, Promo, any, import("mongoose").DefaultSchemaOptions> & Promo & {
+export declare const PromoSchema: import("mongoose").Schema<Promo, import("mongoose").Model<Promo, any, any, any, (import("mongoose").Document<unknown, any, Promo, any, import("mongoose").DefaultSchemaOptions> & Promo & {
     _id: import("mongoose").Types.ObjectId;
 } & {
     __v: number;
-}, any, Promo>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Promo, import("mongoose").Document<unknown, {}, Promo, {
+} & {
     id: string;
-}, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Promo & {
+}) | (import("mongoose").Document<unknown, any, Promo, any, import("mongoose").DefaultSchemaOptions> & Promo & {
+    _id: import("mongoose").Types.ObjectId;
+} & {
+    __v: number;
+}), any, Promo>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Promo, import("mongoose").Document<unknown, {}, Promo, {
+    id: string;
+}, import("mongoose").DefaultSchemaOptions> & Omit<Promo & {
     _id: import("mongoose").Types.ObjectId;
 } & {
     __v: number;
@@ -28,7 +34,7 @@ export declare const PromoSchema: import("mongoose").Schema<Promo, import("mongo
 }, {
     codigo?: import("mongoose").SchemaDefinitionProperty<string, Promo, import("mongoose").Document<unknown, {}, Promo, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Promo & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Promo & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -37,7 +43,7 @@ export declare const PromoSchema: import("mongoose").Schema<Promo, import("mongo
     }>;
     nombre?: import("mongoose").SchemaDefinitionProperty<string, Promo, import("mongoose").Document<unknown, {}, Promo, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Promo & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Promo & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -46,7 +52,7 @@ export declare const PromoSchema: import("mongoose").Schema<Promo, import("mongo
     }>;
     descripcion?: import("mongoose").SchemaDefinitionProperty<string, Promo, import("mongoose").Document<unknown, {}, Promo, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Promo & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Promo & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -55,7 +61,7 @@ export declare const PromoSchema: import("mongoose").Schema<Promo, import("mongo
     }>;
     ruta?: import("mongoose").SchemaDefinitionProperty<string, Promo, import("mongoose").Document<unknown, {}, Promo, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Promo & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Promo & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -64,7 +70,7 @@ export declare const PromoSchema: import("mongoose").Schema<Promo, import("mongo
     }>;
     fecha?: import("mongoose").SchemaDefinitionProperty<string, Promo, import("mongoose").Document<unknown, {}, Promo, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Promo & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Promo & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -73,7 +79,7 @@ export declare const PromoSchema: import("mongoose").Schema<Promo, import("mongo
     }>;
     hora?: import("mongoose").SchemaDefinitionProperty<string, Promo, import("mongoose").Document<unknown, {}, Promo, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Promo & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Promo & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -82,7 +88,7 @@ export declare const PromoSchema: import("mongoose").Schema<Promo, import("mongo
     }>;
     tiempo?: import("mongoose").SchemaDefinitionProperty<Object, Promo, import("mongoose").Document<unknown, {}, Promo, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Promo & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Promo & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -91,7 +97,7 @@ export declare const PromoSchema: import("mongoose").Schema<Promo, import("mongo
     }>;
     contenido?: import("mongoose").SchemaDefinitionProperty<Object, Promo, import("mongoose").Document<unknown, {}, Promo, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Promo & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Promo & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -100,7 +106,7 @@ export declare const PromoSchema: import("mongoose").Schema<Promo, import("mongo
     }>;
     visibilidad?: import("mongoose").SchemaDefinitionProperty<Object, Promo, import("mongoose").Document<unknown, {}, Promo, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Promo & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Promo & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -109,7 +115,7 @@ export declare const PromoSchema: import("mongoose").Schema<Promo, import("mongo
     }>;
     configuracion?: import("mongoose").SchemaDefinitionProperty<Object, Promo, import("mongoose").Document<unknown, {}, Promo, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Promo & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Promo & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -118,7 +124,7 @@ export declare const PromoSchema: import("mongoose").Schema<Promo, import("mongo
     }>;
     estado?: import("mongoose").SchemaDefinitionProperty<Object, Promo, import("mongoose").Document<unknown, {}, Promo, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Promo & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Promo & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -127,7 +133,7 @@ export declare const PromoSchema: import("mongoose").Schema<Promo, import("mongo
     }>;
     cantidadCliente?: import("mongoose").SchemaDefinitionProperty<Number, Promo, import("mongoose").Document<unknown, {}, Promo, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Promo & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Promo & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;

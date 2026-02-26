@@ -10,11 +10,11 @@ export const getMicroserviceConfig = (serviceName: string, port: number) => ({
 });
 
 export const SERVICE_PORTS = {
-  AUTH: 3001,
-  CART: 3002,
-  CONTENT: 3003,
-  ORDERS: 3004,
-  PAYMENTS: 3005,
-  PRODUCTS: 3006,
-  IMAGE: 3007,
+  AUTH: 3101,
+  CART: 3102,
+  CONTENT: 3103,
+  ORDERS: 3104,
+  PAYMENTS: 3105,
+  PRODUCTS: 3106,
+  IMAGE: 3107,
 };

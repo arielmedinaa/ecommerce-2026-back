@@ -17,9 +17,9 @@ exports.LandingsService = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
-const landings_schemas_1 = require("@landings/schemas/landings.schemas");
-const formatos_schema_1 = require("@landings/schemas/formatos.schema");
-const formatos_const_1 = require("@landings/const/formatos.const");
+const landings_schemas_1 = require("../schemas/landings.schemas");
+const formatos_schema_1 = require("../schemas/formatos.schema");
+const formatos_const_1 = require("../const/formatos.const");
 const landings_service_spec_1 = require("./landings.service.spec");
 const landings_error_service_1 = require("./errors/landings-error.service");
 let LandingsService = LandingsService_1 = class LandingsService {

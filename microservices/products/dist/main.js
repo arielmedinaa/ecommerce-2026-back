@@ -4,7 +4,7 @@ const core_1 = require("@nestjs/core");
 const microservices_1 = require("@nestjs/microservices");
 const products_module_1 = require("./products.module");
 const common_1 = require("@nestjs/common");
-const microservice_config_1 = require("../../shared/config/microservice/microservice.config");
+const microservice_config_1 = require("@shared/config/microservice/microservice.config");
 const config_1 = require("@nestjs/config");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(products_module_1.ProductsModule);

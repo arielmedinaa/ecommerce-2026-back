@@ -75,6 +75,28 @@ export class ServiceDiscoveryService {
   }
 
   /**
+   * Obtiene el puerto de un servicio
+   */
+  getServicePort(serviceName: string): number {
+    const service = this.services.get(serviceName);
+    if (service) {
+      return service.port;
+    }
+    
+    const defaultPorts: { [key: string]: number } = {
+      'AUTH_SERVICE': 3101,
+      'CART_SERVICE': 3102,
+      'CONTENT_SERVICE': 3103,
+      'ORDERS_SERVICE': 3104,
+      'PAYMENTS_SERVICE': 3105,
+      'PRODUCTS_SERVICE': 3106,
+      'IMAGE_SERVICE': 3107,
+    };
+    
+    return defaultPorts[serviceName] || 3000;
+  }
+
+  /**
    * Determina el host de un servicio según el modo de ejecución
    */
   private getServiceHost(serviceName: string): string {

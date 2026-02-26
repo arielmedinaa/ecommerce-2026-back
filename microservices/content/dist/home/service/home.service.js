@@ -17,7 +17,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.HomeService = void 0;
 const common_1 = require("@nestjs/common");
 const microservices_1 = require("@nestjs/microservices");
-const response_data_1 = require("@gateway/src/common/response/response.data");
+const response_data_1 = require("@shared/common/response/response.data");
 const resilient_client_decorator_1 = require("@shared/common/decorators/resilient-client.decorator");
 const fallback_data_service_1 = require("@shared/common/services/fallback-data.service");
 let HomeService = HomeService_1 = class HomeService {

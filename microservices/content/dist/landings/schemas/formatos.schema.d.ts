@@ -35,13 +35,19 @@ export declare class Formato {
     documentation?: string;
     metadata?: Record<string, any>;
 }
-export declare const FormatoSchema: import("mongoose").Schema<Formato, import("mongoose").Model<Formato, any, any, any, Document<unknown, any, Formato, any, import("mongoose").DefaultSchemaOptions> & Formato & {
+export declare const FormatoSchema: import("mongoose").Schema<Formato, import("mongoose").Model<Formato, any, any, any, (Document<unknown, any, Formato, any, import("mongoose").DefaultSchemaOptions> & Formato & {
     _id: Types.ObjectId;
 } & {
     __v: number;
-}, any, Formato>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Formato, Document<unknown, {}, Formato, {
+} & {
     id: string;
-}, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Formato & {
+}) | (Document<unknown, any, Formato, any, import("mongoose").DefaultSchemaOptions> & Formato & {
+    _id: Types.ObjectId;
+} & {
+    __v: number;
+}), any, Formato>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Formato, Document<unknown, {}, Formato, {
+    id: string;
+}, import("mongoose").DefaultSchemaOptions> & Omit<Formato & {
     _id: Types.ObjectId;
 } & {
     __v: number;
@@ -50,7 +56,7 @@ export declare const FormatoSchema: import("mongoose").Schema<Formato, import("m
 }, {
     name?: import("mongoose").SchemaDefinitionProperty<string, Formato, Document<unknown, {}, Formato, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Formato & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Formato & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -59,7 +65,7 @@ export declare const FormatoSchema: import("mongoose").Schema<Formato, import("m
     }>;
     slug?: import("mongoose").SchemaDefinitionProperty<string, Formato, Document<unknown, {}, Formato, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Formato & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Formato & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -68,7 +74,7 @@ export declare const FormatoSchema: import("mongoose").Schema<Formato, import("m
     }>;
     description?: import("mongoose").SchemaDefinitionProperty<string, Formato, Document<unknown, {}, Formato, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Formato & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Formato & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -77,16 +83,16 @@ export declare const FormatoSchema: import("mongoose").Schema<Formato, import("m
     }>;
     template?: import("mongoose").SchemaDefinitionProperty<string, Formato, Document<unknown, {}, Formato, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Formato & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Formato & {
         _id: Types.ObjectId;
     } & {
         __v: number;
     }, "id"> & {
         id: string;
     }>;
-    type?: import("mongoose").SchemaDefinitionProperty<"html" | "react" | "jsx", Formato, Document<unknown, {}, Formato, {
+    type?: import("mongoose").SchemaDefinitionProperty<"react" | "html" | "jsx", Formato, Document<unknown, {}, Formato, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Formato & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Formato & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -95,7 +101,7 @@ export declare const FormatoSchema: import("mongoose").Schema<Formato, import("m
     }>;
     category?: import("mongoose").SchemaDefinitionProperty<string, Formato, Document<unknown, {}, Formato, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Formato & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Formato & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -104,7 +110,7 @@ export declare const FormatoSchema: import("mongoose").Schema<Formato, import("m
     }>;
     tags?: import("mongoose").SchemaDefinitionProperty<string[], Formato, Document<unknown, {}, Formato, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Formato & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Formato & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -117,7 +123,7 @@ export declare const FormatoSchema: import("mongoose").Schema<Formato, import("m
         demoUrl?: string;
     }, Formato, Document<unknown, {}, Formato, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Formato & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Formato & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -131,7 +137,7 @@ export declare const FormatoSchema: import("mongoose").Schema<Formato, import("m
         dependencies?: string[];
     }, Formato, Document<unknown, {}, Formato, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Formato & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Formato & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -146,7 +152,7 @@ export declare const FormatoSchema: import("mongoose").Schema<Formato, import("m
         defaultValue?: any;
     }[], Formato, Document<unknown, {}, Formato, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Formato & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Formato & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -155,7 +161,7 @@ export declare const FormatoSchema: import("mongoose").Schema<Formato, import("m
     }>;
     isActive?: import("mongoose").SchemaDefinitionProperty<boolean, Formato, Document<unknown, {}, Formato, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Formato & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Formato & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -164,7 +170,7 @@ export declare const FormatoSchema: import("mongoose").Schema<Formato, import("m
     }>;
     isPremium?: import("mongoose").SchemaDefinitionProperty<boolean, Formato, Document<unknown, {}, Formato, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Formato & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Formato & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -173,7 +179,7 @@ export declare const FormatoSchema: import("mongoose").Schema<Formato, import("m
     }>;
     usageCount?: import("mongoose").SchemaDefinitionProperty<number, Formato, Document<unknown, {}, Formato, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Formato & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Formato & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -182,7 +188,7 @@ export declare const FormatoSchema: import("mongoose").Schema<Formato, import("m
     }>;
     createdBy?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId, Formato, Document<unknown, {}, Formato, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Formato & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Formato & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -191,7 +197,7 @@ export declare const FormatoSchema: import("mongoose").Schema<Formato, import("m
     }>;
     updatedBy?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId, Formato, Document<unknown, {}, Formato, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Formato & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Formato & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -200,7 +206,7 @@ export declare const FormatoSchema: import("mongoose").Schema<Formato, import("m
     }>;
     sortOrder?: import("mongoose").SchemaDefinitionProperty<number, Formato, Document<unknown, {}, Formato, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Formato & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Formato & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -209,7 +215,7 @@ export declare const FormatoSchema: import("mongoose").Schema<Formato, import("m
     }>;
     documentation?: import("mongoose").SchemaDefinitionProperty<string, Formato, Document<unknown, {}, Formato, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Formato & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Formato & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -218,7 +224,7 @@ export declare const FormatoSchema: import("mongoose").Schema<Formato, import("m
     }>;
     metadata?: import("mongoose").SchemaDefinitionProperty<Record<string, any>, Formato, Document<unknown, {}, Formato, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Formato & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Formato & {
         _id: Types.ObjectId;
     } & {
         __v: number;

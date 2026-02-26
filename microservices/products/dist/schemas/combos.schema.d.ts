@@ -33,13 +33,19 @@ export declare class Combos {
     estado: number;
     deposito: string;
 }
-export declare const CombosSchema: import("mongoose").Schema<Combos, import("mongoose").Model<Combos, any, any, any, Document<unknown, any, Combos, any, import("mongoose").DefaultSchemaOptions> & Combos & {
+export declare const CombosSchema: import("mongoose").Schema<Combos, import("mongoose").Model<Combos, any, any, any, (Document<unknown, any, Combos, any, import("mongoose").DefaultSchemaOptions> & Combos & {
     _id: import("mongoose").Types.ObjectId;
 } & {
     __v: number;
-}, any, Combos>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Combos, Document<unknown, {}, Combos, {
+} & {
     id: string;
-}, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+}) | (Document<unknown, any, Combos, any, import("mongoose").DefaultSchemaOptions> & Combos & {
+    _id: import("mongoose").Types.ObjectId;
+} & {
+    __v: number;
+}), any, Combos>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Combos, Document<unknown, {}, Combos, {
+    id: string;
+}, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
     _id: import("mongoose").Types.ObjectId;
 } & {
     __v: number;
@@ -48,7 +54,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
 }, {
     codigo?: import("mongoose").SchemaDefinitionProperty<string, Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -57,7 +63,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     codigoBarra?: import("mongoose").SchemaDefinitionProperty<string, Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -66,7 +72,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     marca?: import("mongoose").SchemaDefinitionProperty<Record<string, any>, Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -75,7 +81,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     modelo?: import("mongoose").SchemaDefinitionProperty<string, Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -84,7 +90,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     nombre?: import("mongoose").SchemaDefinitionProperty<string, Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -93,7 +99,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     ruta?: import("mongoose").SchemaDefinitionProperty<string, Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -102,7 +108,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     descripcion?: import("mongoose").SchemaDefinitionProperty<string, Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -111,7 +117,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     venta?: import("mongoose").SchemaDefinitionProperty<number, Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -120,7 +126,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     ventaCredito?: import("mongoose").SchemaDefinitionProperty<any[], Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -129,7 +135,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     costo?: import("mongoose").SchemaDefinitionProperty<number, Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -138,7 +144,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     precio?: import("mongoose").SchemaDefinitionProperty<number, Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -147,7 +153,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     cantidad?: import("mongoose").SchemaDefinitionProperty<number, Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -156,7 +162,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     descuento?: import("mongoose").SchemaDefinitionProperty<number, Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -165,7 +171,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     categorias?: import("mongoose").SchemaDefinitionProperty<any[], Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -174,7 +180,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     subcategorias?: import("mongoose").SchemaDefinitionProperty<any[], Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -183,7 +189,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     caracteristicas?: import("mongoose").SchemaDefinitionProperty<any[], Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -192,7 +198,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     clasificaciones?: import("mongoose").SchemaDefinitionProperty<any[], Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -201,7 +207,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     relaciones?: import("mongoose").SchemaDefinitionProperty<any[], Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -210,7 +216,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     ofertas?: import("mongoose").SchemaDefinitionProperty<any[], Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -219,7 +225,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     promos?: import("mongoose").SchemaDefinitionProperty<any[], Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -228,7 +234,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     proveedores?: import("mongoose").SchemaDefinitionProperty<any[], Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -237,7 +243,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     imagenes?: import("mongoose").SchemaDefinitionProperty<string[], Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -246,7 +252,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     sello?: import("mongoose").SchemaDefinitionProperty<string, Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -255,7 +261,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     dias_ultimo_movimiento?: import("mongoose").SchemaDefinitionProperty<number, Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -264,7 +270,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     web?: import("mongoose").SchemaDefinitionProperty<number, Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -273,7 +279,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     websc?: import("mongoose").SchemaDefinitionProperty<number, Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -282,7 +288,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     prioridad?: import("mongoose").SchemaDefinitionProperty<number, Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -291,7 +297,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     orden?: import("mongoose").SchemaDefinitionProperty<number, Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -300,7 +306,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     tipo?: import("mongoose").SchemaDefinitionProperty<number, Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -309,7 +315,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     estado?: import("mongoose").SchemaDefinitionProperty<number, Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -318,7 +324,7 @@ export declare const CombosSchema: import("mongoose").Schema<Combos, import("mon
     }>;
     deposito?: import("mongoose").SchemaDefinitionProperty<string, Combos, Document<unknown, {}, Combos, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Combos & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Combos & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;

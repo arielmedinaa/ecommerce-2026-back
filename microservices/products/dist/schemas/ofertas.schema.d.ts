@@ -17,13 +17,19 @@ export declare class Ofertas {
     tiempoActivo: number;
     activo: boolean;
 }
-export declare const OfertasSchema: import("mongoose").Schema<Ofertas, import("mongoose").Model<Ofertas, any, any, any, import("mongoose").Document<unknown, any, Ofertas, any, import("mongoose").DefaultSchemaOptions> & Ofertas & {
+export declare const OfertasSchema: import("mongoose").Schema<Ofertas, import("mongoose").Model<Ofertas, any, any, any, (import("mongoose").Document<unknown, any, Ofertas, any, import("mongoose").DefaultSchemaOptions> & Ofertas & {
     _id: import("mongoose").Types.ObjectId;
 } & {
     __v: number;
-}, any, Ofertas>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Ofertas, import("mongoose").Document<unknown, {}, Ofertas, {
+} & {
     id: string;
-}, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Ofertas & {
+}) | (import("mongoose").Document<unknown, any, Ofertas, any, import("mongoose").DefaultSchemaOptions> & Ofertas & {
+    _id: import("mongoose").Types.ObjectId;
+} & {
+    __v: number;
+}), any, Ofertas>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Ofertas, import("mongoose").Document<unknown, {}, Ofertas, {
+    id: string;
+}, import("mongoose").DefaultSchemaOptions> & Omit<Ofertas & {
     _id: import("mongoose").Types.ObjectId;
 } & {
     __v: number;
@@ -32,7 +38,7 @@ export declare const OfertasSchema: import("mongoose").Schema<Ofertas, import("m
 }, {
     productos?: import("mongoose").SchemaDefinitionProperty<ProductoOferta[], Ofertas, import("mongoose").Document<unknown, {}, Ofertas, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Ofertas & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Ofertas & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -41,7 +47,7 @@ export declare const OfertasSchema: import("mongoose").Schema<Ofertas, import("m
     }>;
     tiempoActivo?: import("mongoose").SchemaDefinitionProperty<number, Ofertas, import("mongoose").Document<unknown, {}, Ofertas, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Ofertas & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Ofertas & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -50,7 +56,7 @@ export declare const OfertasSchema: import("mongoose").Schema<Ofertas, import("m
     }>;
     activo?: import("mongoose").SchemaDefinitionProperty<boolean, Ofertas, import("mongoose").Document<unknown, {}, Ofertas, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Ofertas & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Ofertas & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;

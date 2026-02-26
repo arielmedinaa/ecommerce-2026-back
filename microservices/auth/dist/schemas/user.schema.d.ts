@@ -7,13 +7,19 @@ export declare class User {
     isActive: boolean;
     lastLoginAt: Date;
 }
-export declare const UserSchema: import("mongoose").Schema<User, import("mongoose").Model<User, any, any, any, import("mongoose").Document<unknown, any, User, any, import("mongoose").DefaultSchemaOptions> & User & {
+export declare const UserSchema: import("mongoose").Schema<User, import("mongoose").Model<User, any, any, any, (import("mongoose").Document<unknown, any, User, any, import("mongoose").DefaultSchemaOptions> & User & {
     _id: import("mongoose").Types.ObjectId;
 } & {
     __v: number;
-}, any, User>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, User, import("mongoose").Document<unknown, {}, User, {
+} & {
     id: string;
-}, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<User & {
+}) | (import("mongoose").Document<unknown, any, User, any, import("mongoose").DefaultSchemaOptions> & User & {
+    _id: import("mongoose").Types.ObjectId;
+} & {
+    __v: number;
+}), any, User>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, User, import("mongoose").Document<unknown, {}, User, {
+    id: string;
+}, import("mongoose").DefaultSchemaOptions> & Omit<User & {
     _id: import("mongoose").Types.ObjectId;
 } & {
     __v: number;
@@ -22,7 +28,7 @@ export declare const UserSchema: import("mongoose").Schema<User, import("mongoos
 }, {
     email?: import("mongoose").SchemaDefinitionProperty<string, User, import("mongoose").Document<unknown, {}, User, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<User & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<User & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -31,7 +37,7 @@ export declare const UserSchema: import("mongoose").Schema<User, import("mongoos
     }>;
     name?: import("mongoose").SchemaDefinitionProperty<string, User, import("mongoose").Document<unknown, {}, User, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<User & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<User & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -40,7 +46,7 @@ export declare const UserSchema: import("mongoose").Schema<User, import("mongoos
     }>;
     avatar?: import("mongoose").SchemaDefinitionProperty<string, User, import("mongoose").Document<unknown, {}, User, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<User & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<User & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -49,7 +55,7 @@ export declare const UserSchema: import("mongoose").Schema<User, import("mongoos
     }>;
     provider?: import("mongoose").SchemaDefinitionProperty<"google" | "guest", User, import("mongoose").Document<unknown, {}, User, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<User & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<User & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -58,7 +64,7 @@ export declare const UserSchema: import("mongoose").Schema<User, import("mongoos
     }>;
     providerId?: import("mongoose").SchemaDefinitionProperty<string, User, import("mongoose").Document<unknown, {}, User, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<User & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<User & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -67,7 +73,7 @@ export declare const UserSchema: import("mongoose").Schema<User, import("mongoos
     }>;
     isActive?: import("mongoose").SchemaDefinitionProperty<boolean, User, import("mongoose").Document<unknown, {}, User, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<User & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<User & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -76,7 +82,7 @@ export declare const UserSchema: import("mongoose").Schema<User, import("mongoos
     }>;
     lastLoginAt?: import("mongoose").SchemaDefinitionProperty<Date, User, import("mongoose").Document<unknown, {}, User, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<User & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<User & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;

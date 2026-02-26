@@ -11,13 +11,19 @@ export declare class LandingError {
     operation?: string;
     requestPayload?: Record<string, any>;
 }
-export declare const LandingErrorSchema: import("mongoose").Schema<LandingError, import("mongoose").Model<LandingError, any, any, any, Document<unknown, any, LandingError, any, import("mongoose").DefaultSchemaOptions> & LandingError & {
+export declare const LandingErrorSchema: import("mongoose").Schema<LandingError, import("mongoose").Model<LandingError, any, any, any, (Document<unknown, any, LandingError, any, import("mongoose").DefaultSchemaOptions> & LandingError & {
     _id: Types.ObjectId;
 } & {
     __v: number;
-}, any, LandingError>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, LandingError, Document<unknown, {}, LandingError, {
+} & {
     id: string;
-}, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<LandingError & {
+}) | (Document<unknown, any, LandingError, any, import("mongoose").DefaultSchemaOptions> & LandingError & {
+    _id: Types.ObjectId;
+} & {
+    __v: number;
+}), any, LandingError>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, LandingError, Document<unknown, {}, LandingError, {
+    id: string;
+}, import("mongoose").DefaultSchemaOptions> & Omit<LandingError & {
     _id: Types.ObjectId;
 } & {
     __v: number;
@@ -26,7 +32,7 @@ export declare const LandingErrorSchema: import("mongoose").Schema<LandingError,
 }, {
     landingId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId, LandingError, Document<unknown, {}, LandingError, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<LandingError & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<LandingError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -35,7 +41,7 @@ export declare const LandingErrorSchema: import("mongoose").Schema<LandingError,
     }>;
     errorCode?: import("mongoose").SchemaDefinitionProperty<string, LandingError, Document<unknown, {}, LandingError, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<LandingError & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<LandingError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -44,7 +50,7 @@ export declare const LandingErrorSchema: import("mongoose").Schema<LandingError,
     }>;
     message?: import("mongoose").SchemaDefinitionProperty<string, LandingError, Document<unknown, {}, LandingError, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<LandingError & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<LandingError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -53,7 +59,7 @@ export declare const LandingErrorSchema: import("mongoose").Schema<LandingError,
     }>;
     context?: import("mongoose").SchemaDefinitionProperty<Record<string, any>, LandingError, Document<unknown, {}, LandingError, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<LandingError & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<LandingError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -62,7 +68,7 @@ export declare const LandingErrorSchema: import("mongoose").Schema<LandingError,
     }>;
     stackTrace?: import("mongoose").SchemaDefinitionProperty<string, LandingError, Document<unknown, {}, LandingError, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<LandingError & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<LandingError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -71,7 +77,7 @@ export declare const LandingErrorSchema: import("mongoose").Schema<LandingError,
     }>;
     path?: import("mongoose").SchemaDefinitionProperty<string, LandingError, Document<unknown, {}, LandingError, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<LandingError & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<LandingError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -80,7 +86,7 @@ export declare const LandingErrorSchema: import("mongoose").Schema<LandingError,
     }>;
     userId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId, LandingError, Document<unknown, {}, LandingError, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<LandingError & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<LandingError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -89,7 +95,7 @@ export declare const LandingErrorSchema: import("mongoose").Schema<LandingError,
     }>;
     operation?: import("mongoose").SchemaDefinitionProperty<string, LandingError, Document<unknown, {}, LandingError, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<LandingError & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<LandingError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -98,7 +104,7 @@ export declare const LandingErrorSchema: import("mongoose").Schema<LandingError,
     }>;
     requestPayload?: import("mongoose").SchemaDefinitionProperty<Record<string, any>, LandingError, Document<unknown, {}, LandingError, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<LandingError & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<LandingError & {
         _id: Types.ObjectId;
     } & {
         __v: number;

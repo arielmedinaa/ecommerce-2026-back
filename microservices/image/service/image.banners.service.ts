@@ -13,7 +13,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import sharp from 'sharp';
-import { FileUpload } from 'multer';
+import { Express } from 'express';
+import { Multer } from 'multer';
 
 @Injectable()
 export class BannerService {
@@ -46,7 +47,7 @@ export class BannerService {
   }
 
   async uploadBanner(
-    file: FileUpload,
+    file: Multer.File,
     nombre: string,
     variante: string,
     creadoPor: string,
@@ -127,7 +128,7 @@ export class BannerService {
   }
 
   private async processAndSaveImages(
-    file: FileUpload,
+    file: Multer.File,
     baseFileName: string,
     bannerId: string,
     nombre: string,

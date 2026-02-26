@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HomeService } from './home.service';
-import { ImageService } from '../../image/image.service';
 import { FilterHomeDto } from '../dto/filter.home';
 
 class MockImageService {
@@ -9,18 +8,18 @@ class MockImageService {
 
 describe('HomeService', () => {
   let service: HomeService;
-  let imageService: ImageService;
+  let imageService: MockImageService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         HomeService,
-        { provide: ImageService, useClass: MockImageService }
+        { provide: MockImageService, useClass: MockImageService }
       ],
     }).compile();
 
     service = module.get<HomeService>(HomeService);
-    imageService = module.get<ImageService>(ImageService);
+    imageService = module.get<MockImageService>(MockImageService);
   });
 
   it('debería estar definido', () => {

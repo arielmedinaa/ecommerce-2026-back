@@ -21,7 +21,7 @@ export declare const Categoria: mongoose.Model<{
     categoria: any[];
 }, {
     id: string;
-}, mongoose.ResolveSchemaOptions<mongoose.DefaultSchemaOptions>> & Omit<{
+}, mongoose.DefaultSchemaOptions> & Omit<{
     categoria: any[];
 } & {
     _id: mongoose.Types.ObjectId;
@@ -36,7 +36,7 @@ export declare const Categoria: mongoose.Model<{
         categoria: any[];
     }, {
         id: string;
-    }, mongoose.ResolveSchemaOptions<mongoose.DefaultSchemaOptions>> & Omit<{
+    }, mongoose.DefaultSchemaOptions> & Omit<{
         categoria: any[];
     } & {
         _id: mongoose.Types.ObjectId;

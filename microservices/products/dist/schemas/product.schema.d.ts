@@ -33,13 +33,19 @@ export declare class Product {
     estado: number;
     deposito: string;
 }
-export declare const ProductSchema: import("mongoose").Schema<Product, import("mongoose").Model<Product, any, any, any, Document<unknown, any, Product, any, import("mongoose").DefaultSchemaOptions> & Product & {
+export declare const ProductSchema: import("mongoose").Schema<Product, import("mongoose").Model<Product, any, any, any, (Document<unknown, any, Product, any, import("mongoose").DefaultSchemaOptions> & Product & {
     _id: import("mongoose").Types.ObjectId;
 } & {
     __v: number;
-}, any, Product>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Product, Document<unknown, {}, Product, {
+} & {
     id: string;
-}, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+}) | (Document<unknown, any, Product, any, import("mongoose").DefaultSchemaOptions> & Product & {
+    _id: import("mongoose").Types.ObjectId;
+} & {
+    __v: number;
+}), any, Product>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Product, Document<unknown, {}, Product, {
+    id: string;
+}, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
     _id: import("mongoose").Types.ObjectId;
 } & {
     __v: number;
@@ -48,7 +54,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
 }, {
     codigo?: import("mongoose").SchemaDefinitionProperty<string, Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -57,7 +63,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     codigoBarra?: import("mongoose").SchemaDefinitionProperty<string, Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -66,7 +72,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     marca?: import("mongoose").SchemaDefinitionProperty<Record<string, any>, Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -75,7 +81,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     modelo?: import("mongoose").SchemaDefinitionProperty<string, Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -84,7 +90,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     nombre?: import("mongoose").SchemaDefinitionProperty<string, Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -93,7 +99,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     ruta?: import("mongoose").SchemaDefinitionProperty<string, Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -102,7 +108,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     descripcion?: import("mongoose").SchemaDefinitionProperty<string, Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -111,7 +117,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     venta?: import("mongoose").SchemaDefinitionProperty<number, Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -120,7 +126,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     ventaCredito?: import("mongoose").SchemaDefinitionProperty<any[], Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -129,7 +135,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     costo?: import("mongoose").SchemaDefinitionProperty<number, Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -138,7 +144,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     precio?: import("mongoose").SchemaDefinitionProperty<number, Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -147,7 +153,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     cantidad?: import("mongoose").SchemaDefinitionProperty<number, Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -156,7 +162,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     descuento?: import("mongoose").SchemaDefinitionProperty<number, Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -165,7 +171,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     categorias?: import("mongoose").SchemaDefinitionProperty<any[], Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -174,7 +180,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     subcategorias?: import("mongoose").SchemaDefinitionProperty<any[], Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -183,7 +189,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     caracteristicas?: import("mongoose").SchemaDefinitionProperty<any[], Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -192,7 +198,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     clasificaciones?: import("mongoose").SchemaDefinitionProperty<any[], Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -201,7 +207,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     relaciones?: import("mongoose").SchemaDefinitionProperty<any[], Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -210,7 +216,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     ofertas?: import("mongoose").SchemaDefinitionProperty<any[], Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -219,7 +225,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     promos?: import("mongoose").SchemaDefinitionProperty<any[], Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -228,7 +234,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     proveedores?: import("mongoose").SchemaDefinitionProperty<any[], Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -237,7 +243,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     imagenes?: import("mongoose").SchemaDefinitionProperty<string[], Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -246,7 +252,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     sello?: import("mongoose").SchemaDefinitionProperty<string, Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -255,7 +261,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     dias_ultimo_movimiento?: import("mongoose").SchemaDefinitionProperty<number, Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -264,7 +270,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     web?: import("mongoose").SchemaDefinitionProperty<number, Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -273,7 +279,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     websc?: import("mongoose").SchemaDefinitionProperty<number, Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -282,7 +288,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     prioridad?: import("mongoose").SchemaDefinitionProperty<number, Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -291,7 +297,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     orden?: import("mongoose").SchemaDefinitionProperty<number, Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -300,7 +306,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     tipo?: import("mongoose").SchemaDefinitionProperty<number, Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -309,7 +315,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     estado?: import("mongoose").SchemaDefinitionProperty<number, Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -318,7 +324,7 @@ export declare const ProductSchema: import("mongoose").Schema<Product, import("m
     }>;
     deposito?: import("mongoose").SchemaDefinitionProperty<string, Product, Document<unknown, {}, Product, {
         id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Product & {
+    }, import("mongoose").DefaultSchemaOptions> & Omit<Product & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;

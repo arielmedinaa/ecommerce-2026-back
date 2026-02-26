@@ -1,6 +1,6 @@
 import { HomeService } from '@content/home/service/home.service';
 import { FilterHomeDto } from '@content/home/dto/filter.home';
-import { ResponseData } from '@gateway/src/common/response/response.data';
+import { ResponseData } from '@shared/common/response/response.data';
 import { HomeData } from '@content/home/interfaces/home.interface';
 export declare class HomeController {
     private readonly homeService;

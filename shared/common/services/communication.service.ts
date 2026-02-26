@@ -52,7 +52,14 @@ export class CommunicationService {
       const axios = require('axios');
       
       const httpEndpoint = this.buildHttpEndpoint(pattern);
-      const fullUrl = `${serviceUrl}${httpEndpoint}`;
+      
+      let fullUrl: string;
+      if (this.serviceDiscovery.getRunMode() === 'all') {
+        const servicePort = this.serviceDiscovery.getServicePort(serviceName);
+        fullUrl = `http://${serviceUrl}:${servicePort}${httpEndpoint}`;
+      } else {
+        fullUrl = `${serviceUrl}${httpEndpoint}`;
+      }
       
       this.logger.log(`Fallback a HTTP con ${serviceName}`);
       this.logger.log(`URL: ${fullUrl}`);

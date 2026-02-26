@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { ProductsModule } from './products.module';
 import { Logger } from '@nestjs/common';
-import { SERVICE_PORTS } from '../../shared/config/microservice/microservice.config';
+import { SERVICE_PORTS } from '@shared/config/microservice/microservice.config';
 import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
