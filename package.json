@@ -22,7 +22,6 @@
     "start:dev:auth": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/auth/main.ts",
     "start:dev:gateway": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/main.ts",
     "start:dev:cart": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/cart/main.ts",
-    "start:dev:orders": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/orders/main.ts",
     "start:dev:content": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/content/main.ts",
     "start:dev:payments": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/payments/main.ts",
     "start:dev:image": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/image/main.ts"

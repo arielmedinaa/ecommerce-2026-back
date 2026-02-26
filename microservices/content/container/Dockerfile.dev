@@ -1,0 +1,31 @@
+FROM node:20-alpine
+
+WORKDIR /usr/src/app
+
+RUN apk add --no-cache \
+    vips-dev \
+    python3 \
+    make \
+    g++ \
+    libc6-compat
+
+RUN npm install -g nodemon ts-node tsconfig-paths
+
+COPY package*.json ./
+COPY yarn.lock ./
+COPY tsconfig.json ./
+COPY tsconfig.paths.json ./
+
+RUN yarn install
+
+RUN yarn add -D tsconfig-paths
+
+COPY . .
+
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN chown -R appuser:appgroup /usr/src/app
+USER appuser
+
+EXPOSE 3103
+
+CMD ["yarn", "start:dev:content"]

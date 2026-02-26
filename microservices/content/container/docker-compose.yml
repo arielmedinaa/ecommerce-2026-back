@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  content:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    ports:
+      - "3103:3103"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3103
+      - CONTENT_PORT=3103
+      - IS_DOCKER=true
+      - AUTH_SERVICE_PORT=3101
+      - CART_SERVICE_PORT=3102
+      - ORDERS_SERVICE_PORT=3104
+      - PAYMENTS_SERVICE_PORT=3105
+      - PRODUCTS_SERVICE_PORT=3106
+      - IMAGE_SERVICE_PORT=3107
+      - MONGO_URL=${MONGO_URL}
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+    command: yarn start:dev:content
+    networks:
+      - content-network
+
+networks:
+  content-network:
+    driver: bridge

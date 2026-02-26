@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  payments:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    ports:
+      - "3105:3105"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3105
+      - PAYMENTS_PORT=3105
+      - IS_DOCKER=true
+      - MONGO_URL=${MONGO_URL}
+      - PAGOPAR_PUBLIC_KEY=${PAGOPAR_PUBLIC_KEY}
+      - PAGOPAR_PRIVATE_KEY=${PAGOPAR_PRIVATE_KEY}
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+    command: yarn start:dev:payments
+    networks:
+      - payments-network
+
+networks:
+  payments-network:
+    driver: bridge
