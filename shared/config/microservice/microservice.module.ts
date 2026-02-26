@@ -16,8 +16,8 @@ type ServiceName = keyof typeof SERVICE_PORTS;
 export const getMicroserviceConfig = (serviceName: string) => {
   const service = serviceName.toUpperCase() as ServiceName;
   const port = Number(process.env[`${service}_PORT`] || 
-              process.env.PORT || 
               SERVICE_PORTS[service] || 
+              process.env.PORT || 
               3000);
 
   const host = process.env.IS_DOCKER

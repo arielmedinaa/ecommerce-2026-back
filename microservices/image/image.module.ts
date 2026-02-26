@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
-import { BannersController } from './controller/banners.controller';
+import { BannersController } from './controller/tcp/banners.tcp.controller';
+import { ImageHttpController } from './controller/http/image.http.controller';
 import { BannerService } from './service/image.banners.service';
 import { BannerValidationService } from './service/errors/image.spec';
 import { BannerErrorService } from './service/errors/banner-error.service';
@@ -16,7 +17,7 @@ import { DatabaseModule } from '@shared/config/database/database.module';
       { name: BannerError.name, schema: BannerErrorSchema }
     ])
   ],
-  controllers: [BannersController],
+  controllers: [BannersController, ImageHttpController],
   providers: [
     BannerService,
     BannerValidationService,

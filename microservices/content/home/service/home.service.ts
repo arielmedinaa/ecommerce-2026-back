@@ -9,6 +9,12 @@ import {
 } from '@shared/common/decorators/resilient-client.decorator';
 import { FallbackDataService } from '@shared/common/services/fallback-data.service';
 
+interface BannerResponse {
+  data: any[];
+  success?: boolean;
+  message?: string;
+}
+
 @Injectable()
 export class HomeService {
   private readonly logger = new Logger(HomeService.name);
@@ -58,15 +64,13 @@ export class HomeService {
         },
       };
 
-      this.logger.log('Iniciando llamadas a microservicios...');
-      
-      const [banners, jota, ofertas, productos] = await Promise.all([
-        this.resilientService.sendWithResilience(
-          this.imageClient,
-          { cmd: 'get_all_banners', fields: this.fieldsImage },
-          {},
-          resilientOptions,
-        ) as Promise<any>,
+      const banners = await this.resilientService.sendWithResilience(
+        this.imageClient,
+        { cmd: 'get_all_banners' },
+        { fields: this.fieldsImage },
+        resilientOptions,
+      ) as BannerResponse;
+      const [jota, ofertas, productos] = await Promise.all([
         this.resilientService.sendWithResilience(
           this.productsClient,
           { cmd: 'get_products_jota' },
@@ -98,13 +102,6 @@ export class HomeService {
           resilientOptions,
         ) as Promise<any>,
       ]);
-
-      this.logger.log(`Banners recibidos: ${banners?.success ? 'SUCCESS' : 'FAILED'}`);
-      if (banners?.success) {
-        this.logger.log(`Cantidad de banners: ${banners.data?.length || 0}`);
-      } else {
-        this.logger.error(`Error banners: ${banners?.message || 'Unknown error'}`);
-      }
 
       this.fallbackDataService.saveSuccessfulResponse(productos, 'products');
       this.fallbackDataService.saveSuccessfulResponse(jota, 'jota');

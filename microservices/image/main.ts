@@ -27,7 +27,7 @@ async function bootstrap() {
     await app.startAllMicroservices();
     
     const httpPort = process.env.IMAGE_HTTP_PORT || 4093;
-    await app.listen(httpPort, '127.0.0.1');
+    await app.listen(httpPort, '0.0.0.0');
     
     console.log(`Image microservice running on TCP port ${port}`);
     console.log(`HTTP server listening on port ${httpPort}`);
