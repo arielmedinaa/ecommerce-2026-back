@@ -11,6 +11,7 @@ import { FallbackDataService } from '@shared/common/services/fallback-data.servi
     MicroserviceModule.register('CONTENT'),
     MicroserviceModule.forRoot([
       'PRODUCTS_SERVICE',
+      'IMAGE_SERVICE',
     ]),
     ImageModule,
   ],

@@ -33,9 +33,11 @@ services:
       - ORDERS_PORT=3104
       - PAYMENTS_PORT=3105
       - PRODUCTS_PORT=3106
+      - IMAGE_PORT=3107
     volumes:
       - ../:/usr/src/app
       - /usr/src/app/node_modules
+      - ../imagesEcommerce:/home/appuser/Documents/projects/newEcommerce2026/imagesEcommerce
     command: yarn start:dev:gateway
     depends_on:
       - auth
@@ -44,6 +46,7 @@ services:
       - content
       - orders
       - payments
+      - image
     networks:
       - app-network
 
@@ -119,6 +122,12 @@ services:
       - NODE_ENV=${NODE_ENV:-development}
       - PORT=3103
       - CONTENT_PORT=3103
+      - AUTH_SERVICE_PORT=3101
+      - CART_SERVICE_PORT=3102
+      - ORDERS_SERVICE_PORT=3104
+      - PAYMENTS_SERVICE_PORT=3105
+      - PRODUCTS_SERVICE_PORT=3106
+      - IMAGE_SERVICE_PORT=3107
       #- MONGO_URL=${MONGO_URL}
       - IS_DOCKER=true
     # ports:
@@ -147,6 +156,27 @@ services:
       - ../:/usr/src/app
       - /usr/src/app/node_modules
     command: yarn start:dev:payments
+    networks:
+      - app-network
+
+  # Image Service
+  image:
+    build: 
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=4093
+      - IMAGE_PORT=3107
+      #- MONGO_URL=${MONGO_URL}
+      - IS_DOCKER=true
+    # ports:
+    #   - "3107:3107"
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+      - ../imagesEcommerce:/home/appuser/Documents/projects/newEcommerce2026/imagesEcommerce
+    command: yarn start:dev:image
     networks:
       - app-network
 networks:

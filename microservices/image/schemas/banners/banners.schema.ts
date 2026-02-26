@@ -8,9 +8,6 @@ export type BannersDocument = Banners & Document;
     collection: 'banners'
 })
 export class Banners {
-    @Prop()
-    _id: string;
-
     @Prop({required: true, unique: true, trim: true})
     nombre: string;
 
@@ -38,7 +35,6 @@ export class Banners {
 
 export const BannersSchema = SchemaFactory.createForClass(Banners);
 
-BannersSchema.index({ nombre: 1 });
 BannersSchema.index({ creadoPor: 1 });
 BannersSchema.index({ modificadoPor: 1 });
 BannersSchema.index({ createdAt: -1 });

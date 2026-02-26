@@ -3,7 +3,6 @@ import { ClientProxy } from '@nestjs/microservices';
 import { FilterHomeDto } from '@content/home/dto/filter.home';
 import { HomeData } from '@content/home/interfaces/home.interface';
 import { ResponseData } from '@gateway/common/response/response.data';
-import { ImageService } from '@image/image.service';
 import {
   ResilientService,
   ResilientOptions,
@@ -14,83 +13,20 @@ import { FallbackDataService } from '@shared/common/services/fallback-data.servi
 export class HomeService {
   private readonly logger = new Logger(HomeService.name);
 
+  private fieldsImage = ['nombre', 'imagen', 'variante', 'estado'];
+
   constructor(
-    private readonly imageService: ImageService,
     private readonly resilientService: ResilientService,
     private readonly fallbackDataService: FallbackDataService,
     @Inject('PRODUCTS_SERVICE') private readonly productsClient: ClientProxy,
+    @Inject('IMAGE_SERVICE') private readonly imageClient: ClientProxy,
   ) {}
-
-  private get mockBanners() {
-    return [
-      {
-        id: '1',
-        title: 'Navidad',
-        description: 'Up to 50% off on selected items',
-        imageUrl:
-          'https://csdigitalizacion.nyc3.cdn.digitaloceanspaces.com/ecommerce/publicidad/banner/417894449.png',
-        url: '/navidad',
-        order: 1,
-      },
-      {
-        id: '2',
-        title: 'Entrega',
-        description: 'Discover our latest collection',
-        imageUrl: this.imageService.getImageUrl('centralShopEntrega.webp'),
-        url: '/entrega',
-        order: 2,
-      },
-    ];
-  }
 
   private homeDataCache: Map<
     string,
     { data: ResponseData<HomeData>; timestamp: number }
   > = new Map();
   private readonly HOME_TTL = 30 * 1000;
-
-  private categoriasCache: string[] = [];
-  private lastCacheUpdate: number = 0;
-  private readonly CACHE_TTL = 5 * 60 * 1000;
-
-  private async getCachedCategorias(): Promise<string[]> {
-    const now = Date.now();
-    if (
-      this.categoriasCache.length === 0 ||
-      now - this.lastCacheUpdate > this.CACHE_TTL
-    ) {
-      try {
-        const resilientOptions: ResilientOptions = {
-          retries: 3,
-          delay: 1000,
-          fallback: async () => {
-            this.logger.warn('Using fallback categories');
-            return this.fallbackDataService.getFallbackCategories();
-          },
-          circuitBreaker: {
-            failureThreshold: 3,
-            resetTimeout: 30000,
-          },
-        };
-
-        const result: any = await this.resilientService.sendWithResilience(
-          this.productsClient,
-          { cmd: 'get_categories' },
-          {},
-          resilientOptions,
-        );
-
-        this.categoriasCache = result.categorias || [];
-        this.lastCacheUpdate = now;
-        this.fallbackDataService.saveSuccessfulResponse(result, 'categories');
-      } catch (error) {
-        this.logger.error('Error al obtener categorías:', error);
-        this.categoriasCache = this.fallbackDataService.getFallbackCategories();
-      }
-    }
-
-    return this.categoriasCache;
-  }
 
   async getHomeData(filter: FilterHomeDto): Promise<ResponseData<HomeData>> {
     const limit = filter.limit || 6;
@@ -122,16 +58,27 @@ export class HomeService {
         },
       };
 
-      const [jota] = await Promise.all([
+      this.logger.log('Iniciando llamadas a microservicios...');
+      
+      const [banners, jota, ofertas, productos] = await Promise.all([
+        this.resilientService.sendWithResilience(
+          this.imageClient,
+          { cmd: 'get_all_banners', fields: this.fieldsImage },
+          {},
+          resilientOptions,
+        ) as Promise<any>,
         this.resilientService.sendWithResilience(
           this.productsClient,
           { cmd: 'get_products_jota' },
           {},
           resilientOptions,
         ) as Promise<any>,
-      ]);
-
-      const [productos, categorias] = await Promise.all([
+        this.resilientService.sendWithResilience(
+          this.productsClient,
+          { cmd: 'get_ofertas' },
+          {},
+          resilientOptions,
+        ) as Promise<any>,
         this.resilientService.sendWithResilience(
           this.productsClient,
           { cmd: 'get_products' },
@@ -150,18 +97,23 @@ export class HomeService {
           },
           resilientOptions,
         ) as Promise<any>,
-        this.getCachedCategorias(),
       ]);
+
+      this.logger.log(`Banners recibidos: ${banners?.success ? 'SUCCESS' : 'FAILED'}`);
+      if (banners?.success) {
+        this.logger.log(`Cantidad de banners: ${banners.data?.length || 0}`);
+      } else {
+        this.logger.error(`Error banners: ${banners?.message || 'Unknown error'}`);
+      }
 
       this.fallbackDataService.saveSuccessfulResponse(productos, 'products');
       this.fallbackDataService.saveSuccessfulResponse(jota, 'jota');
       const response = new ResponseData<HomeData>();
       response.data = {
-        banners: this.mockBanners,
+        banners: banners.data || [],
         productos: productos.data || [],
         jota: jota || [],
-        ofertasExpress: [],
-        categorias: categorias,
+        ofertasExpress: ofertas.data || [],
       };
       response.status = 200;
       response.register = productos.total || 0;
@@ -171,16 +123,13 @@ export class HomeService {
       this.logger.error('Error en getHomeData:', error);
       const fallbackProducts =
         this.fallbackDataService.getFallbackProducts(limit);
-      const fallbackCategories =
-        this.fallbackDataService.getFallbackCategories();
       const fallbackJota = this.fallbackDataService.getFallbackJota();
       const response = new ResponseData<HomeData>();
       response.data = {
-        banners: this.mockBanners,
+        banners: [],
         productos: fallbackProducts,
         jota: fallbackJota,
         ofertasExpress: [],
-        categorias: fallbackCategories,
       };
       response.status = 200;
       response.register = fallbackProducts.length;

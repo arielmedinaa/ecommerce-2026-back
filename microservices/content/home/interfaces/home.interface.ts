@@ -4,7 +4,7 @@ export interface Banner {
   id: string;
   title: string;
   description: string;
-  imageUrl: string;
+  imageUrl?: string;
   url: string;
   order: number;
 }
@@ -14,7 +14,6 @@ export interface HomeData {
   productos: any[];
   jota: any[];
   ofertasExpress: any[];
-  categorias: string[];
 }
 
 export type HomeResponse = ResponseData<HomeData>;

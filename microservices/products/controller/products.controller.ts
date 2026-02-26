@@ -5,11 +5,12 @@ import { ProductsService } from '@products/service/products.service';
 import { Product } from '@products/schemas/product.schema';
 import { CreateComboDto } from '@products/schemas/dto/create-combo.dto';
 import { Combos } from '@products/schemas/combos.schema';
+import { OfertasService } from '@products/service/ofertas.service';
 
 @Controller()
 export class ProductsController {
   private readonly logger = new Logger(ProductsController.name);
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(private readonly productsService: ProductsService, private readonly ofertasService: OfertasService) {}
 
   @MessagePattern({ cmd: 'createProducts' })
   public createProduct (createProductDto: CreateProductDto): Promise<Product> {
@@ -70,5 +71,15 @@ export class ProductsController {
   @MessagePattern({ cmd: 'get_products_jota' })
   async getProductsJota() {
     return await this.productsService.getProductsJota();
+  }
+
+  @MessagePattern({ cmd: 'create_oferta' })
+  async createOferta(ofertaData: any) {
+    return await this.ofertasService.createOrUpdateOferta(ofertaData);
+  }
+  
+  @MessagePattern({ cmd: 'get_ofertas' })
+  async getOfertas() {
+    return await this.ofertasService.getAllOfertas();
   }
 }

@@ -1,21 +1,18 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { OfertasValidationService } from './errors/ofertas.spec';
+import { Ofertas } from '@products/schemas/ofertas.schema';
 
 @Injectable()
 export class OfertasService {
   constructor(
-    @InjectModel('Oferta') private readonly ofertaModel: Model<any>,
+    @InjectModel(Ofertas.name) private readonly ofertaModel: Model<Ofertas>,
     private readonly ofertasValidationService: OfertasValidationService,
   ) {}
 
   async createOrUpdateOferta(
-    createData: any,
+    createData: Ofertas,
     codigo?: number,
   ): Promise<{ data: any; message: string; success: boolean }> {
     const validation =
@@ -73,7 +70,6 @@ export class OfertasService {
   }> {
     try {
       const oferta = await this.ofertaModel.findOne({ activo: true });
-
       return {
         data: oferta,
         message: oferta ? 'Oferta activa encontrada' : 'No hay ofertas activas',
@@ -105,61 +101,6 @@ export class OfertasService {
       return {
         data: [],
         message: `Error al obtener las ofertas: ${error.message}`,
-        success: false,
-      };
-    }
-  }
-
-  async updateOferta(
-    id: string,
-    updateData: any,
-    codigo?: number,
-  ): Promise<{ data: any; message: string; success: boolean }> {
-    const idValidation =
-      await this.ofertasValidationService.validateOfertaId(id);
-
-    if (!idValidation.isValid) {
-      return idValidation.error;
-    }
-
-    const validation =
-      await this.ofertasValidationService.validateOfertaPayload(
-        updateData,
-        codigo,
-      );
-
-    if (!validation.isValid) {
-      return validation.error;
-    }
-
-    try {
-      const oferta = await this.ofertaModel.findById(id);
-      if (!oferta) {
-        return {
-          data: [],
-          message: 'Oferta no encontrada',
-          success: false,
-        };
-      }
-
-      const updatedOferta = await this.ofertaModel.findByIdAndUpdate(
-        id,
-        {
-          ...updateData,
-          updatedAt: new Date(),
-        },
-        { new: true },
-      );
-
-      return {
-        data: updatedOferta,
-        message: 'Oferta actualizada exitosamente',
-        success: true,
-      };
-    } catch (error) {
-      return {
-        data: [],
-        message: `Error al actualizar la oferta: ${error.message}`,
         success: false,
       };
     }
@@ -232,7 +173,7 @@ export class OfertasService {
 
       return {
         data: updatedOferta,
-        message: `Oferta ${updatedOferta.activo ? 'activada' : 'desactivada'} exitosamente`,
+        message: `Oferta ${updatedOferta?.activo ? 'activada' : 'desactivada'} exitosamente`,
         success: true,
       };
     } catch (error) {

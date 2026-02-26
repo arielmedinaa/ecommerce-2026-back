@@ -8,19 +8,20 @@ export const SERVICE_PORTS = {
   ORDERS_SERVICE: 3104,
   PAYMENTS_SERVICE: 3105,
   PRODUCTS_SERVICE: 3106,
+  IMAGE_SERVICE: 3107,
 } as const;
 
 type ServiceName = keyof typeof SERVICE_PORTS;
 
 export const getMicroserviceConfig = (serviceName: string) => {
   const service = serviceName.toUpperCase() as ServiceName;
-  const port = process.env[`${service}_PORT`] || 
+  const port = Number(process.env[`${service}_PORT`] || 
               process.env.PORT || 
               SERVICE_PORTS[service] || 
-              3000;
+              3000);
 
   const host = process.env.IS_DOCKER
-    ? serviceName.replace('_SERVICE', '').toLowerCase()
+    ? `deploy-${serviceName.replace('_SERVICE', '').toLowerCase()}-1`
     : 'localhost';
   
   console.log(`Configuring ${service} microservice at ${host}:${port}`);
@@ -29,7 +30,7 @@ export const getMicroserviceConfig = (serviceName: string) => {
     transport: Transport.TCP,
     options: {
       host: host,
-      port: SERVICE_PORTS[service],
+      port: port,
     },
   };
 };

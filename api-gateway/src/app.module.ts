@@ -11,6 +11,8 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ContentModule } from './modules/content/content.module';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtAuthGuard } from '@gateway/common/guards/jwt-auth.guard';
+import { ImageController } from './modules/image/controller/image.controller';
+import { ImageModule } from './modules/image/image.module';
 
 @Module({
   imports: [
@@ -28,13 +30,22 @@ import { JwtAuthGuard } from '@gateway/common/guards/jwt-auth.guard';
       'CONTENT_SERVICE',
       'ORDERS_SERVICE',
       'PAYMENTS_SERVICE',
-      'PRODUCTS_SERVICE'
+      'PRODUCTS_SERVICE',
+      'IMAGE_SERVICE',
     ]),
     PaymentsModule,
     AuthModule,
     ContentModule,
+    ImageModule,
   ],
-  controllers: [AppController, ProductsController, CartController, PaymentsController, AuthController],
+  controllers: [
+    AppController,
+    ProductsController,
+    CartController,
+    PaymentsController,
+    AuthController,
+    ImageController,
+  ],
   providers: [JwtAuthGuard],
 })
 export class AppModule {}

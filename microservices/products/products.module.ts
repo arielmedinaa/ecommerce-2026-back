@@ -7,6 +7,9 @@ import { Product, ProductSchema } from './schemas/product.schema';
 import { Promo, PromoSchema } from './schemas/promos.schema';
 import { Combos, CombosSchema } from './schemas/combos.schema';
 import { DatabaseModule } from '@shared/config/database/database.module';
+import { OfertasService } from './service/ofertas.service';
+import { Ofertas, OfertasSchema } from './schemas/ofertas.schema';
+import { OfertasValidationService } from './service/errors/ofertas.spec';
 
 @Module({
   imports: [
@@ -15,10 +18,11 @@ import { DatabaseModule } from '@shared/config/database/database.module';
       { name: Product.name, schema: ProductSchema },
       { name: Promo.name, schema: PromoSchema },
       { name: Combos.name, schema: CombosSchema },
+      { name: Ofertas.name, schema: OfertasSchema },
     ]),
   ],
   controllers: [ProductsController],
-  providers: [ProductsService, PromosService],
-  exports: [ProductsService, PromosService],
+  providers: [ProductsService, PromosService, OfertasService, OfertasValidationService],
+  exports: [ProductsService, PromosService, OfertasService],
 })
 export class ProductsModule {}

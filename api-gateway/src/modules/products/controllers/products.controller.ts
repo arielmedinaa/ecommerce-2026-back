@@ -109,4 +109,12 @@ export class ProductsController {
       this.productsClient.send({ cmd: 'search_combo_by_codigo' }, payload)
     )
   }
+  
+  @UseGuards(JwtAuthGuard)
+  @Post('/createOferta')
+  async createOferta(@Body() ofertaData: any) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'create_oferta' }, ofertaData)
+    )
+  }
 }

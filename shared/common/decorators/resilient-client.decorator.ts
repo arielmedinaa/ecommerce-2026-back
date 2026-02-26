@@ -64,14 +64,21 @@ export class ResilientService {
     delay: number,
   ): Promise<T> {
     try {
-      return await firstValueFrom(
+      this.logger.log(`Executing command ${pattern.cmd} with data: ${JSON.stringify(data)}`);
+      this.logger.log(`Client connection info: ${JSON.stringify(client)}`);
+      
+      const result = await firstValueFrom(
         this.createRetryObservable(client.send(pattern, data), retries, delay),
       );
+      
+      this.logger.log(`Command ${pattern.cmd} executed successfully`);
+      return result;
     } catch (error) {
       this.logger.error(
         `Failed to execute command ${pattern.cmd} after ${retries} retries:`,
         error.message,
       );
+      this.logger.error(`Full error details:`, error.stack || error);
       throw error;
     }
   }

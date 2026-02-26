@@ -24,7 +24,8 @@
     "start:dev:cart": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/cart/main.ts",
     "start:dev:orders": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/orders/main.ts",
     "start:dev:content": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/content/main.ts",
-    "start:dev:payments": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/payments/main.ts"
+    "start:dev:payments": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/payments/main.ts",
+    "start:dev:image": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/image/main.ts"
   },
   "dependencies": {
     "@nestjs/class-validator": "^0.13.4",
@@ -45,13 +46,16 @@
     "crypto": "^1.0.1",
     "moment-timezone": "^0.6.0",
     "mongoose": "^9.0.1",
+    "multer": "^1.4.5-lts.1",
     "mysql2": "^3.16.3",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "typeorm": "^0.3.28"
+    "sharp": "^0.33.0",
+    "typeorm": "^0.3.28",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
