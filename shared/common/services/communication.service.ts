@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ServiceDiscoveryService } from '@shared/common/services/service-discovery.service';
+import { ServiceDiscoveryService } from './service-discovery.service';
 
 @Injectable()
 export class CommunicationService {

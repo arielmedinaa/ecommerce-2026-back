@@ -16,7 +16,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
           const [type, jwt] = req.headers.authorization.split(' ') ?? [];
           token = type === 'Bearer' ? jwt : null;
         }
-        return token;
+        return token || null;
       },
       ignoreExpiration: false,
       secretOrKey: configService.get<string>('JWT_SECRET') || 'default-secret',

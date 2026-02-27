@@ -3,6 +3,7 @@ FROM node:20-alpine
 WORKDIR /usr/src/app
 
 RUN apk add --no-cache \
+    vips-dev \
     python3 \
     make \
     g++ \
@@ -10,26 +11,20 @@ RUN apk add --no-cache \
 
 RUN npm install -g nodemon ts-node tsconfig-paths
 
-# Copiar package.json del proyecto raíz y del servicio
-COPY package*.json ./
-COPY tsconfig.paths.json ./
 COPY microservices/auth/package*.json ./
-COPY microservices/auth/tsconfig.json ./
-COPY microservices/auth/tsconfig.base.json ./
+COPY yarn.lock ./
+COPY tsconfig.json ./
+COPY tsconfig.paths.json ./
 
-# Instalar dependencias del proyecto raíz primero
-RUN npm install --legacy-peer-deps
+RUN yarn config set network-timeout 600000 && \
+    yarn config set registry https://registry.npmjs.org/ && \
+    yarn install --network-timeout 600000 || \
+    npm install --registry https://registry.npmjs.org/ --timeout=600000
 
-# Copiar código fuente del servicio auth
-COPY microservices/auth .
+RUN yarn add -D tsconfig-paths
 
-# Copiar directorio shared desde el raíz
-COPY shared ./shared
-
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-RUN chown -R appuser:appgroup /usr/src/app
-USER appuser
+COPY . .
 
 EXPOSE 3101
 
-CMD ["npm", "run", "start:dev"]
+CMD ["yarn", "start"]

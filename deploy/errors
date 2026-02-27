@@ -1,779 +1,790 @@
-cart-1         | cart.module.ts:2:32 - error TS2307: Cannot find module '@shared/config/database/database.module' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 2 import { DatabaseModule } from '@shared/config/database/database.module';
-cart-1         |                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | cart.module.ts:13:36 - error TS2307: Cannot find module '@shared/config/microservice/microservice.module' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 13 import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
-cart-1         |                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | cart.module.ts:16:34 - error TS2307: Cannot find module '@shared/common/decorators/resilient-client.decorator' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 16 import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
-cart-1         |                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | cart.module.ts:17:41 - error TS2307: Cannot find module '@shared/common/services/cache-persistente.service' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 17 import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
-cart-1         |                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | constants/cart.constants.ts:1:22 - error TS2307: Cannot find module '@cart/schemas/cart.schema' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 1 import { Cart } from '@cart/schemas/cart.schema';
-cart-1         |                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | controller/cart.controller.ts:3:36 - error TS2307: Cannot find module '@cart/service/cart.service' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 3 import { CartContadoService } from '@cart/service/cart.service';
-cart-1         |                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | controller/cart.controller.ts:4:34 - error TS2307: Cannot find module '@cart/service/errors/cart-error.service' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 4 import { CartErrorService } from '@cart/service/errors/cart-error.service';
-cart-1         |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | main.ts:5:31 - error TS2307: Cannot find module '@shared/config/microservice/microservice.config' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 5 import { SERVICE_PORTS } from "@shared/config/microservice/microservice.config";
-cart-1         |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | service/cart.service.ts:6:37 - error TS2307: Cannot find module '@shared/common/utils/obtenerClave' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 6 import { ObtenerClaveService } from '@shared/common/utils/obtenerClave';
-cart-1         |                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | service/cart.service.ts:10:8 - error TS2307: Cannot find module '@cart/constants/cart.constants' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 10 } from '@cart/constants/cart.constants';
-cart-1         |           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | service/cart.service.ts:12:34 - error TS2307: Cannot find module '@shared/common/decorators/resilient-client.decorator' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 12 import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
-cart-1         |                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | service/cart.service.ts:13:41 - error TS2307: Cannot find module '@shared/common/services/cache-persistente.service' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 13 import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
-cart-1         |                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | service/cart.service.ts:19:38 - error TS2307: Cannot find module '@cart/constants/cart.constants' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 19 import { ESTADO_SOLICITUD_MAP } from '@cart/constants/cart.constants';
-cart-1         |                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | [11:59:29 PM] Found 13 errors. Watching for file changes.
-cart-1         | 
-payments-1     | main.ts:5:31 - error TS2307: Cannot find module '@shared/config/microservice/microservice.config' or its corresponding type declarations.
-payments-1     | 
-payments-1     | 5 import { SERVICE_PORTS } from "@shared/config/microservice/microservice.config";
-payments-1     |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-payments-1     | 
-payments-1     | payments.module.ts:2:32 - error TS2307: Cannot find module '@shared/config/database/database.module' or its corresponding type declarations.
-payments-1     | 
-payments-1     | 2 import { DatabaseModule } from '@shared/config/database/database.module';
-payments-1     |                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-payments-1     | 
-payments-1     | [11:59:30 PM] Found 2 errors. Watching for file changes.
-payments-1     | 
-image-1        | image.module.ts:10:32 - error TS2307: Cannot find module '@shared/config/database/database.module' or its corresponding type declarations.
+image-1        | api-gateway/src/app.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
 image-1        | 
-image-1        | 10 import { DatabaseModule } from '@shared/config/database/database.module';
-image-1        |                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+image-1        | 12 import { JwtModule } from '@nestjs/jwt';
+image-1        |                              ~~~~~~~~~~~~~
 image-1        | 
-image-1        | main.ts:5:31 - error TS2307: Cannot find module '@shared/config/microservice/microservice.config' or its corresponding type declarations.
+image-1        | api-gateway/src/common/guards/jwt-auth.guard.ts:2:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
 image-1        | 
-image-1        | 5 import { SERVICE_PORTS } from "@shared/config/microservice/microservice.config";
-image-1        |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+image-1        | 2 import { JwtService } from '@nestjs/jwt';
+image-1        |                              ~~~~~~~~~~~~~
 image-1        | 
-image-1        | [11:59:33 PM] Found 2 errors. Watching for file changes.
+image-1        | api-gateway/src/modules/auth/auth.module.ts:4:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
 image-1        | 
-auth-1         | auth.module.ts:8:32 - error TS2307: Cannot find module '@shared/config/database/database.module' or its corresponding type declarations.
+image-1        | 4 import { PassportModule } from '@nestjs/passport';
+image-1        |                                  ~~~~~~~~~~~~~~~~~~
+image-1        | 
+image-1        | api-gateway/src/modules/auth/controllers/auth.controller.ts:5:27 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+image-1        | 
+image-1        | 5 import { AuthGuard } from '@nestjs/passport';
+image-1        |                             ~~~~~~~~~~~~~~~~~~
+image-1        | 
+image-1        | api-gateway/src/modules/products/products.module.ts:5:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
+image-1        | 
+image-1        | 5 import { JwtModule } from '@nestjs/jwt';
+image-1        |                             ~~~~~~~~~~~~~
+image-1        | 
+image-1        | api-gateway/src/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+image-1        | 
+image-1        | 2 import { PassportStrategy } from '@nestjs/passport';
+image-1        |                                    ~~~~~~~~~~~~~~~~~~
+image-1        | 
+image-1        | api-gateway/src/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
+image-1        | 
+image-1        | 3 import { Strategy } from 'passport-google-oauth20';
+image-1        |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
+image-1        | 
+image-1        | microservices/auth/auth.module.ts:9:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
+image-1        | 
+image-1        | 9 import { JwtModule } from '@nestjs/jwt';
+image-1        |                             ~~~~~~~~~~~~~
+image-1        | 
+image-1        | microservices/auth/auth.module.ts:10:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+image-1        | 
+image-1        | 10 import { PassportModule } from '@nestjs/passport';
+image-1        |                                   ~~~~~~~~~~~~~~~~~~
+image-1        | 
+image-1        | microservices/auth/service/auth.service.ts:5:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
+image-1        | 
+image-1        | 5 import { JwtService } from '@nestjs/jwt';
+image-1        |                              ~~~~~~~~~~~~~
+image-1        | 
+image-1        | microservices/auth/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+image-1        | 
+image-1        | 2 import { PassportStrategy } from '@nestjs/passport';
+image-1        |                                    ~~~~~~~~~~~~~~~~~~
+image-1        | 
+image-1        | microservices/auth/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
+image-1        | 
+image-1        | 3 import { Strategy } from 'passport-google-oauth20';
+image-1        |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
+image-1        | 
+image-1        | microservices/auth/strategies/jwt.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+image-1        | 
+image-1        | 2 import { PassportStrategy } from '@nestjs/passport';
+image-1        |                                    ~~~~~~~~~~~~~~~~~~
+image-1        | 
+image-1        | microservices/auth/strategies/jwt.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-jwt' or its corresponding type declarations.
+image-1        | 
+image-1        | 3 import { Strategy } from 'passport-jwt';
+image-1        |                            ~~~~~~~~~~~~~~
+image-1        | 
+image-1        | microservices/cart/cart.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
+image-1        | 
+image-1        | 12 import { JwtModule } from '@nestjs/jwt';
+image-1        |                              ~~~~~~~~~~~~~
+image-1        | 
+image-1        | microservices/main.ts:6:25 - error TS2307: Cannot find module 'compression' or its corresponding type declarations.
+image-1        | 
+image-1        | 6 import compression from 'compression';
+image-1        |                           ~~~~~~~~~~~~~
+image-1        | 
+image-1        | [1:49:10 PM] Found 16 errors. Watching for file changes.
+image-1        | 
+auth-1         | microservices/auth/strategies/jwt.strategy.ts:17:11 - error TS2322: Type 'string | null' is not assignable to type 'null'.
+auth-1         |   Type 'string' is not assignable to type 'null'.
 auth-1         | 
-auth-1         | 8 import { DatabaseModule } from '@shared/config/database/database.module';
-auth-1         |                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+auth-1         | 17           token = type === 'Bearer' ? jwt : null;
+auth-1         |              ~~~~~
 auth-1         | 
-auth-1         | main.ts:5:31 - error TS2307: Cannot find module '@shared/config/microservice/microservice.config' or its corresponding type declarations.
+auth-1         | microservices/cart/constants/cart.constants.ts:2:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
 auth-1         | 
-auth-1         | 5 import { SERVICE_PORTS } from '@shared/config/microservice/microservice.config';
-auth-1         |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+auth-1         | 2 import moment from 'moment-timezone';
+auth-1         |                      ~~~~~~~~~~~~~~~~~
 auth-1         | 
-auth-1         | [11:59:33 PM] Found 2 errors. Watching for file changes.
+auth-1         | microservices/cart/service/cart.service.ts:16:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
 auth-1         | 
-products-1     | controller/products.controller.ts:3:34 - error TS2307: Cannot find module '@products/schemas/dto/create-product.dto' or its corresponding type declarations.
+auth-1         | 16 import moment from 'moment-timezone';
+auth-1         |                       ~~~~~~~~~~~~~~~~~
+auth-1         | 
+auth-1         | microservices/cart/service/errors/cart-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
+auth-1         | 
+auth-1         | 5 import moment from 'moment-timezone';
+auth-1         |                      ~~~~~~~~~~~~~~~~~
+auth-1         | 
+auth-1         | microservices/image/service/errors/banner-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
+auth-1         | 
+auth-1         | 5 import moment from 'moment-timezone';
+auth-1         |                      ~~~~~~~~~~~~~~~~~
+auth-1         | 
+auth-1         | microservices/image/service/image.banners.service.ts:14:30 - error TS2307: Cannot find module 'uuid' or its corresponding type declarations.
+auth-1         | 
+auth-1         | 14 import { v4 as uuidv4 } from 'uuid';
+auth-1         |                                 ~~~~~~
+auth-1         | 
+auth-1         | microservices/image/service/image.banners.service.ts:15:19 - error TS2307: Cannot find module 'sharp' or its corresponding type declarations.
+auth-1         | 
+auth-1         | 15 import sharp from 'sharp';
+auth-1         |                      ~~~~~~~
+auth-1         | 
+auth-1         | microservices/main.ts:6:25 - error TS2307: Cannot find module 'compression' or its corresponding type declarations.
+auth-1         | 
+auth-1         | 6 import compression from 'compression';
+auth-1         |                           ~~~~~~~~~~~~~
+auth-1         | 
+auth-1         | microservices/payments/service/errors/payment-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
+auth-1         | 
+auth-1         | 5 import moment from 'moment-timezone';
+auth-1         |                      ~~~~~~~~~~~~~~~~~
+auth-1         | 
+auth-1         | microservices/payments/service/payments.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
+auth-1         | 
+auth-1         | 5 import moment from 'moment-timezone';
+auth-1         |                      ~~~~~~~~~~~~~~~~~
+auth-1         | 
+auth-1         | [1:49:13 PM] Found 10 errors. Watching for file changes.
+auth-1         | 
+auth-1         | node:internal/modules/cjs/loader:1210
+auth-1         |   throw err;
+auth-1         |   ^
+auth-1         | 
+auth-1         | Error: Cannot find module '/usr/src/app/dist/main'
+auth-1         |     at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+auth-1         |     at Module._load (node:internal/modules/cjs/loader:1038:27)
+auth-1         |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+auth-1         |     at node:internal/main/run_main_module:28:49 {
+auth-1         |   code: 'MODULE_NOT_FOUND',
+auth-1         |   requireStack: []
+auth-1         | }
+auth-1         | 
+auth-1         | Node.js v20.20.0
+payments-1     | api-gateway/src/app.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 12 import { JwtModule } from '@nestjs/jwt';
+payments-1     |                              ~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | api-gateway/src/common/guards/jwt-auth.guard.ts:2:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 2 import { JwtService } from '@nestjs/jwt';
+payments-1     |                              ~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | api-gateway/src/modules/auth/auth.module.ts:4:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 4 import { PassportModule } from '@nestjs/passport';
+payments-1     |                                  ~~~~~~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | api-gateway/src/modules/auth/controllers/auth.controller.ts:5:27 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 5 import { AuthGuard } from '@nestjs/passport';
+payments-1     |                             ~~~~~~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | api-gateway/src/modules/products/products.module.ts:5:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 5 import { JwtModule } from '@nestjs/jwt';
+payments-1     |                             ~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | api-gateway/src/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 2 import { PassportStrategy } from '@nestjs/passport';
+payments-1     |                                    ~~~~~~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | api-gateway/src/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 3 import { Strategy } from 'passport-google-oauth20';
+payments-1     |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | microservices/auth/auth.module.ts:9:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 9 import { JwtModule } from '@nestjs/jwt';
+payments-1     |                             ~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | microservices/auth/auth.module.ts:10:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 10 import { PassportModule } from '@nestjs/passport';
+payments-1     |                                   ~~~~~~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | microservices/auth/service/auth.service.ts:5:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 5 import { JwtService } from '@nestjs/jwt';
+payments-1     |                              ~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | microservices/auth/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 2 import { PassportStrategy } from '@nestjs/passport';
+payments-1     |                                    ~~~~~~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | microservices/auth/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 3 import { Strategy } from 'passport-google-oauth20';
+payments-1     |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | microservices/auth/strategies/jwt.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 2 import { PassportStrategy } from '@nestjs/passport';
+payments-1     |                                    ~~~~~~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | microservices/auth/strategies/jwt.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-jwt' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 3 import { Strategy } from 'passport-jwt';
+payments-1     |                            ~~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | microservices/cart/cart.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 12 import { JwtModule } from '@nestjs/jwt';
+payments-1     |                              ~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | microservices/image/service/image.banners.service.ts:14:30 - error TS2307: Cannot find module 'uuid' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 14 import { v4 as uuidv4 } from 'uuid';
+payments-1     |                                 ~~~~~~
+payments-1     | 
+payments-1     | microservices/image/service/image.banners.service.ts:15:19 - error TS2307: Cannot find module 'sharp' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 15 import sharp from 'sharp';
+payments-1     |                      ~~~~~~~
+payments-1     | 
+payments-1     | microservices/main.ts:6:25 - error TS2307: Cannot find module 'compression' or its corresponding type declarations.
+payments-1     | 
+payments-1     | 6 import compression from 'compression';
+payments-1     |                           ~~~~~~~~~~~~~
+payments-1     | 
+payments-1     | [1:49:14 PM] Found 18 errors. Watching for file changes.
+payments-1     | 
+products-1     | api-gateway/src/app.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
 products-1     | 
-products-1     | 3 import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
-products-1     |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+products-1     | 12 import { JwtModule } from '@nestjs/jwt';
+products-1     |                              ~~~~~~~~~~~~~
 products-1     | 
-products-1     | controller/products.controller.ts:4:33 - error TS2307: Cannot find module '@products/service/products.service' or its corresponding type declarations.
+products-1     | api-gateway/src/common/guards/jwt-auth.guard.ts:2:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
 products-1     | 
-products-1     | 4 import { ProductsService } from '@products/service/products.service';
-products-1     |                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+products-1     | 2 import { JwtService } from '@nestjs/jwt';
+products-1     |                              ~~~~~~~~~~~~~
 products-1     | 
-products-1     | controller/products.controller.ts:5:25 - error TS2307: Cannot find module '@products/schemas/product.schema' or its corresponding type declarations.
+products-1     | api-gateway/src/modules/auth/auth.module.ts:4:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
 products-1     | 
-products-1     | 5 import { Product } from '@products/schemas/product.schema';
-products-1     |                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+products-1     | 4 import { PassportModule } from '@nestjs/passport';
+products-1     |                                  ~~~~~~~~~~~~~~~~~~
 products-1     | 
-products-1     | controller/products.controller.ts:6:32 - error TS2307: Cannot find module '@products/schemas/dto/create-combo.dto' or its corresponding type declarations.
+products-1     | api-gateway/src/modules/auth/controllers/auth.controller.ts:5:27 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
 products-1     | 
-products-1     | 6 import { CreateComboDto } from '@products/schemas/dto/create-combo.dto';
-products-1     |                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+products-1     | 5 import { AuthGuard } from '@nestjs/passport';
+products-1     |                             ~~~~~~~~~~~~~~~~~~
 products-1     | 
-products-1     | controller/products.controller.ts:7:24 - error TS2307: Cannot find module '@products/schemas/combos.schema' or its corresponding type declarations.
+products-1     | api-gateway/src/modules/products/products.module.ts:5:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
 products-1     | 
-products-1     | 7 import { Combos } from '@products/schemas/combos.schema';
-products-1     |                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+products-1     | 5 import { JwtModule } from '@nestjs/jwt';
+products-1     |                             ~~~~~~~~~~~~~
 products-1     | 
-products-1     | controller/products.controller.ts:8:32 - error TS2307: Cannot find module '@products/service/ofertas.service' or its corresponding type declarations.
+products-1     | api-gateway/src/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
 products-1     | 
-products-1     | 8 import { OfertasService } from '@products/service/ofertas.service';
-products-1     |                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+products-1     | 2 import { PassportStrategy } from '@nestjs/passport';
+products-1     |                                    ~~~~~~~~~~~~~~~~~~
 products-1     | 
-products-1     | main.ts:5:31 - error TS2307: Cannot find module '@shared/config/microservice/microservice.config' or its corresponding type declarations.
+products-1     | api-gateway/src/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
 products-1     | 
-products-1     | 5 import { SERVICE_PORTS } from '@shared/config/microservice/microservice.config';
-products-1     |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+products-1     | 3 import { Strategy } from 'passport-google-oauth20';
+products-1     |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
 products-1     | 
-products-1     | products.module.ts:9:32 - error TS2307: Cannot find module '@shared/config/database/database.module' or its corresponding type declarations.
+products-1     | microservices/auth/auth.module.ts:9:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
 products-1     | 
-products-1     | 9 import { DatabaseModule } from '@shared/config/database/database.module';
-products-1     |                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+products-1     | 9 import { JwtModule } from '@nestjs/jwt';
+products-1     |                             ~~~~~~~~~~~~~
 products-1     | 
-products-1     | service/category.service.ts:2:27 - error TS2307: Cannot find module '@products/schemas/category.schema' or its corresponding type declarations.
+products-1     | microservices/auth/auth.module.ts:10:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
 products-1     | 
-products-1     | 2 import { Categoria } from "@products/schemas/category.schema";
-products-1     |                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+products-1     | 10 import { PassportModule } from '@nestjs/passport';
+products-1     |                                   ~~~~~~~~~~~~~~~~~~
 products-1     | 
-products-1     | service/category.service.ts:3:29 - error TS2307: Cannot find module '@products/schemas/dto/category.dto' or its corresponding type declarations.
+products-1     | microservices/auth/service/auth.service.ts:5:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
 products-1     | 
-products-1     | 3 import { CategoryDTO } from "@products/schemas/dto/category.dto";
-products-1     |                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+products-1     | 5 import { JwtService } from '@nestjs/jwt';
+products-1     |                              ~~~~~~~~~~~~~
 products-1     | 
-products-1     | service/ofertas.service.ts:5:25 - error TS2307: Cannot find module '@products/schemas/ofertas.schema' or its corresponding type declarations.
+products-1     | microservices/auth/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
 products-1     | 
-products-1     | 5 import { Ofertas } from '@products/schemas/ofertas.schema';
-products-1     |                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+products-1     | 2 import { PassportStrategy } from '@nestjs/passport';
+products-1     |                                    ~~~~~~~~~~~~~~~~~~
 products-1     | 
-products-1     | service/products.service.ts:2:25 - error TS2307: Cannot find module '@products/schemas/product.schema' or its corresponding type declarations.
+products-1     | microservices/auth/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
 products-1     | 
-products-1     | 2 import { Product } from '@products/schemas/product.schema';
-products-1     |                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+products-1     | 3 import { Strategy } from 'passport-google-oauth20';
+products-1     |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
 products-1     | 
-products-1     | service/products.service.ts:4:34 - error TS2307: Cannot find module '@products/schemas/dto/create-product.dto' or its corresponding type declarations.
+products-1     | microservices/auth/strategies/jwt.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
 products-1     | 
-products-1     | 4 import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
-products-1     |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+products-1     | 2 import { PassportStrategy } from '@nestjs/passport';
+products-1     |                                    ~~~~~~~~~~~~~~~~~~
 products-1     | 
-products-1     | service/products.service.ts:7:24 - error TS2307: Cannot find module '@products/schemas/combos.schema' or its corresponding type declarations.
+products-1     | microservices/auth/strategies/jwt.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-jwt' or its corresponding type declarations.
 products-1     | 
-products-1     | 7 import { Combos } from '@products/schemas/combos.schema';
-products-1     |                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+products-1     | 3 import { Strategy } from 'passport-jwt';
+products-1     |                            ~~~~~~~~~~~~~~
 products-1     | 
-products-1     | service/products.service.ts:8:32 - error TS2307: Cannot find module '@products/schemas/dto/create-combo.dto' or its corresponding type declarations.
+products-1     | microservices/cart/cart.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
 products-1     | 
-products-1     | 8 import { CreateComboDto } from '@products/schemas/dto/create-combo.dto';
-products-1     |                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+products-1     | 12 import { JwtModule } from '@nestjs/jwt';
+products-1     |                              ~~~~~~~~~~~~~
 products-1     | 
-products-1     | service/promos.service.ts:4:23 - error TS2307: Cannot find module '@products/schemas/promos.schema' or its corresponding type declarations.
+products-1     | microservices/cart/constants/cart.constants.ts:2:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
 products-1     | 
-products-1     | 4 import { Promo } from '@products/schemas/promos.schema';
-products-1     |                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+products-1     | 2 import moment from 'moment-timezone';
+products-1     |                      ~~~~~~~~~~~~~~~~~
 products-1     | 
-products-1     | [11:59:34 PM] Found 16 errors. Watching for file changes.
+products-1     | microservices/cart/service/cart.service.ts:16:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
 products-1     | 
-content-2      | content.module.ts:4:32 - error TS2307: Cannot find module '@shared/config/database/database.module' or its corresponding type declarations.
+products-1     | 16 import moment from 'moment-timezone';
+products-1     |                       ~~~~~~~~~~~~~~~~~
+products-1     | 
+products-1     | microservices/cart/service/errors/cart-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
+products-1     | 
+products-1     | 5 import moment from 'moment-timezone';
+products-1     |                      ~~~~~~~~~~~~~~~~~
+products-1     | 
+products-1     | microservices/image/service/errors/banner-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
+products-1     | 
+products-1     | 5 import moment from 'moment-timezone';
+products-1     |                      ~~~~~~~~~~~~~~~~~
+products-1     | 
+products-1     | microservices/image/service/image.banners.service.ts:14:30 - error TS2307: Cannot find module 'uuid' or its corresponding type declarations.
+products-1     | 
+products-1     | 14 import { v4 as uuidv4 } from 'uuid';
+products-1     |                                 ~~~~~~
+products-1     | 
+products-1     | microservices/image/service/image.banners.service.ts:15:19 - error TS2307: Cannot find module 'sharp' or its corresponding type declarations.
+products-1     | 
+products-1     | 15 import sharp from 'sharp';
+products-1     |                      ~~~~~~~
+products-1     | 
+products-1     | microservices/main.ts:6:25 - error TS2307: Cannot find module 'compression' or its corresponding type declarations.
+products-1     | 
+products-1     | 6 import compression from 'compression';
+products-1     |                           ~~~~~~~~~~~~~
+products-1     | 
+products-1     | microservices/payments/service/errors/payment-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
+products-1     | 
+products-1     | 5 import moment from 'moment-timezone';
+products-1     |                      ~~~~~~~~~~~~~~~~~
+products-1     | 
+products-1     | microservices/payments/service/payments.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
+products-1     | 
+products-1     | 5 import moment from 'moment-timezone';
+products-1     |                      ~~~~~~~~~~~~~~~~~
+products-1     | 
+products-1     | [1:49:16 PM] Found 24 errors. Watching for file changes.
+products-1     | 
+cart-1         | api-gateway/src/modules/auth/auth.module.ts:4:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+cart-1         | 
+cart-1         | 4 import { PassportModule } from '@nestjs/passport';
+cart-1         |                                  ~~~~~~~~~~~~~~~~~~
+cart-1         | 
+cart-1         | api-gateway/src/modules/auth/controllers/auth.controller.ts:5:27 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+cart-1         | 
+cart-1         | 5 import { AuthGuard } from '@nestjs/passport';
+cart-1         |                             ~~~~~~~~~~~~~~~~~~
+cart-1         | 
+cart-1         | api-gateway/src/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+cart-1         | 
+cart-1         | 2 import { PassportStrategy } from '@nestjs/passport';
+cart-1         |                                    ~~~~~~~~~~~~~~~~~~
+cart-1         | 
+cart-1         | api-gateway/src/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
+cart-1         | 
+cart-1         | 3 import { Strategy } from 'passport-google-oauth20';
+cart-1         |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
+cart-1         | 
+cart-1         | microservices/auth/auth.module.ts:10:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+cart-1         | 
+cart-1         | 10 import { PassportModule } from '@nestjs/passport';
+cart-1         |                                   ~~~~~~~~~~~~~~~~~~
+cart-1         | 
+cart-1         | microservices/auth/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+cart-1         | 
+cart-1         | 2 import { PassportStrategy } from '@nestjs/passport';
+cart-1         |                                    ~~~~~~~~~~~~~~~~~~
+cart-1         | 
+cart-1         | microservices/auth/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
+cart-1         | 
+cart-1         | 3 import { Strategy } from 'passport-google-oauth20';
+cart-1         |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
+cart-1         | 
+cart-1         | microservices/auth/strategies/jwt.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+cart-1         | 
+cart-1         | 2 import { PassportStrategy } from '@nestjs/passport';
+cart-1         |                                    ~~~~~~~~~~~~~~~~~~
+cart-1         | 
+cart-1         | microservices/auth/strategies/jwt.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-jwt' or its corresponding type declarations.
+cart-1         | 
+cart-1         | 3 import { Strategy } from 'passport-jwt';
+cart-1         |                            ~~~~~~~~~~~~~~
+cart-1         | 
+cart-1         | microservices/image/service/image.banners.service.ts:14:30 - error TS2307: Cannot find module 'uuid' or its corresponding type declarations.
+cart-1         | 
+cart-1         | 14 import { v4 as uuidv4 } from 'uuid';
+cart-1         |                                 ~~~~~~
+cart-1         | 
+cart-1         | microservices/image/service/image.banners.service.ts:15:19 - error TS2307: Cannot find module 'sharp' or its corresponding type declarations.
+cart-1         | 
+cart-1         | 15 import sharp from 'sharp';
+cart-1         |                      ~~~~~~~
+cart-1         | 
+cart-1         | microservices/main.ts:6:25 - error TS2307: Cannot find module 'compression' or its corresponding type declarations.
+cart-1         | 
+cart-1         | 6 import compression from 'compression';
+cart-1         |                           ~~~~~~~~~~~~~
+cart-1         | 
+cart-1         | [1:49:18 PM] Found 12 errors. Watching for file changes.
+cart-1         | 
+content-2      | api-gateway/src/app.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
 content-2      | 
-content-2      | 4 import { DatabaseModule } from '@shared/config/database/database.module';
-content-2      |                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 12 import { JwtModule } from '@nestjs/jwt';
+content-2      |                              ~~~~~~~~~~~~~
 content-2      | 
-content-2      | home/controller/home.controller.ts:3:29 - error TS2307: Cannot find module '@content/home/service/home.service' or its corresponding type declarations.
+content-2      | api-gateway/src/common/guards/jwt-auth.guard.ts:2:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
 content-2      | 
-content-2      | 3 import { HomeService } from '@content/home/service/home.service';
-content-2      |                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 2 import { JwtService } from '@nestjs/jwt';
+content-2      |                              ~~~~~~~~~~~~~
 content-2      | 
-content-2      | home/controller/home.controller.ts:4:31 - error TS2307: Cannot find module '@content/home/dto/filter.home' or its corresponding type declarations.
+content-2      | api-gateway/src/modules/auth/auth.module.ts:4:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
 content-2      | 
-content-2      | 4 import { FilterHomeDto } from '@content/home/dto/filter.home';
-content-2      |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 4 import { PassportModule } from '@nestjs/passport';
+content-2      |                                  ~~~~~~~~~~~~~~~~~~
 content-2      | 
-content-2      | home/controller/home.controller.ts:5:30 - error TS2307: Cannot find module '@shared/common/response/response.data' or its corresponding type declarations.
+content-2      | api-gateway/src/modules/auth/controllers/auth.controller.ts:5:27 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
 content-2      | 
-content-2      | 5 import { ResponseData } from '@shared/common/response/response.data';
-content-2      |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 5 import { AuthGuard } from '@nestjs/passport';
+content-2      |                             ~~~~~~~~~~~~~~~~~~
 content-2      | 
-content-2      | home/controller/home.controller.ts:6:26 - error TS2307: Cannot find module '@content/home/interfaces/home.interface' or its corresponding type declarations.
+content-2      | api-gateway/src/modules/products/products.module.ts:5:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
 content-2      | 
-content-2      | 6 import { HomeData } from '@content/home/interfaces/home.interface';
-content-2      |                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 5 import { JwtModule } from '@nestjs/jwt';
+content-2      |                             ~~~~~~~~~~~~~
 content-2      | 
-content-2      | home/controller/home.controller.ts:7:46 - error TS2307: Cannot find module '@shared/common/interceptors/microservice-error.interceptor' or its corresponding type declarations.
+content-2      | api-gateway/src/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
 content-2      | 
-content-2      | 7 import { MicroserviceErrorInterceptor } from '@shared/common/interceptors/microservice-error.interceptor';
-content-2      |                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 2 import { PassportStrategy } from '@nestjs/passport';
+content-2      |                                    ~~~~~~~~~~~~~~~~~~
 content-2      | 
-content-2      | home/home.module.ts:4:36 - error TS2307: Cannot find module '@shared/config/microservice/microservice.module' or its corresponding type declarations.
+content-2      | api-gateway/src/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
 content-2      | 
-content-2      | 4 import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
-content-2      |                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 3 import { Strategy } from 'passport-google-oauth20';
+content-2      |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
 content-2      | 
-content-2      | home/home.module.ts:5:34 - error TS2307: Cannot find module '@shared/common/decorators/resilient-client.decorator' or its corresponding type declarations.
+content-2      | microservices/auth/auth.module.ts:9:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
 content-2      | 
-content-2      | 5 import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
-content-2      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 9 import { JwtModule } from '@nestjs/jwt';
+content-2      |                             ~~~~~~~~~~~~~
 content-2      | 
-content-2      | home/home.module.ts:6:37 - error TS2307: Cannot find module '@shared/common/services/fallback-data.service' or its corresponding type declarations.
+content-2      | microservices/auth/auth.module.ts:10:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
 content-2      | 
-content-2      | 6 import { FallbackDataService } from '@shared/common/services/fallback-data.service';
-content-2      |                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 10 import { PassportModule } from '@nestjs/passport';
+content-2      |                                   ~~~~~~~~~~~~~~~~~~
 content-2      | 
-content-2      | home/interfaces/home.interface.ts:1:30 - error TS2307: Cannot find module '@shared/common/response/response.data' or its corresponding type declarations.
+content-2      | microservices/auth/service/auth.service.ts:5:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
 content-2      | 
-content-2      | 1 import { ResponseData } from '@shared/common/response/response.data';
-content-2      |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 5 import { JwtService } from '@nestjs/jwt';
+content-2      |                              ~~~~~~~~~~~~~
 content-2      | 
-content-2      | home/service/home.service.ts:3:31 - error TS2307: Cannot find module '@content/home/dto/filter.home' or its corresponding type declarations.
+content-2      | microservices/auth/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
 content-2      | 
-content-2      | 3 import { FilterHomeDto } from '@content/home/dto/filter.home';
-content-2      |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 2 import { PassportStrategy } from '@nestjs/passport';
+content-2      |                                    ~~~~~~~~~~~~~~~~~~
 content-2      | 
-content-2      | home/service/home.service.ts:4:26 - error TS2307: Cannot find module '@content/home/interfaces/home.interface' or its corresponding type declarations.
+content-2      | microservices/auth/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
 content-2      | 
-content-2      | 4 import { HomeData } from '@content/home/interfaces/home.interface';
-content-2      |                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 3 import { Strategy } from 'passport-google-oauth20';
+content-2      |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
 content-2      | 
-content-2      | home/service/home.service.ts:5:30 - error TS2307: Cannot find module '@shared/common/response/response.data' or its corresponding type declarations.
+content-2      | microservices/auth/strategies/jwt.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
 content-2      | 
-content-2      | 5 import { ResponseData } from '@shared/common/response/response.data';
-content-2      |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 2 import { PassportStrategy } from '@nestjs/passport';
+content-2      |                                    ~~~~~~~~~~~~~~~~~~
 content-2      | 
-content-2      | home/service/home.service.ts:9:8 - error TS2307: Cannot find module '@shared/common/decorators/resilient-client.decorator' or its corresponding type declarations.
+content-2      | microservices/auth/strategies/jwt.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-jwt' or its corresponding type declarations.
 content-2      | 
-content-2      | 9 } from '@shared/common/decorators/resilient-client.decorator';
-content-2      |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 3 import { Strategy } from 'passport-jwt';
+content-2      |                            ~~~~~~~~~~~~~~
 content-2      | 
-content-2      | home/service/home.service.ts:10:37 - error TS2307: Cannot find module '@shared/common/services/fallback-data.service' or its corresponding type declarations.
+content-2      | microservices/cart/cart.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
 content-2      | 
-content-2      | 10 import { FallbackDataService } from '@shared/common/services/fallback-data.service';
-content-2      |                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 12 import { JwtModule } from '@nestjs/jwt';
+content-2      |                              ~~~~~~~~~~~~~
 content-2      | 
-content-2      | landings/controller/landings.controller.ts:3:25 - error TS2307: Cannot find module '@landings/schemas/landings.schemas' or its corresponding type declarations.
+content-2      | microservices/cart/constants/cart.constants.ts:2:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
 content-2      | 
-content-2      | 3 import { Landing } from '@landings/schemas/landings.schemas';
-content-2      |                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 2 import moment from 'moment-timezone';
+content-2      |                      ~~~~~~~~~~~~~~~~~
 content-2      | 
-content-2      | landings/controller/landings.controller.ts:4:33 - error TS2307: Cannot find module '@landings/service/landings.service' or its corresponding type declarations.
+content-2      | microservices/cart/service/cart.service.ts:16:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
 content-2      | 
-content-2      | 4 import { LandingsService } from '@landings/service/landings.service';
-content-2      |                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 16 import moment from 'moment-timezone';
+content-2      |                       ~~~~~~~~~~~~~~~~~
 content-2      | 
-content-2      | landings/controller/landings.controller.ts:5:25 - error TS2307: Cannot find module '@landings/schemas/formatos.schema' or its corresponding type declarations.
+content-2      | microservices/cart/service/errors/cart-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
 content-2      | 
-content-2      | 5 import { Formato } from '@landings/schemas/formatos.schema';
-content-2      |                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 5 import moment from 'moment-timezone';
+content-2      |                      ~~~~~~~~~~~~~~~~~
 content-2      | 
-content-2      | landings/landings.module.ts:7:36 - error TS2307: Cannot find module '@shared/config/microservice/microservice.module' or its corresponding type declarations.
+content-2      | microservices/image/service/errors/banner-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
 content-2      | 
-content-2      | 7 import { MicroserviceModule } from "@shared/config/microservice/microservice.module";
-content-2      |                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 5 import moment from 'moment-timezone';
+content-2      |                      ~~~~~~~~~~~~~~~~~
 content-2      | 
-content-2      | landings/service/errors/landings-error.service.ts:4:52 - error TS2307: Cannot find module '@landings/schemas/errors/landings.error.schema' or its corresponding type declarations.
+content-2      | microservices/image/service/image.banners.service.ts:14:30 - error TS2307: Cannot find module 'uuid' or its corresponding type declarations.
 content-2      | 
-content-2      | 4 import { LandingError, LandingErrorDocument } from '@landings/schemas/errors/landings.error.schema';
-content-2      |                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 14 import { v4 as uuidv4 } from 'uuid';
+content-2      |                                 ~~~~~~
 content-2      | 
-content-2      | landings/service/landings.service.ts:9:42 - error TS2307: Cannot find module '@landings/schemas/landings.schemas' or its corresponding type declarations.
+content-2      | microservices/image/service/image.banners.service.ts:15:19 - error TS2307: Cannot find module 'sharp' or its corresponding type declarations.
 content-2      | 
-content-2      | 9 import { Landing, LandingDocument } from '@landings/schemas/landings.schemas';
-content-2      |                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 15 import sharp from 'sharp';
+content-2      |                      ~~~~~~~
 content-2      | 
-content-2      | landings/service/landings.service.ts:10:42 - error TS2307: Cannot find module '@landings/schemas/formatos.schema' or its corresponding type declarations.
+content-2      | microservices/main.ts:6:25 - error TS2307: Cannot find module 'compression' or its corresponding type declarations.
 content-2      | 
-content-2      | 10 import { Formato, FormatoDocument } from '@landings/schemas/formatos.schema';
-content-2      |                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 6 import compression from 'compression';
+content-2      |                           ~~~~~~~~~~~~~
 content-2      | 
-content-2      | landings/service/landings.service.ts:11:36 - error TS2307: Cannot find module '@landings/const/formatos.const' or its corresponding type declarations.
+content-2      | microservices/payments/service/errors/payment-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
 content-2      | 
-content-2      | 11 import { FORMATOS_TEMPLATES } from '@landings/const/formatos.const';
-content-2      |                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 5 import moment from 'moment-timezone';
+content-2      |                      ~~~~~~~~~~~~~~~~~
 content-2      | 
-content-2      | main.ts:4:31 - error TS2307: Cannot find module '@shared/config/microservice/microservice.config' or its corresponding type declarations.
+content-2      | microservices/payments/service/payments.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
 content-2      | 
-content-2      | 4 import { SERVICE_PORTS } from '@shared/config/microservice/microservice.config';
-content-2      |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-2      | 5 import moment from 'moment-timezone';
+content-2      |                      ~~~~~~~~~~~~~~~~~
 content-2      | 
-content-2      | [11:59:35 PM] Found 24 errors. Watching for file changes.
+content-2      | [1:49:19 PM] Found 24 errors. Watching for file changes.
 content-2      | 
-content-1      | content.module.ts:4:32 - error TS2307: Cannot find module '@shared/config/database/database.module' or its corresponding type declarations.
-content-1      | 
-content-1      | 4 import { DatabaseModule } from '@shared/config/database/database.module';
-content-1      |                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | home/controller/home.controller.ts:3:29 - error TS2307: Cannot find module '@content/home/service/home.service' or its corresponding type declarations.
-content-1      | 
-content-1      | 3 import { HomeService } from '@content/home/service/home.service';
-content-1      |                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | home/controller/home.controller.ts:4:31 - error TS2307: Cannot find module '@content/home/dto/filter.home' or its corresponding type declarations.
-content-1      | 
-content-1      | 4 import { FilterHomeDto } from '@content/home/dto/filter.home';
-content-1      |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | home/controller/home.controller.ts:5:30 - error TS2307: Cannot find module '@shared/common/response/response.data' or its corresponding type declarations.
-content-1      | 
-content-1      | 5 import { ResponseData } from '@shared/common/response/response.data';
-content-1      |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | home/controller/home.controller.ts:6:26 - error TS2307: Cannot find module '@content/home/interfaces/home.interface' or its corresponding type declarations.
-content-1      | 
-content-1      | 6 import { HomeData } from '@content/home/interfaces/home.interface';
-content-1      |                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | home/controller/home.controller.ts:7:46 - error TS2307: Cannot find module '@shared/common/interceptors/microservice-error.interceptor' or its corresponding type declarations.
-content-1      | 
-content-1      | 7 import { MicroserviceErrorInterceptor } from '@shared/common/interceptors/microservice-error.interceptor';
-content-1      |                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | home/home.module.ts:4:36 - error TS2307: Cannot find module '@shared/config/microservice/microservice.module' or its corresponding type declarations.
-content-1      | 
-content-1      | 4 import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
-content-1      |                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | home/home.module.ts:5:34 - error TS2307: Cannot find module '@shared/common/decorators/resilient-client.decorator' or its corresponding type declarations.
-content-1      | 
-content-1      | 5 import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
-content-1      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | home/home.module.ts:6:37 - error TS2307: Cannot find module '@shared/common/services/fallback-data.service' or its corresponding type declarations.
-content-1      | 
-content-1      | 6 import { FallbackDataService } from '@shared/common/services/fallback-data.service';
-content-1      |                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | home/interfaces/home.interface.ts:1:30 - error TS2307: Cannot find module '@shared/common/response/response.data' or its corresponding type declarations.
-content-1      | 
-content-1      | 1 import { ResponseData } from '@shared/common/response/response.data';
-content-1      |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | home/service/home.service.ts:3:31 - error TS2307: Cannot find module '@content/home/dto/filter.home' or its corresponding type declarations.
-content-1      | 
-content-1      | 3 import { FilterHomeDto } from '@content/home/dto/filter.home';
-content-1      |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | home/service/home.service.ts:4:26 - error TS2307: Cannot find module '@content/home/interfaces/home.interface' or its corresponding type declarations.
-content-1      | 
-content-1      | 4 import { HomeData } from '@content/home/interfaces/home.interface';
-content-1      |                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | home/service/home.service.ts:5:30 - error TS2307: Cannot find module '@shared/common/response/response.data' or its corresponding type declarations.
-content-1      | 
-content-1      | 5 import { ResponseData } from '@shared/common/response/response.data';
-content-1      |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | home/service/home.service.ts:9:8 - error TS2307: Cannot find module '@shared/common/decorators/resilient-client.decorator' or its corresponding type declarations.
-content-1      | 
-content-1      | 9 } from '@shared/common/decorators/resilient-client.decorator';
-content-1      |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | home/service/home.service.ts:10:37 - error TS2307: Cannot find module '@shared/common/services/fallback-data.service' or its corresponding type declarations.
-content-1      | 
-content-1      | 10 import { FallbackDataService } from '@shared/common/services/fallback-data.service';
-content-1      |                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | landings/controller/landings.controller.ts:3:25 - error TS2307: Cannot find module '@landings/schemas/landings.schemas' or its corresponding type declarations.
-content-1      | 
-content-1      | 3 import { Landing } from '@landings/schemas/landings.schemas';
-content-1      |                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | landings/controller/landings.controller.ts:4:33 - error TS2307: Cannot find module '@landings/service/landings.service' or its corresponding type declarations.
-content-1      | 
-content-1      | 4 import { LandingsService } from '@landings/service/landings.service';
-content-1      |                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | landings/controller/landings.controller.ts:5:25 - error TS2307: Cannot find module '@landings/schemas/formatos.schema' or its corresponding type declarations.
-content-1      | 
-content-1      | 5 import { Formato } from '@landings/schemas/formatos.schema';
-content-1      |                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | landings/landings.module.ts:7:36 - error TS2307: Cannot find module '@shared/config/microservice/microservice.module' or its corresponding type declarations.
-content-1      | 
-content-1      | 7 import { MicroserviceModule } from "@shared/config/microservice/microservice.module";
-content-1      |                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | landings/service/errors/landings-error.service.ts:4:52 - error TS2307: Cannot find module '@landings/schemas/errors/landings.error.schema' or its corresponding type declarations.
-content-1      | 
-content-1      | 4 import { LandingError, LandingErrorDocument } from '@landings/schemas/errors/landings.error.schema';
-content-1      |                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | landings/service/landings.service.ts:9:42 - error TS2307: Cannot find module '@landings/schemas/landings.schemas' or its corresponding type declarations.
-content-1      | 
-content-1      | 9 import { Landing, LandingDocument } from '@landings/schemas/landings.schemas';
-content-1      |                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | landings/service/landings.service.ts:10:42 - error TS2307: Cannot find module '@landings/schemas/formatos.schema' or its corresponding type declarations.
-content-1      | 
-content-1      | 10 import { Formato, FormatoDocument } from '@landings/schemas/formatos.schema';
-content-1      |                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | landings/service/landings.service.ts:11:36 - error TS2307: Cannot find module '@landings/const/formatos.const' or its corresponding type declarations.
-content-1      | 
-content-1      | 11 import { FORMATOS_TEMPLATES } from '@landings/const/formatos.const';
-content-1      |                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | main.ts:4:31 - error TS2307: Cannot find module '@shared/config/microservice/microservice.config' or its corresponding type declarations.
-content-1      | 
-content-1      | 4 import { SERVICE_PORTS } from '@shared/config/microservice/microservice.config';
-content-1      |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | [11:59:36 PM] Found 24 errors. Watching for file changes.
-content-1      | 
-content-3      | content.module.ts:4:32 - error TS2307: Cannot find module '@shared/config/database/database.module' or its corresponding type declarations.
+content-3      | api-gateway/src/app.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
 content-3      | 
-content-3      | 4 import { DatabaseModule } from '@shared/config/database/database.module';
-content-3      |                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 12 import { JwtModule } from '@nestjs/jwt';
+content-3      |                              ~~~~~~~~~~~~~
 content-3      | 
-content-3      | home/controller/home.controller.ts:3:29 - error TS2307: Cannot find module '@content/home/service/home.service' or its corresponding type declarations.
+content-3      | api-gateway/src/common/guards/jwt-auth.guard.ts:2:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
 content-3      | 
-content-3      | 3 import { HomeService } from '@content/home/service/home.service';
-content-3      |                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 2 import { JwtService } from '@nestjs/jwt';
+content-3      |                              ~~~~~~~~~~~~~
 content-3      | 
-content-3      | home/controller/home.controller.ts:4:31 - error TS2307: Cannot find module '@content/home/dto/filter.home' or its corresponding type declarations.
+content-3      | api-gateway/src/modules/auth/auth.module.ts:4:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
 content-3      | 
-content-3      | 4 import { FilterHomeDto } from '@content/home/dto/filter.home';
-content-3      |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 4 import { PassportModule } from '@nestjs/passport';
+content-3      |                                  ~~~~~~~~~~~~~~~~~~
 content-3      | 
-content-3      | home/controller/home.controller.ts:5:30 - error TS2307: Cannot find module '@shared/common/response/response.data' or its corresponding type declarations.
+content-3      | api-gateway/src/modules/auth/controllers/auth.controller.ts:5:27 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
 content-3      | 
-content-3      | 5 import { ResponseData } from '@shared/common/response/response.data';
-content-3      |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 5 import { AuthGuard } from '@nestjs/passport';
+content-3      |                             ~~~~~~~~~~~~~~~~~~
 content-3      | 
-content-3      | home/controller/home.controller.ts:6:26 - error TS2307: Cannot find module '@content/home/interfaces/home.interface' or its corresponding type declarations.
+content-3      | api-gateway/src/modules/products/products.module.ts:5:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
 content-3      | 
-content-3      | 6 import { HomeData } from '@content/home/interfaces/home.interface';
-content-3      |                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 5 import { JwtModule } from '@nestjs/jwt';
+content-3      |                             ~~~~~~~~~~~~~
 content-3      | 
-content-3      | home/controller/home.controller.ts:7:46 - error TS2307: Cannot find module '@shared/common/interceptors/microservice-error.interceptor' or its corresponding type declarations.
+content-3      | api-gateway/src/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
 content-3      | 
-content-3      | 7 import { MicroserviceErrorInterceptor } from '@shared/common/interceptors/microservice-error.interceptor';
-content-3      |                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 2 import { PassportStrategy } from '@nestjs/passport';
+content-3      |                                    ~~~~~~~~~~~~~~~~~~
 content-3      | 
-content-3      | home/home.module.ts:4:36 - error TS2307: Cannot find module '@shared/config/microservice/microservice.module' or its corresponding type declarations.
+content-3      | api-gateway/src/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
 content-3      | 
-content-3      | 4 import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
-content-3      |                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 3 import { Strategy } from 'passport-google-oauth20';
+content-3      |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
 content-3      | 
-content-3      | home/home.module.ts:5:34 - error TS2307: Cannot find module '@shared/common/decorators/resilient-client.decorator' or its corresponding type declarations.
+content-3      | microservices/auth/auth.module.ts:9:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
 content-3      | 
-content-3      | 5 import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
-content-3      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 9 import { JwtModule } from '@nestjs/jwt';
+content-3      |                             ~~~~~~~~~~~~~
 content-3      | 
-content-3      | home/home.module.ts:6:37 - error TS2307: Cannot find module '@shared/common/services/fallback-data.service' or its corresponding type declarations.
+content-3      | microservices/auth/auth.module.ts:10:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
 content-3      | 
-content-3      | 6 import { FallbackDataService } from '@shared/common/services/fallback-data.service';
-content-3      |                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 10 import { PassportModule } from '@nestjs/passport';
+content-3      |                                   ~~~~~~~~~~~~~~~~~~
 content-3      | 
-content-3      | home/interfaces/home.interface.ts:1:30 - error TS2307: Cannot find module '@shared/common/response/response.data' or its corresponding type declarations.
+content-3      | microservices/auth/service/auth.service.ts:5:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
 content-3      | 
-content-3      | 1 import { ResponseData } from '@shared/common/response/response.data';
-content-3      |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 5 import { JwtService } from '@nestjs/jwt';
+content-3      |                              ~~~~~~~~~~~~~
 content-3      | 
-content-3      | home/service/home.service.ts:3:31 - error TS2307: Cannot find module '@content/home/dto/filter.home' or its corresponding type declarations.
+content-3      | microservices/auth/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
 content-3      | 
-content-3      | 3 import { FilterHomeDto } from '@content/home/dto/filter.home';
-content-3      |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 2 import { PassportStrategy } from '@nestjs/passport';
+content-3      |                                    ~~~~~~~~~~~~~~~~~~
 content-3      | 
-content-3      | home/service/home.service.ts:4:26 - error TS2307: Cannot find module '@content/home/interfaces/home.interface' or its corresponding type declarations.
+content-3      | microservices/auth/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
 content-3      | 
-content-3      | 4 import { HomeData } from '@content/home/interfaces/home.interface';
-content-3      |                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 3 import { Strategy } from 'passport-google-oauth20';
+content-3      |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
 content-3      | 
-content-3      | home/service/home.service.ts:5:30 - error TS2307: Cannot find module '@shared/common/response/response.data' or its corresponding type declarations.
+content-3      | microservices/auth/strategies/jwt.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
 content-3      | 
-content-3      | 5 import { ResponseData } from '@shared/common/response/response.data';
-content-3      |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 2 import { PassportStrategy } from '@nestjs/passport';
+content-3      |                                    ~~~~~~~~~~~~~~~~~~
 content-3      | 
-content-3      | home/service/home.service.ts:9:8 - error TS2307: Cannot find module '@shared/common/decorators/resilient-client.decorator' or its corresponding type declarations.
+content-3      | microservices/auth/strategies/jwt.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-jwt' or its corresponding type declarations.
 content-3      | 
-content-3      | 9 } from '@shared/common/decorators/resilient-client.decorator';
-content-3      |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 3 import { Strategy } from 'passport-jwt';
+content-3      |                            ~~~~~~~~~~~~~~
 content-3      | 
-content-3      | home/service/home.service.ts:10:37 - error TS2307: Cannot find module '@shared/common/services/fallback-data.service' or its corresponding type declarations.
+content-3      | microservices/cart/cart.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
 content-3      | 
-content-3      | 10 import { FallbackDataService } from '@shared/common/services/fallback-data.service';
-content-3      |                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 12 import { JwtModule } from '@nestjs/jwt';
+content-3      |                              ~~~~~~~~~~~~~
 content-3      | 
-content-3      | landings/controller/landings.controller.ts:3:25 - error TS2307: Cannot find module '@landings/schemas/landings.schemas' or its corresponding type declarations.
+content-3      | microservices/cart/constants/cart.constants.ts:2:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
 content-3      | 
-content-3      | 3 import { Landing } from '@landings/schemas/landings.schemas';
-content-3      |                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 2 import moment from 'moment-timezone';
+content-3      |                      ~~~~~~~~~~~~~~~~~
 content-3      | 
-content-3      | landings/controller/landings.controller.ts:4:33 - error TS2307: Cannot find module '@landings/service/landings.service' or its corresponding type declarations.
+content-3      | microservices/cart/service/cart.service.ts:16:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
 content-3      | 
-content-3      | 4 import { LandingsService } from '@landings/service/landings.service';
-content-3      |                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 16 import moment from 'moment-timezone';
+content-3      |                       ~~~~~~~~~~~~~~~~~
 content-3      | 
-content-3      | landings/controller/landings.controller.ts:5:25 - error TS2307: Cannot find module '@landings/schemas/formatos.schema' or its corresponding type declarations.
+content-3      | microservices/cart/service/errors/cart-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
 content-3      | 
-content-3      | 5 import { Formato } from '@landings/schemas/formatos.schema';
-content-3      |                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 5 import moment from 'moment-timezone';
+content-3      |                      ~~~~~~~~~~~~~~~~~
 content-3      | 
-content-3      | landings/landings.module.ts:7:36 - error TS2307: Cannot find module '@shared/config/microservice/microservice.module' or its corresponding type declarations.
+content-3      | microservices/image/service/errors/banner-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
 content-3      | 
-content-3      | 7 import { MicroserviceModule } from "@shared/config/microservice/microservice.module";
-content-3      |                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 5 import moment from 'moment-timezone';
+content-3      |                      ~~~~~~~~~~~~~~~~~
 content-3      | 
-content-3      | landings/service/errors/landings-error.service.ts:4:52 - error TS2307: Cannot find module '@landings/schemas/errors/landings.error.schema' or its corresponding type declarations.
+content-3      | microservices/image/service/image.banners.service.ts:14:30 - error TS2307: Cannot find module 'uuid' or its corresponding type declarations.
 content-3      | 
-content-3      | 4 import { LandingError, LandingErrorDocument } from '@landings/schemas/errors/landings.error.schema';
-content-3      |                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 14 import { v4 as uuidv4 } from 'uuid';
+content-3      |                                 ~~~~~~
 content-3      | 
-content-3      | landings/service/landings.service.ts:9:42 - error TS2307: Cannot find module '@landings/schemas/landings.schemas' or its corresponding type declarations.
+content-3      | microservices/image/service/image.banners.service.ts:15:19 - error TS2307: Cannot find module 'sharp' or its corresponding type declarations.
 content-3      | 
-content-3      | 9 import { Landing, LandingDocument } from '@landings/schemas/landings.schemas';
-content-3      |                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 15 import sharp from 'sharp';
+content-3      |                      ~~~~~~~
 content-3      | 
-content-3      | landings/service/landings.service.ts:10:42 - error TS2307: Cannot find module '@landings/schemas/formatos.schema' or its corresponding type declarations.
+content-3      | microservices/main.ts:6:25 - error TS2307: Cannot find module 'compression' or its corresponding type declarations.
 content-3      | 
-content-3      | 10 import { Formato, FormatoDocument } from '@landings/schemas/formatos.schema';
-content-3      |                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 6 import compression from 'compression';
+content-3      |                           ~~~~~~~~~~~~~
 content-3      | 
-content-3      | landings/service/landings.service.ts:11:36 - error TS2307: Cannot find module '@landings/const/formatos.const' or its corresponding type declarations.
+content-3      | microservices/payments/service/errors/payment-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
 content-3      | 
-content-3      | 11 import { FORMATOS_TEMPLATES } from '@landings/const/formatos.const';
-content-3      |                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 5 import moment from 'moment-timezone';
+content-3      |                      ~~~~~~~~~~~~~~~~~
 content-3      | 
-content-3      | main.ts:4:31 - error TS2307: Cannot find module '@shared/config/microservice/microservice.config' or its corresponding type declarations.
+content-3      | microservices/payments/service/payments.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
 content-3      | 
-content-3      | 4 import { SERVICE_PORTS } from '@shared/config/microservice/microservice.config';
-content-3      |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+content-3      | 5 import moment from 'moment-timezone';
+content-3      |                      ~~~~~~~~~~~~~~~~~
 content-3      | 
-content-3      | [11:59:37 PM] Found 24 errors. Watching for file changes.
+content-3      | [1:49:20 PM] Found 24 errors. Watching for file changes.
 content-3      | 
-api-gateway-2  | Configuring PAYMENTS_SERVICE microservice at deploy-payments-1:3105
-api-gateway-1  | Configuring PAYMENTS_SERVICE microservice at deploy-payments-1:3105
-api-gateway-1  | Configuring AUTH_SERVICE microservice at deploy-auth-1:3101
-api-gateway-2  | Configuring AUTH_SERVICE microservice at deploy-auth-1:3101
-api-gateway-1  | Configuring CONTENT_SERVICE microservice at deploy-content-1:3103
-api-gateway-2  | Configuring CONTENT_SERVICE microservice at deploy-content-1:3103
-api-gateway-1  | Configuring AUTH_SERVICE microservice at deploy-auth-1:3101
-api-gateway-1  | Configuring CART_SERVICE microservice at deploy-cart-1:3102
-api-gateway-1  | Configuring CONTENT_SERVICE microservice at deploy-content-1:3103
-api-gateway-1  | Configuring ORDERS_SERVICE microservice at deploy-orders-1:3104
-api-gateway-1  | Configuring PAYMENTS_SERVICE microservice at deploy-payments-1:3105
-api-gateway-1  | Configuring PRODUCTS_SERVICE microservice at deploy-products-1:3106
-api-gateway-1  | Configuring IMAGE_SERVICE microservice at deploy-image-1:3107
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:54 PM     LOG [NestFactory] Starting Nest application...
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:54 PM     LOG [InstanceLoader] MicroserviceModule dependencies initialized +145ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:54 PM     LOG [InstanceLoader] ClientsModule dependencies initialized +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:54 PM     LOG [InstanceLoader] MicroserviceModule dependencies initialized +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:54 PM     LOG [InstanceLoader] ClientsModule dependencies initialized +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:54 PM     LOG [InstanceLoader] MicroserviceModule dependencies initialized +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:54 PM     LOG [InstanceLoader] ClientsModule dependencies initialized +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:54 PM     LOG [InstanceLoader] PassportModule dependencies initialized +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:54 PM     LOG [InstanceLoader] MicroserviceModule dependencies initialized +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:54 PM     LOG [InstanceLoader] ClientsModule dependencies initialized +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:54 PM     LOG [InstanceLoader] ClientsModule dependencies initialized +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:54 PM     LOG [InstanceLoader] ConfigHostModule dependencies initialized +2ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:54 PM     LOG [InstanceLoader] JwtModule dependencies initialized +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:54 PM     LOG [InstanceLoader] ConfigModule dependencies initialized +6ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:54 PM     LOG [InstanceLoader] PaymentsModule dependencies initialized +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:54 PM     LOG [InstanceLoader] ContentModule dependencies initialized +2ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:54 PM     LOG [InstanceLoader] ImageModule dependencies initialized +0ms
-api-gateway-2  | Configuring AUTH_SERVICE microservice at deploy-auth-1:3101
-api-gateway-2  | Configuring CART_SERVICE microservice at deploy-cart-1:3102
-api-gateway-2  | Configuring CONTENT_SERVICE microservice at deploy-content-1:3103
-api-gateway-2  | Configuring ORDERS_SERVICE microservice at deploy-orders-1:3104
-api-gateway-2  | Configuring PAYMENTS_SERVICE microservice at deploy-payments-1:3105
-api-gateway-2  | Configuring PRODUCTS_SERVICE microservice at deploy-products-1:3106
-api-gateway-2  | Configuring IMAGE_SERVICE microservice at deploy-image-1:3107
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:54 PM     LOG [InstanceLoader] AppModule dependencies initialized +2ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:54 PM     LOG [InstanceLoader] AuthModule dependencies initialized +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:54 PM     LOG [NestFactory] Starting Nest application...
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [InstanceLoader] MicroserviceModule dependencies initialized +138ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [InstanceLoader] ClientsModule dependencies initialized +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [InstanceLoader] MicroserviceModule dependencies initialized +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [InstanceLoader] ClientsModule dependencies initialized +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [InstanceLoader] MicroserviceModule dependencies initialized +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [InstanceLoader] ClientsModule dependencies initialized +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [InstanceLoader] PassportModule dependencies initialized +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [InstanceLoader] MicroserviceModule dependencies initialized +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [InstanceLoader] ClientsModule dependencies initialized +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [InstanceLoader] ClientsModule dependencies initialized +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [InstanceLoader] ConfigHostModule dependencies initialized +2ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [InstanceLoader] JwtModule dependencies initialized +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [InstanceLoader] ConfigModule dependencies initialized +9ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [InstanceLoader] PaymentsModule dependencies initialized +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RoutesResolver] AppController {/api}: +190ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/health, GET} route +7ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RoutesResolver] ProductsController {/api/products}: +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/products/create, POST} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/products/combos, POST} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/products, POST} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/products/listar/promos, POST} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/products/searchProducts, POST} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/products/searchComboByCodigo, GET} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/products/createOferta, POST} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RoutesResolver] CartController {/api/cart}: +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/cart, POST} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/cart/getCart, GET} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/cart/getAllCart, POST} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/cart/finishCart, POST} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RoutesResolver] PaymentsController {/api/payments}: +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/registrar, POST} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/listar/:codigoCarrito, GET} route +18ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/reembolsos/:codigoCarrito, GET} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/motivoRechazo/:codigoCarrito, GET} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/actualizarEstado, POST} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/health, GET} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RoutesResolver] AuthController {/api/auth}: +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/guest, POST} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/google, GET} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/google/callback, GET} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/me, GET} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/logout, POST} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/validate-token, POST} route +2ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RoutesResolver] ImageController {/api/image}: +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/upload, POST} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:nombre/:device, GET} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/list, POST} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id, GET} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/update, POST} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/delete, POST} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/toggle, POST} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/dimensions, GET} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RoutesResolver] PaymentsController {/api/payments}: +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/registrar, POST} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/listar/:codigoCarrito, GET} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/reembolsos/:codigoCarrito, GET} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/motivoRechazo/:codigoCarrito, GET} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/actualizarEstado, POST} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/health, GET} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RoutesResolver] AuthController {/api/auth}: +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/guest, POST} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/google, GET} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/google/callback, GET} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/me, GET} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/logout, POST} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/validate-token, POST} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RoutesResolver] ContentController {/api/content}: +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/home, POST} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/landing, POST} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/landings, GET} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/landings/active, GET} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/landing/:id, GET} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/landing/slug/:slug, GET} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/landing/:id, PUT} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/landing/:id, DELETE} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/landing/:id/toggle-publish, PUT} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/formats, GET} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/formats/active, GET} route +3ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/format/:id, GET} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/format/slug/:slug, GET} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/format, POST} route +2ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/format/:id, PUT} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/format/:id, DELETE} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/formats/templates, GET} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/formats/import-template, POST} route +4ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/landings/stats, GET} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/formats/stats, GET} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RoutesResolver] ImageController {/api/image}: +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/upload, POST} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:nombre/:device, GET} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/list, POST} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id, GET} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/update, POST} route +0ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/delete, POST} route +3ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/toggle, POST} route +9ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/dimensions, GET} route +1ms
-api-gateway-1  | [Nest] 27  - 02/26/2026, 11:59:55 PM     LOG [NestApplication] Nest application successfully started +22ms
-api-gateway-1  | API Gateway is running on: http://[::1]:3100
-api-gateway-1  | Swagger documentation: http://[::1]:3100/api/docs
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [InstanceLoader] ContentModule dependencies initialized +7ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [InstanceLoader] ImageModule dependencies initialized +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [InstanceLoader] AppModule dependencies initialized +9ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [InstanceLoader] AuthModule dependencies initialized +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RoutesResolver] AppController {/api}: +218ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/health, GET} route +17ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RoutesResolver] ProductsController {/api/products}: +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/products/create, POST} route +5ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/products/combos, POST} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/products, POST} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/products/listar/promos, POST} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/products/searchProducts, POST} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/products/searchComboByCodigo, GET} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/products/createOferta, POST} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RoutesResolver] CartController {/api/cart}: +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/cart, POST} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/cart/getCart, GET} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/cart/getAllCart, POST} route +2ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/cart/finishCart, POST} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RoutesResolver] PaymentsController {/api/payments}: +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/registrar, POST} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/listar/:codigoCarrito, GET} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/reembolsos/:codigoCarrito, GET} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/motivoRechazo/:codigoCarrito, GET} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/actualizarEstado, POST} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/health, GET} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RoutesResolver] AuthController {/api/auth}: +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/guest, POST} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/google, GET} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/google/callback, GET} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/me, GET} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/logout, POST} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/validate-token, POST} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RoutesResolver] ImageController {/api/image}: +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/upload, POST} route +2ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:nombre/:device, GET} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/list, POST} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id, GET} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/update, POST} route +2ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/delete, POST} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/toggle, POST} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/dimensions, GET} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RoutesResolver] PaymentsController {/api/payments}: +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/registrar, POST} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/listar/:codigoCarrito, GET} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/reembolsos/:codigoCarrito, GET} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/motivoRechazo/:codigoCarrito, GET} route +19ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/actualizarEstado, POST} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/payments/health, GET} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RoutesResolver] AuthController {/api/auth}: +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/guest, POST} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/google, GET} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/google/callback, GET} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/me, GET} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/logout, POST} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/auth/validate-token, POST} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RoutesResolver] ContentController {/api/content}: +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/home, POST} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/landing, POST} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/landings, GET} route +2ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/landings/active, GET} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/landing/:id, GET} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/landing/slug/:slug, GET} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/landing/:id, PUT} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/landing/:id, DELETE} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/landing/:id/toggle-publish, PUT} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/formats, GET} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/formats/active, GET} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/format/:id, GET} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/format/slug/:slug, GET} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/format, POST} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/format/:id, PUT} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/format/:id, DELETE} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/formats/templates, GET} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/formats/import-template, POST} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/landings/stats, GET} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/content/formats/stats, GET} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RoutesResolver] ImageController {/api/image}: +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/upload, POST} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:nombre/:device, GET} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/list, POST} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id, GET} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/update, POST} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/delete, POST} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/:id/toggle, POST} route +1ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [RouterExplorer] Mapped {/api/image/banner/dimensions, GET} route +0ms
-api-gateway-2  | [Nest] 29  - 02/26/2026, 11:59:55 PM     LOG [NestApplication] Nest application successfully started +37ms
-api-gateway-2  | API Gateway is running on: http://[::1]:3100
-api-gateway-2  | Swagger documentation: http://[::1]:3100/api/docs
+content-1      | api-gateway/src/app.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
+content-1      | 
+content-1      | 12 import { JwtModule } from '@nestjs/jwt';
+content-1      |                              ~~~~~~~~~~~~~
+content-1      | 
+content-1      | api-gateway/src/common/guards/jwt-auth.guard.ts:2:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
+content-1      | 
+content-1      | 2 import { JwtService } from '@nestjs/jwt';
+content-1      |                              ~~~~~~~~~~~~~
+content-1      | 
+content-1      | api-gateway/src/modules/auth/auth.module.ts:4:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+content-1      | 
+content-1      | 4 import { PassportModule } from '@nestjs/passport';
+content-1      |                                  ~~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | api-gateway/src/modules/auth/controllers/auth.controller.ts:5:27 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+content-1      | 
+content-1      | 5 import { AuthGuard } from '@nestjs/passport';
+content-1      |                             ~~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | api-gateway/src/modules/products/products.module.ts:5:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
+content-1      | 
+content-1      | 5 import { JwtModule } from '@nestjs/jwt';
+content-1      |                             ~~~~~~~~~~~~~
+content-1      | 
+content-1      | api-gateway/src/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+content-1      | 
+content-1      | 2 import { PassportStrategy } from '@nestjs/passport';
+content-1      |                                    ~~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | api-gateway/src/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
+content-1      | 
+content-1      | 3 import { Strategy } from 'passport-google-oauth20';
+content-1      |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | microservices/auth/auth.module.ts:9:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
+content-1      | 
+content-1      | 9 import { JwtModule } from '@nestjs/jwt';
+content-1      |                             ~~~~~~~~~~~~~
+content-1      | 
+content-1      | microservices/auth/auth.module.ts:10:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+content-1      | 
+content-1      | 10 import { PassportModule } from '@nestjs/passport';
+content-1      |                                   ~~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | microservices/auth/service/auth.service.ts:5:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
+content-1      | 
+content-1      | 5 import { JwtService } from '@nestjs/jwt';
+content-1      |                              ~~~~~~~~~~~~~
+content-1      | 
+content-1      | microservices/auth/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+content-1      | 
+content-1      | 2 import { PassportStrategy } from '@nestjs/passport';
+content-1      |                                    ~~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | microservices/auth/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
+content-1      | 
+content-1      | 3 import { Strategy } from 'passport-google-oauth20';
+content-1      |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | microservices/auth/strategies/jwt.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
+content-1      | 
+content-1      | 2 import { PassportStrategy } from '@nestjs/passport';
+content-1      |                                    ~~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | microservices/auth/strategies/jwt.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-jwt' or its corresponding type declarations.
+content-1      | 
+content-1      | 3 import { Strategy } from 'passport-jwt';
+content-1      |                            ~~~~~~~~~~~~~~
+content-1      | 
+content-1      | microservices/cart/cart.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
+content-1      | 
+content-1      | 12 import { JwtModule } from '@nestjs/jwt';
+content-1      |                              ~~~~~~~~~~~~~
+content-1      | 
+content-1      | microservices/cart/constants/cart.constants.ts:2:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
+content-1      | 
+content-1      | 2 import moment from 'moment-timezone';
+content-1      |                      ~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | microservices/cart/service/cart.service.ts:16:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
+content-1      | 
+content-1      | 16 import moment from 'moment-timezone';
+content-1      |                       ~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | microservices/cart/service/errors/cart-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
+content-1      | 
+content-1      | 5 import moment from 'moment-timezone';
+content-1      |                      ~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | microservices/image/service/errors/banner-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
+content-1      | 
+content-1      | 5 import moment from 'moment-timezone';
+content-1      |                      ~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | microservices/image/service/image.banners.service.ts:14:30 - error TS2307: Cannot find module 'uuid' or its corresponding type declarations.
+content-1      | 
+content-1      | 14 import { v4 as uuidv4 } from 'uuid';
+content-1      |                                 ~~~~~~
+content-1      | 
+content-1      | microservices/image/service/image.banners.service.ts:15:19 - error TS2307: Cannot find module 'sharp' or its corresponding type declarations.
+content-1      | 
+content-1      | 15 import sharp from 'sharp';
+content-1      |                      ~~~~~~~
+content-1      | 
+content-1      | microservices/main.ts:6:25 - error TS2307: Cannot find module 'compression' or its corresponding type declarations.
+content-1      | 
+content-1      | 6 import compression from 'compression';
+content-1      |                           ~~~~~~~~~~~~~
+content-1      | 
+content-1      | microservices/payments/service/errors/payment-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
+content-1      | 
+content-1      | 5 import moment from 'moment-timezone';
+content-1      |                      ~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | microservices/payments/service/payments.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
+content-1      | 
+content-1      | 5 import moment from 'moment-timezone';
+content-1      |                      ~~~~~~~~~~~~~~~~~
+content-1      | 
+content-1      | [1:49:24 PM] Found 24 errors. Watching for file changes.
