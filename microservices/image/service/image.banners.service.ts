@@ -189,7 +189,6 @@ export class BannerService {
     device: string = 'desktop',
   ): Promise<string> {
     try {
-      // Validar dispositivo
       const deviceValidation =
         await this.bannerValidationService.validateDevice(
           device,
@@ -198,11 +197,6 @@ export class BannerService {
       if (!deviceValidation.isValid) {
         throw new BadRequestException(deviceValidation.error.message);
       }
-
-      // Agregar logging para debugging
-      this.logger.log(
-        `Buscando banner con nombre: "${nombre}" y device: "${device}"`,
-      );
 
       const banner = await this.bannerModel.findOne({
         nombre,
@@ -274,15 +268,15 @@ export class BannerService {
     }
   }
 
-  async getAllBanners(
-    fields?: string[],
-  ): Promise<{
+  async getAllBanners(fields?: string[]): Promise<{
     data: Banners[];
     message: string;
     success: boolean;
   }> {
     try {
-      const banners = await this.bannerModel.find({}, fields).sort({ createdAt: -1 });
+      const banners = await this.bannerModel
+        .find({}, fields)
+        .sort({ createdAt: -1 });
       return {
         data: banners,
         message: 'Banners obtenidos exitosamente',
@@ -306,7 +300,6 @@ export class BannerService {
     id: string,
   ): Promise<{ data: Banners; message: string; success: boolean }> {
     try {
-      // Validar ID
       const idValidation = await this.bannerValidationService.validateBannerId(
         id,
         'getBannerById',
@@ -447,7 +440,6 @@ export class BannerService {
       }
 
       const newStatus = banner.estado === 'activo' ? 'inactivo' : 'activo';
-
       const updatedBanner = await this.bannerModel.findByIdAndUpdate(
         id,
         {

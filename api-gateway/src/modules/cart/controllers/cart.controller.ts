@@ -62,6 +62,7 @@ export class CartController {
     skip: number;
     sort: string;
     order: string;
+    estado: number;
   }, @Req() request: Request){
     const authorization = request.headers.authorization;
     const token = authorization?.split(' ')[1] || '';
@@ -74,7 +75,8 @@ export class CartController {
         limit: body.limit, 
         skip: body.skip, 
         sort: body.sort, 
-        order: body.order
+        order: body.order,
+        estado: body.estado
       })
     )
   }

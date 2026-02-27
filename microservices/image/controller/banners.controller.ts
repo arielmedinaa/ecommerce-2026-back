@@ -123,11 +123,6 @@ export class BannersController {
     };
   }
 
-  @MessagePattern({ cmd: 'get_all_banners' })
-  async getAllBanners(@Payload() data: { fields?: string[] }) {
-    return await this.bannerService.getAllBanners(data.fields);
-  }
-
   @MessagePattern({ cmd: 'get_banner_by_id' })
   async getBannerById(data: { id: string }) {
     return await this.bannerService.getBannerById(data.id);

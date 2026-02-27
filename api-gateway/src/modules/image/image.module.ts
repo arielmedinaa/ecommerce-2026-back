@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { JwtModule } from '@nestjs/jwt';
 import { ImageController } from './controller/image.controller';
 
 @Module({
   imports: [
+    JwtModule,
     ClientsModule.register([
       {
         name: 'IMAGE_SERVICE',

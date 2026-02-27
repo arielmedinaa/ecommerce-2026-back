@@ -208,18 +208,12 @@ services:
       - ../.env
     environment:
       - NODE_ENV=${NODE_ENV:-development}
-      - PORT=3105
-      - IMAGE_PORT=3105
+      - PORT=4093
+      - IMAGE_PORT=3107
+      #- MONGO_URL=${MONGO_URL}
       - IS_DOCKER=true
-      - RUN_MODE=all
-      - SERVICE_NAME=IMAGE_SERVICE
-      # URLs de otros servicios (comunicación Docker)
-      - AUTH_SERVICE_URL=deploy-auth-1
-      - CART_SERVICE_URL=deploy-cart-1
-      - CONTENT_SERVICE_URL=deploy-content-1
-      - PAYMENTS_SERVICE_URL=deploy-payments-1
-      - PRODUCTS_SERVICE_URL=deploy-products-1
-      - IMAGE_SERVICE_URL=deploy-image-1
+    # ports:
+    #   - "3107:3107"
     volumes:
       - ../:/usr/src/app
       - ../imagesEcommerce:/home/appuser/Documents/projects/newEcommerce2026/imagesEcommerce

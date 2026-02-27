@@ -301,9 +301,10 @@ export class CartContadoService {
     skip: number,
     sort: string,
     order: string = 'desc',
+    estado: number = 0,
   ): Promise<{ data: Cart[]; success: boolean; message: string }> {
     const resultado = await this.carrito
-      .find({ 'cliente.equipo': clienteToken, estado: 0 })
+      .find({ 'cliente.equipo': clienteToken })
       .lean()
       .limit(limit)
       .skip(skip)

@@ -9,7 +9,8 @@ import {
   Res,
   HttpStatus,
   Logger,
-  Inject
+  Inject,
+  UseGuards
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
@@ -17,6 +18,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes } from '@nestjs/swagger';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { JwtAuthGuard } from '@gateway/common/guards/jwt-auth.guard';
 
 @ApiTags('Banners')
 @Controller('image')
@@ -27,6 +29,7 @@ export class ImageController {
     @Inject('IMAGE_SERVICE') private readonly imageClient: ClientProxy
   ) {}
 
+  @UseGuards(JwtAuthGuard)
   @Post('banner/upload')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -53,6 +56,8 @@ export class ImageController {
       },
     })
   )
+
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Subir un nuevo banner' })
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 201, description: 'Banner subido exitosamente' })
@@ -197,6 +202,7 @@ export class ImageController {
     }
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('banner/:id/update')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -223,6 +229,8 @@ export class ImageController {
       },
     })
   )
+
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Actualizar banner existente' })
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: 'Banner actualizado' })
@@ -248,6 +256,7 @@ export class ImageController {
     }
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('banner/:id/delete')
   @ApiOperation({ summary: 'Eliminar banner' })
   @ApiResponse({ status: 200, description: 'Banner eliminado' })

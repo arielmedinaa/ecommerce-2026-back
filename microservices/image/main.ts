@@ -19,7 +19,7 @@ async function bootstrap() {
     app.connectMicroservice({
       transport: Transport.TCP,
       options: {
-        host: process.env.IS_DOCKER ? '0.0.0.0' : 'localhost',
+        host: '0.0.0.0',
         port: port,
       },
     });
