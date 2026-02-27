@@ -8,15 +8,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(configService: ConfigService) {
     super({
       jwtFromRequest: (req) => {
-        let token = null;
+        let token: string | null = null;
         if (req && req.cookies) {
-          token = req.cookies['access_token'];
+          token = req.cookies['access_token'] || null;
         }
         if (!token && req.headers.authorization) {
           const [type, jwt] = req.headers.authorization.split(' ') ?? [];
           token = type === 'Bearer' ? jwt : null;
         }
-        return token || null;
+        return token;
       },
       ignoreExpiration: false,
       secretOrKey: configService.get<string>('JWT_SECRET') || 'default-secret',

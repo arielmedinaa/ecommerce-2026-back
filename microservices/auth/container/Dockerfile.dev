@@ -23,8 +23,9 @@ RUN yarn config set network-timeout 600000 && \
 
 RUN yarn add -D tsconfig-paths
 
-COPY . .
+COPY microservices/auth/ ./src/
+COPY shared/ ./shared/
 
 EXPOSE 3101
 
-CMD ["yarn", "start"]
+CMD ["yarn", "start:dev"]

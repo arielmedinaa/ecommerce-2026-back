@@ -6,7 +6,8 @@
   "scripts": {
     "build": "nest build",
     "start": "node -r tsconfig-paths/register dist/main",
-    "start:dev": "ts-node -r tsconfig-paths/register --project tsconfig.json main.ts",
+    "start:dev": "NODE_ENV=development nest start --watch",
+    "start:dev:content": "NODE_ENV=development ts-node -r tsconfig-paths/register microservices/content/main.ts",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node -r tsconfig-paths/register dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",

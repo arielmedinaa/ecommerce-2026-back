@@ -1,790 +1,130 @@
-image-1        | api-gateway/src/app.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-image-1        | 
-image-1        | 12 import { JwtModule } from '@nestjs/jwt';
-image-1        |                              ~~~~~~~~~~~~~
-image-1        | 
-image-1        | api-gateway/src/common/guards/jwt-auth.guard.ts:2:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-image-1        | 
-image-1        | 2 import { JwtService } from '@nestjs/jwt';
-image-1        |                              ~~~~~~~~~~~~~
-image-1        | 
-image-1        | api-gateway/src/modules/auth/auth.module.ts:4:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-image-1        | 
-image-1        | 4 import { PassportModule } from '@nestjs/passport';
-image-1        |                                  ~~~~~~~~~~~~~~~~~~
-image-1        | 
-image-1        | api-gateway/src/modules/auth/controllers/auth.controller.ts:5:27 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-image-1        | 
-image-1        | 5 import { AuthGuard } from '@nestjs/passport';
-image-1        |                             ~~~~~~~~~~~~~~~~~~
-image-1        | 
-image-1        | api-gateway/src/modules/products/products.module.ts:5:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-image-1        | 
-image-1        | 5 import { JwtModule } from '@nestjs/jwt';
-image-1        |                             ~~~~~~~~~~~~~
-image-1        | 
-image-1        | api-gateway/src/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-image-1        | 
-image-1        | 2 import { PassportStrategy } from '@nestjs/passport';
-image-1        |                                    ~~~~~~~~~~~~~~~~~~
-image-1        | 
-image-1        | api-gateway/src/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
-image-1        | 
-image-1        | 3 import { Strategy } from 'passport-google-oauth20';
-image-1        |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
-image-1        | 
-image-1        | microservices/auth/auth.module.ts:9:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-image-1        | 
-image-1        | 9 import { JwtModule } from '@nestjs/jwt';
-image-1        |                             ~~~~~~~~~~~~~
-image-1        | 
-image-1        | microservices/auth/auth.module.ts:10:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-image-1        | 
-image-1        | 10 import { PassportModule } from '@nestjs/passport';
-image-1        |                                   ~~~~~~~~~~~~~~~~~~
-image-1        | 
-image-1        | microservices/auth/service/auth.service.ts:5:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-image-1        | 
-image-1        | 5 import { JwtService } from '@nestjs/jwt';
-image-1        |                              ~~~~~~~~~~~~~
-image-1        | 
-image-1        | microservices/auth/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-image-1        | 
-image-1        | 2 import { PassportStrategy } from '@nestjs/passport';
-image-1        |                                    ~~~~~~~~~~~~~~~~~~
-image-1        | 
-image-1        | microservices/auth/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
-image-1        | 
-image-1        | 3 import { Strategy } from 'passport-google-oauth20';
-image-1        |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
-image-1        | 
-image-1        | microservices/auth/strategies/jwt.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-image-1        | 
-image-1        | 2 import { PassportStrategy } from '@nestjs/passport';
-image-1        |                                    ~~~~~~~~~~~~~~~~~~
-image-1        | 
-image-1        | microservices/auth/strategies/jwt.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-jwt' or its corresponding type declarations.
-image-1        | 
-image-1        | 3 import { Strategy } from 'passport-jwt';
-image-1        |                            ~~~~~~~~~~~~~~
-image-1        | 
-image-1        | microservices/cart/cart.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-image-1        | 
-image-1        | 12 import { JwtModule } from '@nestjs/jwt';
-image-1        |                              ~~~~~~~~~~~~~
-image-1        | 
-image-1        | microservices/main.ts:6:25 - error TS2307: Cannot find module 'compression' or its corresponding type declarations.
-image-1        | 
-image-1        | 6 import compression from 'compression';
-image-1        |                           ~~~~~~~~~~~~~
-image-1        | 
-image-1        | [1:49:10 PM] Found 16 errors. Watching for file changes.
-image-1        | 
+content-3      | node:internal/modules/cjs/loader:1210
+content-3      |   throw err;
+content-3      |   ^
+content-3      | 
+content-3      | Error: Cannot find module '/usr/src/app/dist/main'
+content-3      |     at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+content-3      |     at Module._load (node:internal/modules/cjs/loader:1038:27)
+content-3      |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+content-3      |     at node:internal/main/run_main_module:28:49 {
+content-3      |   code: 'MODULE_NOT_FOUND',
+content-3      |   requireStack: []
+content-3      | }
+content-3      | 
+content-3      | Node.js v20.20.0
+content-3      | info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+content-3      | error Command failed with exit code 1.
+payments-1     | node:internal/modules/cjs/loader:1210
+payments-1     |   throw err;
+payments-1     |   ^
+payments-1     | 
+payments-1     | Error: Cannot find module '/usr/src/app/dist/main'
+payments-1     |     at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+payments-1     |     at Module._load (node:internal/modules/cjs/loader:1038:27)
+payments-1     |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+payments-1     |     at node:internal/main/run_main_module:28:49 {
+payments-1     |   code: 'MODULE_NOT_FOUND',
+payments-1     |   requireStack: []
+payments-1     | }
+payments-1     | 
+payments-1     | Node.js v20.20.0
+content-2      | node:internal/modules/cjs/loader:1210
+content-2      |   throw err;
+content-2      |   ^
+content-2      | 
+content-2      | Error: Cannot find module '/usr/src/app/dist/main'
+content-2      |     at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+content-2      |     at Module._load (node:internal/modules/cjs/loader:1038:27)
+content-2      |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+content-2      |     at node:internal/main/run_main_module:28:49 {
+content-2      |   code: 'MODULE_NOT_FOUND',
+content-2      |   requireStack: []
+content-2      | }
+content-2      | 
+content-2      | Node.js v20.20.0
+content-3 exited with code 1
+payments-1     | error Command failed with exit code 1.
+payments-1     | info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+content-2      | error Command failed with exit code 1.
+content-2      | info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+payments-1 exited with code 1
+content-2 exited with code 1
+cart-1         | node:internal/modules/cjs/loader:1210
+cart-1         |   throw err;
+cart-1         |   ^
+cart-1         | 
+cart-1         | Error: Cannot find module '/usr/src/app/dist/main'
+cart-1         |     at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+cart-1         |     at Module._load (node:internal/modules/cjs/loader:1038:27)
+cart-1         |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+cart-1         |     at node:internal/main/run_main_module:28:49 {
+cart-1         |   code: 'MODULE_NOT_FOUND',
+cart-1         |   requireStack: []
+cart-1         | }
+cart-1         | 
+cart-1         | Node.js v20.20.0
+content-1      | node:internal/modules/cjs/loader:1210
+content-1      |   throw err;
+content-1      |   ^
+content-1      | 
+content-1      | Error: Cannot find module '/usr/src/app/dist/main'
+content-1      |     at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+content-1      |     at Module._load (node:internal/modules/cjs/loader:1038:27)
+content-1      |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+content-1      |     at node:internal/main/run_main_module:28:49 {
+content-1      |   code: 'MODULE_NOT_FOUND',
+content-1      |   requireStack: []
+content-1      | }
+content-1      | 
+content-1      | Node.js v20.20.0
 auth-1         | microservices/auth/strategies/jwt.strategy.ts:17:11 - error TS2322: Type 'string | null' is not assignable to type 'null'.
 auth-1         |   Type 'string' is not assignable to type 'null'.
 auth-1         | 
 auth-1         | 17           token = type === 'Bearer' ? jwt : null;
 auth-1         |              ~~~~~
 auth-1         | 
-auth-1         | microservices/cart/constants/cart.constants.ts:2:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
+auth-1         | Found 1 error(s).
 auth-1         | 
-auth-1         | 2 import moment from 'moment-timezone';
-auth-1         |                      ~~~~~~~~~~~~~~~~~
-auth-1         | 
-auth-1         | microservices/cart/service/cart.service.ts:16:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-auth-1         | 
-auth-1         | 16 import moment from 'moment-timezone';
-auth-1         |                       ~~~~~~~~~~~~~~~~~
-auth-1         | 
-auth-1         | microservices/cart/service/errors/cart-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-auth-1         | 
-auth-1         | 5 import moment from 'moment-timezone';
-auth-1         |                      ~~~~~~~~~~~~~~~~~
-auth-1         | 
-auth-1         | microservices/image/service/errors/banner-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-auth-1         | 
-auth-1         | 5 import moment from 'moment-timezone';
-auth-1         |                      ~~~~~~~~~~~~~~~~~
-auth-1         | 
-auth-1         | microservices/image/service/image.banners.service.ts:14:30 - error TS2307: Cannot find module 'uuid' or its corresponding type declarations.
-auth-1         | 
-auth-1         | 14 import { v4 as uuidv4 } from 'uuid';
-auth-1         |                                 ~~~~~~
-auth-1         | 
-auth-1         | microservices/image/service/image.banners.service.ts:15:19 - error TS2307: Cannot find module 'sharp' or its corresponding type declarations.
-auth-1         | 
-auth-1         | 15 import sharp from 'sharp';
-auth-1         |                      ~~~~~~~
-auth-1         | 
-auth-1         | microservices/main.ts:6:25 - error TS2307: Cannot find module 'compression' or its corresponding type declarations.
-auth-1         | 
-auth-1         | 6 import compression from 'compression';
-auth-1         |                           ~~~~~~~~~~~~~
-auth-1         | 
-auth-1         | microservices/payments/service/errors/payment-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-auth-1         | 
-auth-1         | 5 import moment from 'moment-timezone';
-auth-1         |                      ~~~~~~~~~~~~~~~~~
-auth-1         | 
-auth-1         | microservices/payments/service/payments.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-auth-1         | 
-auth-1         | 5 import moment from 'moment-timezone';
-auth-1         |                      ~~~~~~~~~~~~~~~~~
-auth-1         | 
-auth-1         | [1:49:13 PM] Found 10 errors. Watching for file changes.
-auth-1         | 
-auth-1         | node:internal/modules/cjs/loader:1210
-auth-1         |   throw err;
-auth-1         |   ^
-auth-1         | 
-auth-1         | Error: Cannot find module '/usr/src/app/dist/main'
-auth-1         |     at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
-auth-1         |     at Module._load (node:internal/modules/cjs/loader:1038:27)
-auth-1         |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
-auth-1         |     at node:internal/main/run_main_module:28:49 {
-auth-1         |   code: 'MODULE_NOT_FOUND',
-auth-1         |   requireStack: []
-auth-1         | }
-auth-1         | 
-auth-1         | Node.js v20.20.0
-payments-1     | api-gateway/src/app.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-payments-1     | 
-payments-1     | 12 import { JwtModule } from '@nestjs/jwt';
-payments-1     |                              ~~~~~~~~~~~~~
-payments-1     | 
-payments-1     | api-gateway/src/common/guards/jwt-auth.guard.ts:2:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-payments-1     | 
-payments-1     | 2 import { JwtService } from '@nestjs/jwt';
-payments-1     |                              ~~~~~~~~~~~~~
-payments-1     | 
-payments-1     | api-gateway/src/modules/auth/auth.module.ts:4:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-payments-1     | 
-payments-1     | 4 import { PassportModule } from '@nestjs/passport';
-payments-1     |                                  ~~~~~~~~~~~~~~~~~~
-payments-1     | 
-payments-1     | api-gateway/src/modules/auth/controllers/auth.controller.ts:5:27 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-payments-1     | 
-payments-1     | 5 import { AuthGuard } from '@nestjs/passport';
-payments-1     |                             ~~~~~~~~~~~~~~~~~~
-payments-1     | 
-payments-1     | api-gateway/src/modules/products/products.module.ts:5:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-payments-1     | 
-payments-1     | 5 import { JwtModule } from '@nestjs/jwt';
-payments-1     |                             ~~~~~~~~~~~~~
-payments-1     | 
-payments-1     | api-gateway/src/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-payments-1     | 
-payments-1     | 2 import { PassportStrategy } from '@nestjs/passport';
-payments-1     |                                    ~~~~~~~~~~~~~~~~~~
-payments-1     | 
-payments-1     | api-gateway/src/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
-payments-1     | 
-payments-1     | 3 import { Strategy } from 'passport-google-oauth20';
-payments-1     |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
-payments-1     | 
-payments-1     | microservices/auth/auth.module.ts:9:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-payments-1     | 
-payments-1     | 9 import { JwtModule } from '@nestjs/jwt';
-payments-1     |                             ~~~~~~~~~~~~~
-payments-1     | 
-payments-1     | microservices/auth/auth.module.ts:10:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-payments-1     | 
-payments-1     | 10 import { PassportModule } from '@nestjs/passport';
-payments-1     |                                   ~~~~~~~~~~~~~~~~~~
-payments-1     | 
-payments-1     | microservices/auth/service/auth.service.ts:5:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-payments-1     | 
-payments-1     | 5 import { JwtService } from '@nestjs/jwt';
-payments-1     |                              ~~~~~~~~~~~~~
-payments-1     | 
-payments-1     | microservices/auth/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-payments-1     | 
-payments-1     | 2 import { PassportStrategy } from '@nestjs/passport';
-payments-1     |                                    ~~~~~~~~~~~~~~~~~~
-payments-1     | 
-payments-1     | microservices/auth/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
-payments-1     | 
-payments-1     | 3 import { Strategy } from 'passport-google-oauth20';
-payments-1     |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
-payments-1     | 
-payments-1     | microservices/auth/strategies/jwt.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-payments-1     | 
-payments-1     | 2 import { PassportStrategy } from '@nestjs/passport';
-payments-1     |                                    ~~~~~~~~~~~~~~~~~~
-payments-1     | 
-payments-1     | microservices/auth/strategies/jwt.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-jwt' or its corresponding type declarations.
-payments-1     | 
-payments-1     | 3 import { Strategy } from 'passport-jwt';
-payments-1     |                            ~~~~~~~~~~~~~~
-payments-1     | 
-payments-1     | microservices/cart/cart.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-payments-1     | 
-payments-1     | 12 import { JwtModule } from '@nestjs/jwt';
-payments-1     |                              ~~~~~~~~~~~~~
-payments-1     | 
-payments-1     | microservices/image/service/image.banners.service.ts:14:30 - error TS2307: Cannot find module 'uuid' or its corresponding type declarations.
-payments-1     | 
-payments-1     | 14 import { v4 as uuidv4 } from 'uuid';
-payments-1     |                                 ~~~~~~
-payments-1     | 
-payments-1     | microservices/image/service/image.banners.service.ts:15:19 - error TS2307: Cannot find module 'sharp' or its corresponding type declarations.
-payments-1     | 
-payments-1     | 15 import sharp from 'sharp';
-payments-1     |                      ~~~~~~~
-payments-1     | 
-payments-1     | microservices/main.ts:6:25 - error TS2307: Cannot find module 'compression' or its corresponding type declarations.
-payments-1     | 
-payments-1     | 6 import compression from 'compression';
-payments-1     |                           ~~~~~~~~~~~~~
-payments-1     | 
-payments-1     | [1:49:14 PM] Found 18 errors. Watching for file changes.
-payments-1     | 
-products-1     | api-gateway/src/app.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
+auth-1         | error Command failed with exit code 1.
+auth-1         | info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+cart-1         | error Command failed with exit code 1.
+cart-1         | info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+content-1      | error Command failed with exit code 1.
+content-1      | info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+auth-1 exited with code 1
+cart-1 exited with code 1
+content-1 exited with code 1
+image-1        | node:internal/modules/cjs/loader:1210
+image-1        |   throw err;
+image-1        |   ^
+image-1        | 
+image-1        | Error: Cannot find module '/usr/src/app/dist/main'
+image-1        |     at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+image-1        |     at Module._load (node:internal/modules/cjs/loader:1038:27)
+image-1        |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+image-1        |     at node:internal/main/run_main_module:28:49 {
+image-1        |   code: 'MODULE_NOT_FOUND',
+image-1        |   requireStack: []
+image-1        | }
+image-1        | 
+image-1        | Node.js v20.20.0
+products-1     | node:internal/modules/cjs/loader:1210
+products-1     |   throw err;
+products-1     |   ^
 products-1     | 
-products-1     | 12 import { JwtModule } from '@nestjs/jwt';
-products-1     |                              ~~~~~~~~~~~~~
+products-1     | Error: Cannot find module '/usr/src/app/dist/main'
+products-1     |     at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+products-1     |     at Module._load (node:internal/modules/cjs/loader:1038:27)
+products-1     |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+products-1     |     at node:internal/main/run_main_module:28:49 {
+products-1     |   code: 'MODULE_NOT_FOUND',
+products-1     |   requireStack: []
+products-1     | }
 products-1     | 
-products-1     | api-gateway/src/common/guards/jwt-auth.guard.ts:2:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-products-1     | 
-products-1     | 2 import { JwtService } from '@nestjs/jwt';
-products-1     |                              ~~~~~~~~~~~~~
-products-1     | 
-products-1     | api-gateway/src/modules/auth/auth.module.ts:4:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-products-1     | 
-products-1     | 4 import { PassportModule } from '@nestjs/passport';
-products-1     |                                  ~~~~~~~~~~~~~~~~~~
-products-1     | 
-products-1     | api-gateway/src/modules/auth/controllers/auth.controller.ts:5:27 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-products-1     | 
-products-1     | 5 import { AuthGuard } from '@nestjs/passport';
-products-1     |                             ~~~~~~~~~~~~~~~~~~
-products-1     | 
-products-1     | api-gateway/src/modules/products/products.module.ts:5:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-products-1     | 
-products-1     | 5 import { JwtModule } from '@nestjs/jwt';
-products-1     |                             ~~~~~~~~~~~~~
-products-1     | 
-products-1     | api-gateway/src/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-products-1     | 
-products-1     | 2 import { PassportStrategy } from '@nestjs/passport';
-products-1     |                                    ~~~~~~~~~~~~~~~~~~
-products-1     | 
-products-1     | api-gateway/src/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
-products-1     | 
-products-1     | 3 import { Strategy } from 'passport-google-oauth20';
-products-1     |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
-products-1     | 
-products-1     | microservices/auth/auth.module.ts:9:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-products-1     | 
-products-1     | 9 import { JwtModule } from '@nestjs/jwt';
-products-1     |                             ~~~~~~~~~~~~~
-products-1     | 
-products-1     | microservices/auth/auth.module.ts:10:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-products-1     | 
-products-1     | 10 import { PassportModule } from '@nestjs/passport';
-products-1     |                                   ~~~~~~~~~~~~~~~~~~
-products-1     | 
-products-1     | microservices/auth/service/auth.service.ts:5:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-products-1     | 
-products-1     | 5 import { JwtService } from '@nestjs/jwt';
-products-1     |                              ~~~~~~~~~~~~~
-products-1     | 
-products-1     | microservices/auth/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-products-1     | 
-products-1     | 2 import { PassportStrategy } from '@nestjs/passport';
-products-1     |                                    ~~~~~~~~~~~~~~~~~~
-products-1     | 
-products-1     | microservices/auth/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
-products-1     | 
-products-1     | 3 import { Strategy } from 'passport-google-oauth20';
-products-1     |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
-products-1     | 
-products-1     | microservices/auth/strategies/jwt.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-products-1     | 
-products-1     | 2 import { PassportStrategy } from '@nestjs/passport';
-products-1     |                                    ~~~~~~~~~~~~~~~~~~
-products-1     | 
-products-1     | microservices/auth/strategies/jwt.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-jwt' or its corresponding type declarations.
-products-1     | 
-products-1     | 3 import { Strategy } from 'passport-jwt';
-products-1     |                            ~~~~~~~~~~~~~~
-products-1     | 
-products-1     | microservices/cart/cart.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-products-1     | 
-products-1     | 12 import { JwtModule } from '@nestjs/jwt';
-products-1     |                              ~~~~~~~~~~~~~
-products-1     | 
-products-1     | microservices/cart/constants/cart.constants.ts:2:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-products-1     | 
-products-1     | 2 import moment from 'moment-timezone';
-products-1     |                      ~~~~~~~~~~~~~~~~~
-products-1     | 
-products-1     | microservices/cart/service/cart.service.ts:16:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-products-1     | 
-products-1     | 16 import moment from 'moment-timezone';
-products-1     |                       ~~~~~~~~~~~~~~~~~
-products-1     | 
-products-1     | microservices/cart/service/errors/cart-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-products-1     | 
-products-1     | 5 import moment from 'moment-timezone';
-products-1     |                      ~~~~~~~~~~~~~~~~~
-products-1     | 
-products-1     | microservices/image/service/errors/banner-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-products-1     | 
-products-1     | 5 import moment from 'moment-timezone';
-products-1     |                      ~~~~~~~~~~~~~~~~~
-products-1     | 
-products-1     | microservices/image/service/image.banners.service.ts:14:30 - error TS2307: Cannot find module 'uuid' or its corresponding type declarations.
-products-1     | 
-products-1     | 14 import { v4 as uuidv4 } from 'uuid';
-products-1     |                                 ~~~~~~
-products-1     | 
-products-1     | microservices/image/service/image.banners.service.ts:15:19 - error TS2307: Cannot find module 'sharp' or its corresponding type declarations.
-products-1     | 
-products-1     | 15 import sharp from 'sharp';
-products-1     |                      ~~~~~~~
-products-1     | 
-products-1     | microservices/main.ts:6:25 - error TS2307: Cannot find module 'compression' or its corresponding type declarations.
-products-1     | 
-products-1     | 6 import compression from 'compression';
-products-1     |                           ~~~~~~~~~~~~~
-products-1     | 
-products-1     | microservices/payments/service/errors/payment-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-products-1     | 
-products-1     | 5 import moment from 'moment-timezone';
-products-1     |                      ~~~~~~~~~~~~~~~~~
-products-1     | 
-products-1     | microservices/payments/service/payments.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-products-1     | 
-products-1     | 5 import moment from 'moment-timezone';
-products-1     |                      ~~~~~~~~~~~~~~~~~
-products-1     | 
-products-1     | [1:49:16 PM] Found 24 errors. Watching for file changes.
-products-1     | 
-cart-1         | api-gateway/src/modules/auth/auth.module.ts:4:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 4 import { PassportModule } from '@nestjs/passport';
-cart-1         |                                  ~~~~~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | api-gateway/src/modules/auth/controllers/auth.controller.ts:5:27 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 5 import { AuthGuard } from '@nestjs/passport';
-cart-1         |                             ~~~~~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | api-gateway/src/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 2 import { PassportStrategy } from '@nestjs/passport';
-cart-1         |                                    ~~~~~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | api-gateway/src/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 3 import { Strategy } from 'passport-google-oauth20';
-cart-1         |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | microservices/auth/auth.module.ts:10:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 10 import { PassportModule } from '@nestjs/passport';
-cart-1         |                                   ~~~~~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | microservices/auth/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 2 import { PassportStrategy } from '@nestjs/passport';
-cart-1         |                                    ~~~~~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | microservices/auth/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 3 import { Strategy } from 'passport-google-oauth20';
-cart-1         |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | microservices/auth/strategies/jwt.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 2 import { PassportStrategy } from '@nestjs/passport';
-cart-1         |                                    ~~~~~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | microservices/auth/strategies/jwt.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-jwt' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 3 import { Strategy } from 'passport-jwt';
-cart-1         |                            ~~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | microservices/image/service/image.banners.service.ts:14:30 - error TS2307: Cannot find module 'uuid' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 14 import { v4 as uuidv4 } from 'uuid';
-cart-1         |                                 ~~~~~~
-cart-1         | 
-cart-1         | microservices/image/service/image.banners.service.ts:15:19 - error TS2307: Cannot find module 'sharp' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 15 import sharp from 'sharp';
-cart-1         |                      ~~~~~~~
-cart-1         | 
-cart-1         | microservices/main.ts:6:25 - error TS2307: Cannot find module 'compression' or its corresponding type declarations.
-cart-1         | 
-cart-1         | 6 import compression from 'compression';
-cart-1         |                           ~~~~~~~~~~~~~
-cart-1         | 
-cart-1         | [1:49:18 PM] Found 12 errors. Watching for file changes.
-cart-1         | 
-content-2      | api-gateway/src/app.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-content-2      | 
-content-2      | 12 import { JwtModule } from '@nestjs/jwt';
-content-2      |                              ~~~~~~~~~~~~~
-content-2      | 
-content-2      | api-gateway/src/common/guards/jwt-auth.guard.ts:2:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-content-2      | 
-content-2      | 2 import { JwtService } from '@nestjs/jwt';
-content-2      |                              ~~~~~~~~~~~~~
-content-2      | 
-content-2      | api-gateway/src/modules/auth/auth.module.ts:4:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-content-2      | 
-content-2      | 4 import { PassportModule } from '@nestjs/passport';
-content-2      |                                  ~~~~~~~~~~~~~~~~~~
-content-2      | 
-content-2      | api-gateway/src/modules/auth/controllers/auth.controller.ts:5:27 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-content-2      | 
-content-2      | 5 import { AuthGuard } from '@nestjs/passport';
-content-2      |                             ~~~~~~~~~~~~~~~~~~
-content-2      | 
-content-2      | api-gateway/src/modules/products/products.module.ts:5:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-content-2      | 
-content-2      | 5 import { JwtModule } from '@nestjs/jwt';
-content-2      |                             ~~~~~~~~~~~~~
-content-2      | 
-content-2      | api-gateway/src/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-content-2      | 
-content-2      | 2 import { PassportStrategy } from '@nestjs/passport';
-content-2      |                                    ~~~~~~~~~~~~~~~~~~
-content-2      | 
-content-2      | api-gateway/src/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
-content-2      | 
-content-2      | 3 import { Strategy } from 'passport-google-oauth20';
-content-2      |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
-content-2      | 
-content-2      | microservices/auth/auth.module.ts:9:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-content-2      | 
-content-2      | 9 import { JwtModule } from '@nestjs/jwt';
-content-2      |                             ~~~~~~~~~~~~~
-content-2      | 
-content-2      | microservices/auth/auth.module.ts:10:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-content-2      | 
-content-2      | 10 import { PassportModule } from '@nestjs/passport';
-content-2      |                                   ~~~~~~~~~~~~~~~~~~
-content-2      | 
-content-2      | microservices/auth/service/auth.service.ts:5:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-content-2      | 
-content-2      | 5 import { JwtService } from '@nestjs/jwt';
-content-2      |                              ~~~~~~~~~~~~~
-content-2      | 
-content-2      | microservices/auth/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-content-2      | 
-content-2      | 2 import { PassportStrategy } from '@nestjs/passport';
-content-2      |                                    ~~~~~~~~~~~~~~~~~~
-content-2      | 
-content-2      | microservices/auth/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
-content-2      | 
-content-2      | 3 import { Strategy } from 'passport-google-oauth20';
-content-2      |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
-content-2      | 
-content-2      | microservices/auth/strategies/jwt.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-content-2      | 
-content-2      | 2 import { PassportStrategy } from '@nestjs/passport';
-content-2      |                                    ~~~~~~~~~~~~~~~~~~
-content-2      | 
-content-2      | microservices/auth/strategies/jwt.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-jwt' or its corresponding type declarations.
-content-2      | 
-content-2      | 3 import { Strategy } from 'passport-jwt';
-content-2      |                            ~~~~~~~~~~~~~~
-content-2      | 
-content-2      | microservices/cart/cart.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-content-2      | 
-content-2      | 12 import { JwtModule } from '@nestjs/jwt';
-content-2      |                              ~~~~~~~~~~~~~
-content-2      | 
-content-2      | microservices/cart/constants/cart.constants.ts:2:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-content-2      | 
-content-2      | 2 import moment from 'moment-timezone';
-content-2      |                      ~~~~~~~~~~~~~~~~~
-content-2      | 
-content-2      | microservices/cart/service/cart.service.ts:16:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-content-2      | 
-content-2      | 16 import moment from 'moment-timezone';
-content-2      |                       ~~~~~~~~~~~~~~~~~
-content-2      | 
-content-2      | microservices/cart/service/errors/cart-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-content-2      | 
-content-2      | 5 import moment from 'moment-timezone';
-content-2      |                      ~~~~~~~~~~~~~~~~~
-content-2      | 
-content-2      | microservices/image/service/errors/banner-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-content-2      | 
-content-2      | 5 import moment from 'moment-timezone';
-content-2      |                      ~~~~~~~~~~~~~~~~~
-content-2      | 
-content-2      | microservices/image/service/image.banners.service.ts:14:30 - error TS2307: Cannot find module 'uuid' or its corresponding type declarations.
-content-2      | 
-content-2      | 14 import { v4 as uuidv4 } from 'uuid';
-content-2      |                                 ~~~~~~
-content-2      | 
-content-2      | microservices/image/service/image.banners.service.ts:15:19 - error TS2307: Cannot find module 'sharp' or its corresponding type declarations.
-content-2      | 
-content-2      | 15 import sharp from 'sharp';
-content-2      |                      ~~~~~~~
-content-2      | 
-content-2      | microservices/main.ts:6:25 - error TS2307: Cannot find module 'compression' or its corresponding type declarations.
-content-2      | 
-content-2      | 6 import compression from 'compression';
-content-2      |                           ~~~~~~~~~~~~~
-content-2      | 
-content-2      | microservices/payments/service/errors/payment-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-content-2      | 
-content-2      | 5 import moment from 'moment-timezone';
-content-2      |                      ~~~~~~~~~~~~~~~~~
-content-2      | 
-content-2      | microservices/payments/service/payments.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-content-2      | 
-content-2      | 5 import moment from 'moment-timezone';
-content-2      |                      ~~~~~~~~~~~~~~~~~
-content-2      | 
-content-2      | [1:49:19 PM] Found 24 errors. Watching for file changes.
-content-2      | 
-content-3      | api-gateway/src/app.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-content-3      | 
-content-3      | 12 import { JwtModule } from '@nestjs/jwt';
-content-3      |                              ~~~~~~~~~~~~~
-content-3      | 
-content-3      | api-gateway/src/common/guards/jwt-auth.guard.ts:2:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-content-3      | 
-content-3      | 2 import { JwtService } from '@nestjs/jwt';
-content-3      |                              ~~~~~~~~~~~~~
-content-3      | 
-content-3      | api-gateway/src/modules/auth/auth.module.ts:4:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-content-3      | 
-content-3      | 4 import { PassportModule } from '@nestjs/passport';
-content-3      |                                  ~~~~~~~~~~~~~~~~~~
-content-3      | 
-content-3      | api-gateway/src/modules/auth/controllers/auth.controller.ts:5:27 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-content-3      | 
-content-3      | 5 import { AuthGuard } from '@nestjs/passport';
-content-3      |                             ~~~~~~~~~~~~~~~~~~
-content-3      | 
-content-3      | api-gateway/src/modules/products/products.module.ts:5:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-content-3      | 
-content-3      | 5 import { JwtModule } from '@nestjs/jwt';
-content-3      |                             ~~~~~~~~~~~~~
-content-3      | 
-content-3      | api-gateway/src/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-content-3      | 
-content-3      | 2 import { PassportStrategy } from '@nestjs/passport';
-content-3      |                                    ~~~~~~~~~~~~~~~~~~
-content-3      | 
-content-3      | api-gateway/src/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
-content-3      | 
-content-3      | 3 import { Strategy } from 'passport-google-oauth20';
-content-3      |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
-content-3      | 
-content-3      | microservices/auth/auth.module.ts:9:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-content-3      | 
-content-3      | 9 import { JwtModule } from '@nestjs/jwt';
-content-3      |                             ~~~~~~~~~~~~~
-content-3      | 
-content-3      | microservices/auth/auth.module.ts:10:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-content-3      | 
-content-3      | 10 import { PassportModule } from '@nestjs/passport';
-content-3      |                                   ~~~~~~~~~~~~~~~~~~
-content-3      | 
-content-3      | microservices/auth/service/auth.service.ts:5:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-content-3      | 
-content-3      | 5 import { JwtService } from '@nestjs/jwt';
-content-3      |                              ~~~~~~~~~~~~~
-content-3      | 
-content-3      | microservices/auth/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-content-3      | 
-content-3      | 2 import { PassportStrategy } from '@nestjs/passport';
-content-3      |                                    ~~~~~~~~~~~~~~~~~~
-content-3      | 
-content-3      | microservices/auth/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
-content-3      | 
-content-3      | 3 import { Strategy } from 'passport-google-oauth20';
-content-3      |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
-content-3      | 
-content-3      | microservices/auth/strategies/jwt.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-content-3      | 
-content-3      | 2 import { PassportStrategy } from '@nestjs/passport';
-content-3      |                                    ~~~~~~~~~~~~~~~~~~
-content-3      | 
-content-3      | microservices/auth/strategies/jwt.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-jwt' or its corresponding type declarations.
-content-3      | 
-content-3      | 3 import { Strategy } from 'passport-jwt';
-content-3      |                            ~~~~~~~~~~~~~~
-content-3      | 
-content-3      | microservices/cart/cart.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-content-3      | 
-content-3      | 12 import { JwtModule } from '@nestjs/jwt';
-content-3      |                              ~~~~~~~~~~~~~
-content-3      | 
-content-3      | microservices/cart/constants/cart.constants.ts:2:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-content-3      | 
-content-3      | 2 import moment from 'moment-timezone';
-content-3      |                      ~~~~~~~~~~~~~~~~~
-content-3      | 
-content-3      | microservices/cart/service/cart.service.ts:16:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-content-3      | 
-content-3      | 16 import moment from 'moment-timezone';
-content-3      |                       ~~~~~~~~~~~~~~~~~
-content-3      | 
-content-3      | microservices/cart/service/errors/cart-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-content-3      | 
-content-3      | 5 import moment from 'moment-timezone';
-content-3      |                      ~~~~~~~~~~~~~~~~~
-content-3      | 
-content-3      | microservices/image/service/errors/banner-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-content-3      | 
-content-3      | 5 import moment from 'moment-timezone';
-content-3      |                      ~~~~~~~~~~~~~~~~~
-content-3      | 
-content-3      | microservices/image/service/image.banners.service.ts:14:30 - error TS2307: Cannot find module 'uuid' or its corresponding type declarations.
-content-3      | 
-content-3      | 14 import { v4 as uuidv4 } from 'uuid';
-content-3      |                                 ~~~~~~
-content-3      | 
-content-3      | microservices/image/service/image.banners.service.ts:15:19 - error TS2307: Cannot find module 'sharp' or its corresponding type declarations.
-content-3      | 
-content-3      | 15 import sharp from 'sharp';
-content-3      |                      ~~~~~~~
-content-3      | 
-content-3      | microservices/main.ts:6:25 - error TS2307: Cannot find module 'compression' or its corresponding type declarations.
-content-3      | 
-content-3      | 6 import compression from 'compression';
-content-3      |                           ~~~~~~~~~~~~~
-content-3      | 
-content-3      | microservices/payments/service/errors/payment-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-content-3      | 
-content-3      | 5 import moment from 'moment-timezone';
-content-3      |                      ~~~~~~~~~~~~~~~~~
-content-3      | 
-content-3      | microservices/payments/service/payments.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-content-3      | 
-content-3      | 5 import moment from 'moment-timezone';
-content-3      |                      ~~~~~~~~~~~~~~~~~
-content-3      | 
-content-3      | [1:49:20 PM] Found 24 errors. Watching for file changes.
-content-3      | 
-content-1      | api-gateway/src/app.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-content-1      | 
-content-1      | 12 import { JwtModule } from '@nestjs/jwt';
-content-1      |                              ~~~~~~~~~~~~~
-content-1      | 
-content-1      | api-gateway/src/common/guards/jwt-auth.guard.ts:2:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-content-1      | 
-content-1      | 2 import { JwtService } from '@nestjs/jwt';
-content-1      |                              ~~~~~~~~~~~~~
-content-1      | 
-content-1      | api-gateway/src/modules/auth/auth.module.ts:4:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-content-1      | 
-content-1      | 4 import { PassportModule } from '@nestjs/passport';
-content-1      |                                  ~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | api-gateway/src/modules/auth/controllers/auth.controller.ts:5:27 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-content-1      | 
-content-1      | 5 import { AuthGuard } from '@nestjs/passport';
-content-1      |                             ~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | api-gateway/src/modules/products/products.module.ts:5:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-content-1      | 
-content-1      | 5 import { JwtModule } from '@nestjs/jwt';
-content-1      |                             ~~~~~~~~~~~~~
-content-1      | 
-content-1      | api-gateway/src/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-content-1      | 
-content-1      | 2 import { PassportStrategy } from '@nestjs/passport';
-content-1      |                                    ~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | api-gateway/src/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
-content-1      | 
-content-1      | 3 import { Strategy } from 'passport-google-oauth20';
-content-1      |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | microservices/auth/auth.module.ts:9:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-content-1      | 
-content-1      | 9 import { JwtModule } from '@nestjs/jwt';
-content-1      |                             ~~~~~~~~~~~~~
-content-1      | 
-content-1      | microservices/auth/auth.module.ts:10:32 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-content-1      | 
-content-1      | 10 import { PassportModule } from '@nestjs/passport';
-content-1      |                                   ~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | microservices/auth/service/auth.service.ts:5:28 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-content-1      | 
-content-1      | 5 import { JwtService } from '@nestjs/jwt';
-content-1      |                              ~~~~~~~~~~~~~
-content-1      | 
-content-1      | microservices/auth/strategies/google.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-content-1      | 
-content-1      | 2 import { PassportStrategy } from '@nestjs/passport';
-content-1      |                                    ~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | microservices/auth/strategies/google.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-google-oauth20' or its corresponding type declarations.
-content-1      | 
-content-1      | 3 import { Strategy } from 'passport-google-oauth20';
-content-1      |                            ~~~~~~~~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | microservices/auth/strategies/jwt.strategy.ts:2:34 - error TS2307: Cannot find module '@nestjs/passport' or its corresponding type declarations.
-content-1      | 
-content-1      | 2 import { PassportStrategy } from '@nestjs/passport';
-content-1      |                                    ~~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | microservices/auth/strategies/jwt.strategy.ts:3:26 - error TS2307: Cannot find module 'passport-jwt' or its corresponding type declarations.
-content-1      | 
-content-1      | 3 import { Strategy } from 'passport-jwt';
-content-1      |                            ~~~~~~~~~~~~~~
-content-1      | 
-content-1      | microservices/cart/cart.module.ts:12:27 - error TS2307: Cannot find module '@nestjs/jwt' or its corresponding type declarations.
-content-1      | 
-content-1      | 12 import { JwtModule } from '@nestjs/jwt';
-content-1      |                              ~~~~~~~~~~~~~
-content-1      | 
-content-1      | microservices/cart/constants/cart.constants.ts:2:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-content-1      | 
-content-1      | 2 import moment from 'moment-timezone';
-content-1      |                      ~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | microservices/cart/service/cart.service.ts:16:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-content-1      | 
-content-1      | 16 import moment from 'moment-timezone';
-content-1      |                       ~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | microservices/cart/service/errors/cart-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-content-1      | 
-content-1      | 5 import moment from 'moment-timezone';
-content-1      |                      ~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | microservices/image/service/errors/banner-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-content-1      | 
-content-1      | 5 import moment from 'moment-timezone';
-content-1      |                      ~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | microservices/image/service/image.banners.service.ts:14:30 - error TS2307: Cannot find module 'uuid' or its corresponding type declarations.
-content-1      | 
-content-1      | 14 import { v4 as uuidv4 } from 'uuid';
-content-1      |                                 ~~~~~~
-content-1      | 
-content-1      | microservices/image/service/image.banners.service.ts:15:19 - error TS2307: Cannot find module 'sharp' or its corresponding type declarations.
-content-1      | 
-content-1      | 15 import sharp from 'sharp';
-content-1      |                      ~~~~~~~
-content-1      | 
-content-1      | microservices/main.ts:6:25 - error TS2307: Cannot find module 'compression' or its corresponding type declarations.
-content-1      | 
-content-1      | 6 import compression from 'compression';
-content-1      |                           ~~~~~~~~~~~~~
-content-1      | 
-content-1      | microservices/payments/service/errors/payment-error.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-content-1      | 
-content-1      | 5 import moment from 'moment-timezone';
-content-1      |                      ~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | microservices/payments/service/payments.service.ts:5:20 - error TS2307: Cannot find module 'moment-timezone' or its corresponding type declarations.
-content-1      | 
-content-1      | 5 import moment from 'moment-timezone';
-content-1      |                      ~~~~~~~~~~~~~~~~~
-content-1      | 
-content-1      | [1:49:24 PM] Found 24 errors. Watching for file changes.
+products-1     | Node.js v20.20.0
+image-1        | error Command failed with exit code 1.
+image-1        | info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+products-1     | error Command failed with exit code 1.
+products-1     | info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+image-1 exited with code 1
+products-1 exited with code 1
