@@ -22,19 +22,13 @@ export declare class Cart {
     estados: Record<string, any>;
     finished?: string;
 }
-export declare const CartSchema: import("mongoose").Schema<Cart, import("mongoose").Model<Cart, any, any, any, (Document<unknown, any, Cart, any, import("mongoose").DefaultSchemaOptions> & Cart & {
+export declare const CartSchema: import("mongoose").Schema<Cart, import("mongoose").Model<Cart, any, any, any, Document<unknown, any, Cart, any, import("mongoose").DefaultSchemaOptions> & Cart & {
     _id: import("mongoose").Types.ObjectId;
 } & {
     __v: number;
-} & {
+}, any, Cart>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Cart, Document<unknown, {}, Cart, {
     id: string;
-}) | (Document<unknown, any, Cart, any, import("mongoose").DefaultSchemaOptions> & Cart & {
-    _id: import("mongoose").Types.ObjectId;
-} & {
-    __v: number;
-}), any, Cart>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Cart, Document<unknown, {}, Cart, {
-    id: string;
-}, import("mongoose").DefaultSchemaOptions> & Omit<Cart & {
+}, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Cart & {
     _id: import("mongoose").Types.ObjectId;
 } & {
     __v: number;
@@ -43,7 +37,7 @@ export declare const CartSchema: import("mongoose").Schema<Cart, import("mongoos
 }, {
     codigo?: import("mongoose").SchemaDefinitionProperty<number, Cart, Document<unknown, {}, Cart, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Cart & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Cart & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -52,7 +46,7 @@ export declare const CartSchema: import("mongoose").Schema<Cart, import("mongoos
     }>;
     proceso?: import("mongoose").SchemaDefinitionProperty<string, Cart, Document<unknown, {}, Cart, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Cart & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Cart & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -68,7 +62,7 @@ export declare const CartSchema: import("mongoose").Schema<Cart, import("mongoos
         tipodocumento?: string;
     }, Cart, Document<unknown, {}, Cart, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Cart & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Cart & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -77,7 +71,7 @@ export declare const CartSchema: import("mongoose").Schema<Cart, import("mongoos
     }>;
     tiempo?: import("mongoose").SchemaDefinitionProperty<string, Cart, Document<unknown, {}, Cart, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Cart & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Cart & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -86,7 +80,7 @@ export declare const CartSchema: import("mongoose").Schema<Cart, import("mongoos
     }>;
     transaccion?: import("mongoose").SchemaDefinitionProperty<any[], Cart, Document<unknown, {}, Cart, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Cart & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Cart & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -95,7 +89,7 @@ export declare const CartSchema: import("mongoose").Schema<Cart, import("mongoos
     }>;
     seguimiento?: import("mongoose").SchemaDefinitionProperty<any[], Cart, Document<unknown, {}, Cart, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Cart & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Cart & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -104,7 +98,7 @@ export declare const CartSchema: import("mongoose").Schema<Cart, import("mongoos
     }>;
     envio?: import("mongoose").SchemaDefinitionProperty<Record<string, any>, Cart, Document<unknown, {}, Cart, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Cart & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Cart & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -113,7 +107,7 @@ export declare const CartSchema: import("mongoose").Schema<Cart, import("mongoos
     }>;
     pago?: import("mongoose").SchemaDefinitionProperty<Record<string, any>, Cart, Document<unknown, {}, Cart, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Cart & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Cart & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -122,7 +116,7 @@ export declare const CartSchema: import("mongoose").Schema<Cart, import("mongoos
     }>;
     articulos?: import("mongoose").SchemaDefinitionProperty<Record<string, any>, Cart, Document<unknown, {}, Cart, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Cart & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Cart & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -131,7 +125,7 @@ export declare const CartSchema: import("mongoose").Schema<Cart, import("mongoos
     }>;
     atencion?: import("mongoose").SchemaDefinitionProperty<number, Cart, Document<unknown, {}, Cart, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Cart & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Cart & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -140,7 +134,7 @@ export declare const CartSchema: import("mongoose").Schema<Cart, import("mongoos
     }>;
     estado?: import("mongoose").SchemaDefinitionProperty<number, Cart, Document<unknown, {}, Cart, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Cart & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Cart & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -149,7 +143,7 @@ export declare const CartSchema: import("mongoose").Schema<Cart, import("mongoos
     }>;
     estados?: import("mongoose").SchemaDefinitionProperty<Record<string, any>, Cart, Document<unknown, {}, Cart, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Cart & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Cart & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -158,7 +152,7 @@ export declare const CartSchema: import("mongoose").Schema<Cart, import("mongoos
     }>;
     finished?: import("mongoose").SchemaDefinitionProperty<string, Cart, Document<unknown, {}, Cart, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Cart & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Cart & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;

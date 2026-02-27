@@ -5,24 +5,8 @@ export declare class CartController {
     private readonly cartErrorService;
     private readonly logger;
     constructor(cartService: CartContadoService, cartErrorService: CartErrorService);
-    addToCart(payload: any): Promise<{
-        data: import("../schemas/cart.schema").Cart[];
-        success: boolean;
-        message: string;
-    }>;
-    getCart(payload: any): Promise<{
-        data: Record<string, any>;
-        success: boolean;
-        message: string;
-    }>;
-    getAllCartByClient(payload: any): Promise<{
-        data: import("../schemas/cart.schema").Cart[];
-        success: boolean;
-        message: string;
-    }>;
-    finishCart(payload: any): Promise<{
-        data: any[];
-        success: boolean;
-        message: string;
-    }>;
+    addToCart(payload: any): Promise<any>;
+    getCart(payload: any): Promise<any>;
+    getAllCartByClient(payload: any): Promise<any>;
+    finishCart(payload: any): Promise<any>;
 }

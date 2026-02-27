@@ -6,19 +6,13 @@ export declare class GuestToken {
     expiresAt: Date;
     lastUsedAt: Date;
 }
-export declare const GuestTokenSchema: import("mongoose").Schema<GuestToken, import("mongoose").Model<GuestToken, any, any, any, (import("mongoose").Document<unknown, any, GuestToken, any, import("mongoose").DefaultSchemaOptions> & GuestToken & {
+export declare const GuestTokenSchema: import("mongoose").Schema<GuestToken, import("mongoose").Model<GuestToken, any, any, any, import("mongoose").Document<unknown, any, GuestToken, any, import("mongoose").DefaultSchemaOptions> & GuestToken & {
     _id: import("mongoose").Types.ObjectId;
 } & {
     __v: number;
-} & {
+}, any, GuestToken>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, GuestToken, import("mongoose").Document<unknown, {}, GuestToken, {
     id: string;
-}) | (import("mongoose").Document<unknown, any, GuestToken, any, import("mongoose").DefaultSchemaOptions> & GuestToken & {
-    _id: import("mongoose").Types.ObjectId;
-} & {
-    __v: number;
-}), any, GuestToken>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, GuestToken, import("mongoose").Document<unknown, {}, GuestToken, {
-    id: string;
-}, import("mongoose").DefaultSchemaOptions> & Omit<GuestToken & {
+}, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<GuestToken & {
     _id: import("mongoose").Types.ObjectId;
 } & {
     __v: number;
@@ -27,7 +21,7 @@ export declare const GuestTokenSchema: import("mongoose").Schema<GuestToken, imp
 }, {
     token?: import("mongoose").SchemaDefinitionProperty<string, GuestToken, import("mongoose").Document<unknown, {}, GuestToken, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<GuestToken & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<GuestToken & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -36,7 +30,7 @@ export declare const GuestTokenSchema: import("mongoose").Schema<GuestToken, imp
     }>;
     ipAddress?: import("mongoose").SchemaDefinitionProperty<string, GuestToken, import("mongoose").Document<unknown, {}, GuestToken, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<GuestToken & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<GuestToken & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -45,7 +39,7 @@ export declare const GuestTokenSchema: import("mongoose").Schema<GuestToken, imp
     }>;
     userAgent?: import("mongoose").SchemaDefinitionProperty<string, GuestToken, import("mongoose").Document<unknown, {}, GuestToken, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<GuestToken & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<GuestToken & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -54,7 +48,7 @@ export declare const GuestTokenSchema: import("mongoose").Schema<GuestToken, imp
     }>;
     isActive?: import("mongoose").SchemaDefinitionProperty<boolean, GuestToken, import("mongoose").Document<unknown, {}, GuestToken, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<GuestToken & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<GuestToken & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -63,7 +57,7 @@ export declare const GuestTokenSchema: import("mongoose").Schema<GuestToken, imp
     }>;
     expiresAt?: import("mongoose").SchemaDefinitionProperty<Date, GuestToken, import("mongoose").Document<unknown, {}, GuestToken, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<GuestToken & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<GuestToken & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -72,7 +66,7 @@ export declare const GuestTokenSchema: import("mongoose").Schema<GuestToken, imp
     }>;
     lastUsedAt?: import("mongoose").SchemaDefinitionProperty<Date, GuestToken, import("mongoose").Document<unknown, {}, GuestToken, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<GuestToken & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<GuestToken & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;

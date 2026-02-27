@@ -15,11 +15,11 @@ var ProductsService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProductsService = void 0;
 const common_1 = require("@nestjs/common");
-const product_schema_1 = require("../schemas/product.schema");
+const product_schema_1 = require("@products/schemas/product.schema");
 const promos_service_1 = require("./promos.service");
 const mongoose_1 = require("mongoose");
 const mongoose_2 = require("@nestjs/mongoose");
-const combos_schema_1 = require("../schemas/combos.schema");
+const combos_schema_1 = require("@products/schemas/combos.schema");
 let ProductsService = ProductsService_1 = class ProductsService {
     constructor(productModel, combosModel, promosService) {
         this.productModel = productModel;

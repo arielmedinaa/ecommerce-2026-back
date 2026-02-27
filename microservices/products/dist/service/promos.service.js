@@ -16,7 +16,7 @@ exports.PromosService = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
-const promos_schema_1 = require("../schemas/promos.schema");
+const promos_schema_1 = require("@products/schemas/promos.schema");
 let PromosService = class PromosService {
     constructor(promoModel) {
         this.promoModel = promoModel;

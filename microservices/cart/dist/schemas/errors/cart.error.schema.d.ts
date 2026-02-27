@@ -8,19 +8,13 @@ export declare class CartError {
     stackTrace?: string;
     path?: string;
 }
-export declare const CartErrorSchema: import("mongoose").Schema<CartError, import("mongoose").Model<CartError, any, any, any, (Document<unknown, any, CartError, any, import("mongoose").DefaultSchemaOptions> & CartError & {
+export declare const CartErrorSchema: import("mongoose").Schema<CartError, import("mongoose").Model<CartError, any, any, any, Document<unknown, any, CartError, any, import("mongoose").DefaultSchemaOptions> & CartError & {
     _id: Types.ObjectId;
 } & {
     __v: number;
-} & {
+}, any, CartError>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, CartError, Document<unknown, {}, CartError, {
     id: string;
-}) | (Document<unknown, any, CartError, any, import("mongoose").DefaultSchemaOptions> & CartError & {
-    _id: Types.ObjectId;
-} & {
-    __v: number;
-}), any, CartError>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, CartError, Document<unknown, {}, CartError, {
-    id: string;
-}, import("mongoose").DefaultSchemaOptions> & Omit<CartError & {
+}, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<CartError & {
     _id: Types.ObjectId;
 } & {
     __v: number;
@@ -29,7 +23,7 @@ export declare const CartErrorSchema: import("mongoose").Schema<CartError, impor
 }, {
     cartId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId, CartError, Document<unknown, {}, CartError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<CartError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<CartError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -38,7 +32,7 @@ export declare const CartErrorSchema: import("mongoose").Schema<CartError, impor
     }>;
     errorCode?: import("mongoose").SchemaDefinitionProperty<string, CartError, Document<unknown, {}, CartError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<CartError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<CartError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -47,7 +41,7 @@ export declare const CartErrorSchema: import("mongoose").Schema<CartError, impor
     }>;
     message?: import("mongoose").SchemaDefinitionProperty<string, CartError, Document<unknown, {}, CartError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<CartError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<CartError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -56,7 +50,7 @@ export declare const CartErrorSchema: import("mongoose").Schema<CartError, impor
     }>;
     context?: import("mongoose").SchemaDefinitionProperty<Record<string, any>, CartError, Document<unknown, {}, CartError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<CartError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<CartError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -65,7 +59,7 @@ export declare const CartErrorSchema: import("mongoose").Schema<CartError, impor
     }>;
     stackTrace?: import("mongoose").SchemaDefinitionProperty<string, CartError, Document<unknown, {}, CartError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<CartError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<CartError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -74,7 +68,7 @@ export declare const CartErrorSchema: import("mongoose").Schema<CartError, impor
     }>;
     path?: import("mongoose").SchemaDefinitionProperty<string, CartError, Document<unknown, {}, CartError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<CartError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<CartError & {
         _id: Types.ObjectId;
     } & {
         __v: number;

@@ -11,12 +11,13 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HomeController = void 0;
 const common_1 = require("@nestjs/common");
 const microservices_1 = require("@nestjs/microservices");
-const home_service_1 = require("../service/home.service");
-const filter_home_1 = require("../dto/filter.home");
+const home_service_1 = require("@content/home/service/home.service");
+const filter_home_1 = require("@content/home/dto/filter.home");
 const microservice_error_interceptor_1 = require("@shared/common/interceptors/microservice-error.interceptor");
 let HomeController = class HomeController {
     constructor(homeService) {
@@ -54,14 +55,14 @@ __decorate([
     (0, common_1.Post)('data'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [filter_home_1.FilterHomeDto]),
+    __metadata("design:paramtypes", [typeof (_b = typeof filter_home_1.FilterHomeDto !== "undefined" && filter_home_1.FilterHomeDto) === "function" ? _b : Object]),
     __metadata("design:returntype", Promise)
 ], HomeController.prototype, "getHomeData", null);
 __decorate([
     (0, common_1.Get)(),
     __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [filter_home_1.FilterHomeDto]),
+    __metadata("design:paramtypes", [typeof (_c = typeof filter_home_1.FilterHomeDto !== "undefined" && filter_home_1.FilterHomeDto) === "function" ? _c : Object]),
     __metadata("design:returntype", Promise)
 ], HomeController.prototype, "getHomeDataQuery", null);
 __decorate([
@@ -80,6 +81,6 @@ __decorate([
 exports.HomeController = HomeController = __decorate([
     (0, common_1.Controller)('home'),
     (0, common_1.UseInterceptors)(microservice_error_interceptor_1.MicroserviceErrorInterceptor),
-    __metadata("design:paramtypes", [home_service_1.HomeService])
+    __metadata("design:paramtypes", [typeof (_a = typeof home_service_1.HomeService !== "undefined" && home_service_1.HomeService) === "function" ? _a : Object])
 ], HomeController);
 //# sourceMappingURL=home.controller.js.map

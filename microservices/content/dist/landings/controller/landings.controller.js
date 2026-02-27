@@ -11,11 +11,12 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LandingsController = void 0;
 const common_1 = require("@nestjs/common");
 const microservices_1 = require("@nestjs/microservices");
-const landings_service_1 = require("../service/landings.service");
+const landings_service_1 = require("@landings/service/landings.service");
 let LandingsController = class LandingsController {
     constructor(landingsService) {
         this.landingsService = landingsService;
@@ -121,6 +122,6 @@ __decorate([
 ], LandingsController.prototype, "getPredefinedTemplates", null);
 exports.LandingsController = LandingsController = __decorate([
     (0, common_1.Controller)(),
-    __metadata("design:paramtypes", [landings_service_1.LandingsService])
+    __metadata("design:paramtypes", [typeof (_a = typeof landings_service_1.LandingsService !== "undefined" && landings_service_1.LandingsService) === "function" ? _a : Object])
 ], LandingsController);
 //# sourceMappingURL=landings.controller.js.map

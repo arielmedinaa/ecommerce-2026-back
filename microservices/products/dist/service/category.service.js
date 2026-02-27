@@ -11,7 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CategoryService = void 0;
 const common_1 = require("@nestjs/common");
-const category_schema_1 = require("../schemas/category.schema");
+const category_schema_1 = require("@products/schemas/category.schema");
 let CategoryService = class CategoryService {
     constructor() { }
     async createCategory(category) {

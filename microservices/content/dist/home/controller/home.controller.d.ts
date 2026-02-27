@@ -12,5 +12,5 @@ export declare class HomeController {
         timestamp: string;
         service: string;
     }>;
-    getHomeContent(payload: any): Promise<ResponseData<HomeData>>;
+    getHomeContent(payload: any): Promise<any>;
 }

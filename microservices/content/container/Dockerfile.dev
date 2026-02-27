@@ -10,15 +10,21 @@ RUN apk add --no-cache \
 
 RUN npm install -g nodemon ts-node tsconfig-paths
 
-# Copiar solo los archivos del servicio content
+# Copiar package.json del proyecto raíz y del servicio
 COPY package*.json ./
-COPY tsconfig.json ./
+COPY tsconfig.paths.json ./
+COPY microservices/content/package*.json ./
+COPY microservices/content/tsconfig.json ./
+COPY microservices/content/tsconfig.base.json ./
 
-# Instalar dependencias del servicio
+# Instalar dependencias del proyecto raíz primero
 RUN npm install --legacy-peer-deps
 
 # Copiar código fuente del servicio content
-COPY . .
+COPY microservices/content .
+
+# Copiar directorio shared desde el raíz
+COPY shared ./shared
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 RUN chown -R appuser:appgroup /usr/src/app

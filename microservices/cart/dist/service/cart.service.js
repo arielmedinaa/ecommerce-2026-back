@@ -21,7 +21,7 @@ const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const obtenerClave_1 = require("@shared/common/utils/obtenerClave");
-const cart_constants_1 = require("../constants/cart.constants");
+const cart_constants_1 = require("@cart/constants/cart.constants");
 const microservices_1 = require("@nestjs/microservices");
 const resilient_client_decorator_1 = require("@shared/common/decorators/resilient-client.decorator");
 const cache_persistente_service_1 = require("@shared/common/services/cache-persistente.service");
@@ -30,7 +30,7 @@ const cart_error_service_1 = require("./errors/cart-error.service");
 const moment_timezone_1 = require("moment-timezone");
 const https = require("https");
 const mysql = require("mysql2/promise");
-const cart_constants_2 = require("../constants/cart.constants");
+const cart_constants_2 = require("@cart/constants/cart.constants");
 const rxjs_1 = require("rxjs");
 let CartContadoService = CartContadoService_1 = class CartContadoService {
     constructor(carrito, transacciones, productsService, paymentsService, obtenerClaveService, cartValidationService, cartErrorService, resilientService, cacheService) {

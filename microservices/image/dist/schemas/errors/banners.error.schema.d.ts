@@ -12,19 +12,13 @@ export declare class BannerError {
     fileName?: string;
     device?: string;
 }
-export declare const BannerErrorSchema: import("mongoose").Schema<BannerError, import("mongoose").Model<BannerError, any, any, any, (Document<unknown, any, BannerError, any, import("mongoose").DefaultSchemaOptions> & BannerError & {
+export declare const BannerErrorSchema: import("mongoose").Schema<BannerError, import("mongoose").Model<BannerError, any, any, any, Document<unknown, any, BannerError, any, import("mongoose").DefaultSchemaOptions> & BannerError & {
     _id: Types.ObjectId;
 } & {
     __v: number;
-} & {
+}, any, BannerError>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, BannerError, Document<unknown, {}, BannerError, {
     id: string;
-}) | (Document<unknown, any, BannerError, any, import("mongoose").DefaultSchemaOptions> & BannerError & {
-    _id: Types.ObjectId;
-} & {
-    __v: number;
-}), any, BannerError>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, BannerError, Document<unknown, {}, BannerError, {
-    id: string;
-}, import("mongoose").DefaultSchemaOptions> & Omit<BannerError & {
+}, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<BannerError & {
     _id: Types.ObjectId;
 } & {
     __v: number;
@@ -33,7 +27,7 @@ export declare const BannerErrorSchema: import("mongoose").Schema<BannerError, i
 }, {
     bannerId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId, BannerError, Document<unknown, {}, BannerError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<BannerError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<BannerError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -42,7 +36,7 @@ export declare const BannerErrorSchema: import("mongoose").Schema<BannerError, i
     }>;
     errorCode?: import("mongoose").SchemaDefinitionProperty<string, BannerError, Document<unknown, {}, BannerError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<BannerError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<BannerError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -51,7 +45,7 @@ export declare const BannerErrorSchema: import("mongoose").Schema<BannerError, i
     }>;
     message?: import("mongoose").SchemaDefinitionProperty<string, BannerError, Document<unknown, {}, BannerError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<BannerError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<BannerError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -60,7 +54,7 @@ export declare const BannerErrorSchema: import("mongoose").Schema<BannerError, i
     }>;
     context?: import("mongoose").SchemaDefinitionProperty<Record<string, any>, BannerError, Document<unknown, {}, BannerError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<BannerError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<BannerError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -69,7 +63,7 @@ export declare const BannerErrorSchema: import("mongoose").Schema<BannerError, i
     }>;
     stackTrace?: import("mongoose").SchemaDefinitionProperty<string, BannerError, Document<unknown, {}, BannerError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<BannerError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<BannerError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -78,7 +72,7 @@ export declare const BannerErrorSchema: import("mongoose").Schema<BannerError, i
     }>;
     path?: import("mongoose").SchemaDefinitionProperty<string, BannerError, Document<unknown, {}, BannerError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<BannerError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<BannerError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -87,7 +81,7 @@ export declare const BannerErrorSchema: import("mongoose").Schema<BannerError, i
     }>;
     operation?: import("mongoose").SchemaDefinitionProperty<string, BannerError, Document<unknown, {}, BannerError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<BannerError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<BannerError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -96,7 +90,7 @@ export declare const BannerErrorSchema: import("mongoose").Schema<BannerError, i
     }>;
     userId?: import("mongoose").SchemaDefinitionProperty<string, BannerError, Document<unknown, {}, BannerError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<BannerError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<BannerError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -105,7 +99,7 @@ export declare const BannerErrorSchema: import("mongoose").Schema<BannerError, i
     }>;
     fileName?: import("mongoose").SchemaDefinitionProperty<string, BannerError, Document<unknown, {}, BannerError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<BannerError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<BannerError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -114,7 +108,7 @@ export declare const BannerErrorSchema: import("mongoose").Schema<BannerError, i
     }>;
     device?: import("mongoose").SchemaDefinitionProperty<string, BannerError, Document<unknown, {}, BannerError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<BannerError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<BannerError & {
         _id: Types.ObjectId;
     } & {
         __v: number;

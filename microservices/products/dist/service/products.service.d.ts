@@ -33,28 +33,16 @@ export declare class ProductsService {
         total: number;
     }>;
     getProductsByCategory(categoryId: string, limit?: number, offset?: number): Promise<{
-        data: (Product & {
-            _id: import("mongoose").Types.ObjectId;
-        } & {
-            __v: number;
-        })[];
+        data: any[];
         total: number;
     }>;
     getProductsJota(): Promise<{
-        data: (Product & {
-            _id: import("mongoose").Types.ObjectId;
-        } & {
-            __v: number;
-        })[];
+        data: any[];
         total: number;
     }>;
     findByIds(ids: string[], fields?: string, filters?: any): Promise<any[]>;
     findByPromos(filters?: any): Promise<any[]>;
-    findComboByCodigo(codigo: string): Promise<Combos & {
-        _id: import("mongoose").Types.ObjectId;
-    } & {
-        __v: number;
-    }>;
+    findComboByCodigo(codigo: string): Promise<any>;
     getCategories(): Promise<{
         categorias: string[];
     }>;

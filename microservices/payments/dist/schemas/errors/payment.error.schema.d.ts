@@ -8,19 +8,13 @@ export declare class PaymentError {
     stackTrace?: string;
     path?: string;
 }
-export declare const PaymentErrorSchema: import("mongoose").Schema<PaymentError, import("mongoose").Model<PaymentError, any, any, any, (Document<unknown, any, PaymentError, any, import("mongoose").DefaultSchemaOptions> & PaymentError & {
+export declare const PaymentErrorSchema: import("mongoose").Schema<PaymentError, import("mongoose").Model<PaymentError, any, any, any, Document<unknown, any, PaymentError, any, import("mongoose").DefaultSchemaOptions> & PaymentError & {
     _id: Types.ObjectId;
 } & {
     __v: number;
-} & {
+}, any, PaymentError>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, PaymentError, Document<unknown, {}, PaymentError, {
     id: string;
-}) | (Document<unknown, any, PaymentError, any, import("mongoose").DefaultSchemaOptions> & PaymentError & {
-    _id: Types.ObjectId;
-} & {
-    __v: number;
-}), any, PaymentError>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, PaymentError, Document<unknown, {}, PaymentError, {
-    id: string;
-}, import("mongoose").DefaultSchemaOptions> & Omit<PaymentError & {
+}, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<PaymentError & {
     _id: Types.ObjectId;
 } & {
     __v: number;
@@ -29,7 +23,7 @@ export declare const PaymentErrorSchema: import("mongoose").Schema<PaymentError,
 }, {
     paymentId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId, PaymentError, Document<unknown, {}, PaymentError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<PaymentError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<PaymentError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -38,7 +32,7 @@ export declare const PaymentErrorSchema: import("mongoose").Schema<PaymentError,
     }>;
     errorCode?: import("mongoose").SchemaDefinitionProperty<string, PaymentError, Document<unknown, {}, PaymentError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<PaymentError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<PaymentError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -47,7 +41,7 @@ export declare const PaymentErrorSchema: import("mongoose").Schema<PaymentError,
     }>;
     message?: import("mongoose").SchemaDefinitionProperty<string, PaymentError, Document<unknown, {}, PaymentError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<PaymentError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<PaymentError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -56,7 +50,7 @@ export declare const PaymentErrorSchema: import("mongoose").Schema<PaymentError,
     }>;
     context?: import("mongoose").SchemaDefinitionProperty<Record<string, any>, PaymentError, Document<unknown, {}, PaymentError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<PaymentError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<PaymentError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -65,7 +59,7 @@ export declare const PaymentErrorSchema: import("mongoose").Schema<PaymentError,
     }>;
     stackTrace?: import("mongoose").SchemaDefinitionProperty<string, PaymentError, Document<unknown, {}, PaymentError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<PaymentError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<PaymentError & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -74,7 +68,7 @@ export declare const PaymentErrorSchema: import("mongoose").Schema<PaymentError,
     }>;
     path?: import("mongoose").SchemaDefinitionProperty<string, PaymentError, Document<unknown, {}, PaymentError, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<PaymentError & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<PaymentError & {
         _id: Types.ObjectId;
     } & {
         __v: number;

@@ -14,39 +14,12 @@ export declare class ProductsController {
     findAll(filters: {
         offset: number;
         limit: number;
-    }): Promise<{
-        data: Product[];
-        total: number;
-    }>;
-    findByPromos(filters?: any): Promise<any[]>;
-    searchProducts(filters?: any): Promise<{
-        data: Product[];
-        total: number;
-    }>;
-    searchComboByCodigo(codigo: string): Promise<Combos & {
-        _id: import("mongoose").Types.ObjectId;
-    } & {
-        __v: number;
-    }>;
-    getCategories(): Promise<{
-        categorias: string[];
-    }>;
-    getProductsJota(): Promise<{
-        data: (Product & {
-            _id: import("mongoose").Types.ObjectId;
-        } & {
-            __v: number;
-        })[];
-        total: number;
-    }>;
-    createOferta(ofertaData: any): Promise<{
-        data: any;
-        message: string;
-        success: boolean;
-    }>;
-    getOfertas(): Promise<{
-        data: any[];
-        message: string;
-        success: boolean;
-    }>;
+    }): Promise<any>;
+    findByPromos(filters?: any): Promise<any>;
+    searchProducts(filters?: any): Promise<any>;
+    searchComboByCodigo(codigo: string): Promise<any>;
+    getCategories(): Promise<any>;
+    getProductsJota(): Promise<any>;
+    createOferta(ofertaData: any): Promise<any>;
+    getOfertas(): Promise<any>;
 }

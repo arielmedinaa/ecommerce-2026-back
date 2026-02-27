@@ -58,8 +58,8 @@ services:
   # Auth Service
   auth:
     build: 
-      context: ../microservices/auth
-      dockerfile: container/Dockerfile.dev
+      context: ..
+      dockerfile: microservices/auth/container/Dockerfile.dev
     env_file:
       - ../.env
     environment:
@@ -78,6 +78,7 @@ services:
       - IMAGE_SERVICE_URL=deploy-image-1
     volumes:
       - ../microservices/auth:/usr/src/app
+      - ../shared:/usr/src/app/shared
       - /usr/src/app/node_modules
     command: npm run start:dev
     networks:
@@ -86,8 +87,8 @@ services:
   # Products Service
   products:
     build: 
-      context: ../microservices/products
-      dockerfile: container/Dockerfile.dev
+      context: ..
+      dockerfile: microservices/products/container/Dockerfile.dev
     env_file:
       - ../.env
     environment:
@@ -106,6 +107,7 @@ services:
       - IMAGE_SERVICE_URL=deploy-image-1
     volumes:
       - ../microservices/products:/usr/src/app
+      - ../shared:/usr/src/app/shared
       - /usr/src/app/node_modules
     command: npm run start:dev
     networks:
@@ -114,8 +116,8 @@ services:
   # Cart Service
   cart:
     build: 
-      context: ../microservices/cart
-      dockerfile: container/Dockerfile.dev
+      context: ..
+      dockerfile: microservices/cart/container/Dockerfile.dev
     env_file:
       - ../.env
     environment:
@@ -134,6 +136,7 @@ services:
       - IMAGE_SERVICE_URL=deploy-image-1
     volumes:
       - ../microservices/cart:/usr/src/app
+      - ../shared:/usr/src/app/shared
       - /usr/src/app/node_modules
     command: npm run start:dev
     networks:
@@ -142,8 +145,8 @@ services:
   # Content Service
   content:
     build: 
-      context: ../microservices/content
-      dockerfile: container/Dockerfile.dev
+      context: ..
+      dockerfile: microservices/content/container/Dockerfile.dev
     env_file:
       - ../.env
     environment:
@@ -162,6 +165,7 @@ services:
       - IMAGE_SERVICE_URL=deploy-image-1
     volumes:
       - ../microservices/content:/usr/src/app
+      - ../shared:/usr/src/app/shared
       - /usr/src/app/node_modules
     command: npm run start:dev
     networks:
@@ -170,8 +174,8 @@ services:
   # Payments Service
   payments:
     build: 
-      context: ../microservices/payments
-      dockerfile: container/Dockerfile.dev
+      context: ..
+      dockerfile: microservices/payments/container/Dockerfile.dev
     env_file:
       - ../.env
     environment:
@@ -190,6 +194,7 @@ services:
       - IMAGE_SERVICE_URL=deploy-image-1
     volumes:
       - ../microservices/payments:/usr/src/app
+      - ../shared:/usr/src/app/shared
       - /usr/src/app/node_modules
     command: npm run start:dev
     networks:
@@ -198,8 +203,8 @@ services:
   # Image Service
   image:
     build: 
-      context: ../microservices/image
-      dockerfile: container/Dockerfile.dev
+      context: ..
+      dockerfile: microservices/image/container/Dockerfile.dev
     env_file:
       - ../.env
     environment:
@@ -218,8 +223,9 @@ services:
       - IMAGE_SERVICE_URL=deploy-image-1
     volumes:
       - ../microservices/image:/usr/src/app
-      - /usr/src/app/node_modules
+      - ../shared:/usr/src/app/shared
       - ../imagesEcommerce:/home/appuser/Documents/projects/newEcommerce2026/imagesEcommerce
+      - /usr/src/app/node_modules
     command: npm run start:dev
     networks:
       - app-network

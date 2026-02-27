@@ -12,6 +12,16 @@
       "@response/*": ["api-gateway/src/common/response/*"],
       "@shared/*": ["shared/*"],
       "@shared/config/*": ["shared/config/*"],
+      "@shared/config/database/*": ["shared/config/database/*"],
+      "@shared/config/microservice/*": ["shared/config/microservice/*"],
+      "@shared/common/*": ["shared/common/*"],
+      "@shared/common/decorators/*": ["shared/common/decorators/*"],
+      "@shared/common/services/*": ["shared/common/services/*"],
+      "@shared/common/utils/*": ["shared/common/utils/*"],
+      "@shared/common/response/*": ["shared/common/response/*"],
+      "@shared/common/interceptors/*": ["shared/common/interceptors/*"],
+      "@shared/common/controllers/*": ["shared/common/controllers/*"],
+      "@shared/common/guards/*": ["shared/common/guards/*"],
       "@shared/microservice/*": ["shared/microservice/*"],
       "@gateway/*": ["api-gateway/src/*"],
       "@models/*": ["api-gateway/src/common/models/*"],
@@ -21,7 +31,7 @@
       "@microservice-config/*": ["shared/config/microservice/*"],
       "@home/*": ["microservices/content/home/*"],
       "@decorators/*": ["api-gateway/src/common/decorators/*"],
-      "@landings/*": ["microservices/content/landings/*"],
+      "@landings/*": ["microservices/content/landings/*"]
     }
   }
 }

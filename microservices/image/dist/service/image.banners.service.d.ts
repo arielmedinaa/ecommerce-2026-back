@@ -2,7 +2,6 @@ import { Model } from 'mongoose';
 import { Banners, BannersDocument } from '../schemas/banners/banners.schema';
 import { BannerValidationService } from './errors/image.spec';
 import { BannerErrorService } from './errors/banner-error.service';
-import { FileUpload } from 'multer';
 export declare class BannerService {
     private readonly bannerModel;
     private readonly bannerValidationService;
@@ -12,7 +11,7 @@ export declare class BannerService {
     private readonly dimensions;
     constructor(bannerModel: Model<BannersDocument>, bannerValidationService: BannerValidationService, bannerErrorService: BannerErrorService);
     private ensureDirectoryExists;
-    uploadBanner(file: FileUpload, nombre: string, variante: string, creadoPor: string, modificadoPor: string): Promise<{
+    uploadBanner(file: any, nombre: string, variante: string, creadoPor: string, modificadoPor: string): Promise<{
         data: Banners;
         message: string;
         success: boolean;

@@ -17,7 +17,7 @@ const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const ofertas_spec_1 = require("./errors/ofertas.spec");
-const ofertas_schema_1 = require("../schemas/ofertas.schema");
+const ofertas_schema_1 = require("@products/schemas/ofertas.schema");
 let OfertasService = class OfertasService {
     constructor(ofertaModel, ofertasValidationService) {
         this.ofertaModel = ofertaModel;

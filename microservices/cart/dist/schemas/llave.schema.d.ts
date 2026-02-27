@@ -4,19 +4,13 @@ export declare class Llave {
     tabla: string;
     valor: number;
 }
-export declare const LlaveSchema: import("mongoose").Schema<Llave, import("mongoose").Model<Llave, any, any, any, (Document<unknown, any, Llave, any, import("mongoose").DefaultSchemaOptions> & Llave & {
+export declare const LlaveSchema: import("mongoose").Schema<Llave, import("mongoose").Model<Llave, any, any, any, Document<unknown, any, Llave, any, import("mongoose").DefaultSchemaOptions> & Llave & {
     _id: import("mongoose").Types.ObjectId;
 } & {
     __v: number;
-} & {
+}, any, Llave>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Llave, Document<unknown, {}, Llave, {
     id: string;
-}) | (Document<unknown, any, Llave, any, import("mongoose").DefaultSchemaOptions> & Llave & {
-    _id: import("mongoose").Types.ObjectId;
-} & {
-    __v: number;
-}), any, Llave>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Llave, Document<unknown, {}, Llave, {
-    id: string;
-}, import("mongoose").DefaultSchemaOptions> & Omit<Llave & {
+}, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Llave & {
     _id: import("mongoose").Types.ObjectId;
 } & {
     __v: number;
@@ -25,7 +19,7 @@ export declare const LlaveSchema: import("mongoose").Schema<Llave, import("mongo
 }, {
     tabla?: import("mongoose").SchemaDefinitionProperty<string, Llave, Document<unknown, {}, Llave, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Llave & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Llave & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -34,7 +28,7 @@ export declare const LlaveSchema: import("mongoose").Schema<Llave, import("mongo
     }>;
     valor?: import("mongoose").SchemaDefinitionProperty<number, Llave, Document<unknown, {}, Llave, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Llave & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Llave & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;

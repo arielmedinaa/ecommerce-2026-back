@@ -12,12 +12,13 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 var CartController_1;
+var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CartController = void 0;
 const common_1 = require("@nestjs/common");
 const microservices_1 = require("@nestjs/microservices");
-const cart_service_1 = require("../service/cart.service");
-const cart_error_service_1 = require("../service/errors/cart-error.service");
+const cart_service_1 = require("@cart/service/cart.service");
+const cart_error_service_1 = require("@cart/service/errors/cart-error.service");
 let CartController = CartController_1 = class CartController {
     constructor(cartService, cartErrorService) {
         this.cartService = cartService;
@@ -104,7 +105,6 @@ __decorate([
 ], CartController.prototype, "finishCart", null);
 exports.CartController = CartController = CartController_1 = __decorate([
     (0, common_1.Controller)(),
-    __metadata("design:paramtypes", [cart_service_1.CartContadoService,
-        cart_error_service_1.CartErrorService])
+    __metadata("design:paramtypes", [typeof (_a = typeof cart_service_1.CartContadoService !== "undefined" && cart_service_1.CartContadoService) === "function" ? _a : Object, typeof (_b = typeof cart_error_service_1.CartErrorService !== "undefined" && cart_error_service_1.CartErrorService) === "function" ? _b : Object])
 ], CartController);
 //# sourceMappingURL=cart.controller.js.map

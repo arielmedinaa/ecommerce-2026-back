@@ -20,19 +20,13 @@ export declare class Landing {
     expiraEn?: Date;
     tituloRelacionado: string;
 }
-export declare const LandingSchema: import("mongoose").Schema<Landing, import("mongoose").Model<Landing, any, any, any, (Document<unknown, any, Landing, any, import("mongoose").DefaultSchemaOptions> & Landing & {
+export declare const LandingSchema: import("mongoose").Schema<Landing, import("mongoose").Model<Landing, any, any, any, Document<unknown, any, Landing, any, import("mongoose").DefaultSchemaOptions> & Landing & {
     _id: Types.ObjectId;
 } & {
     __v: number;
-} & {
+}, any, Landing>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Landing, Document<unknown, {}, Landing, {
     id: string;
-}) | (Document<unknown, any, Landing, any, import("mongoose").DefaultSchemaOptions> & Landing & {
-    _id: Types.ObjectId;
-} & {
-    __v: number;
-}), any, Landing>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Landing, Document<unknown, {}, Landing, {
-    id: string;
-}, import("mongoose").DefaultSchemaOptions> & Omit<Landing & {
+}, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Landing & {
     _id: Types.ObjectId;
 } & {
     __v: number;
@@ -41,7 +35,7 @@ export declare const LandingSchema: import("mongoose").Schema<Landing, import("m
 }, {
     title?: import("mongoose").SchemaDefinitionProperty<string, Landing, Document<unknown, {}, Landing, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Landing & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Landing & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -50,7 +44,7 @@ export declare const LandingSchema: import("mongoose").Schema<Landing, import("m
     }>;
     slug?: import("mongoose").SchemaDefinitionProperty<string, Landing, Document<unknown, {}, Landing, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Landing & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Landing & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -59,7 +53,7 @@ export declare const LandingSchema: import("mongoose").Schema<Landing, import("m
     }>;
     content?: import("mongoose").SchemaDefinitionProperty<string, Landing, Document<unknown, {}, Landing, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Landing & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Landing & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -68,7 +62,7 @@ export declare const LandingSchema: import("mongoose").Schema<Landing, import("m
     }>;
     createdBy?: import("mongoose").SchemaDefinitionProperty<string, Landing, Document<unknown, {}, Landing, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Landing & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Landing & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -77,7 +71,7 @@ export declare const LandingSchema: import("mongoose").Schema<Landing, import("m
     }>;
     updatedBy?: import("mongoose").SchemaDefinitionProperty<string, Landing, Document<unknown, {}, Landing, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Landing & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Landing & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -86,7 +80,7 @@ export declare const LandingSchema: import("mongoose").Schema<Landing, import("m
     }>;
     isActive?: import("mongoose").SchemaDefinitionProperty<boolean, Landing, Document<unknown, {}, Landing, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Landing & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Landing & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -95,7 +89,7 @@ export declare const LandingSchema: import("mongoose").Schema<Landing, import("m
     }>;
     isPublished?: import("mongoose").SchemaDefinitionProperty<boolean, Landing, Document<unknown, {}, Landing, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Landing & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Landing & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -104,7 +98,7 @@ export declare const LandingSchema: import("mongoose").Schema<Landing, import("m
     }>;
     description?: import("mongoose").SchemaDefinitionProperty<string, Landing, Document<unknown, {}, Landing, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Landing & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Landing & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -113,7 +107,7 @@ export declare const LandingSchema: import("mongoose").Schema<Landing, import("m
     }>;
     metaTitle?: import("mongoose").SchemaDefinitionProperty<string, Landing, Document<unknown, {}, Landing, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Landing & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Landing & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -122,7 +116,7 @@ export declare const LandingSchema: import("mongoose").Schema<Landing, import("m
     }>;
     metaDescription?: import("mongoose").SchemaDefinitionProperty<string, Landing, Document<unknown, {}, Landing, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Landing & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Landing & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -131,7 +125,7 @@ export declare const LandingSchema: import("mongoose").Schema<Landing, import("m
     }>;
     metaKeywords?: import("mongoose").SchemaDefinitionProperty<string[], Landing, Document<unknown, {}, Landing, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Landing & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Landing & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -140,7 +134,7 @@ export declare const LandingSchema: import("mongoose").Schema<Landing, import("m
     }>;
     viewCount?: import("mongoose").SchemaDefinitionProperty<number, Landing, Document<unknown, {}, Landing, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Landing & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Landing & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -149,7 +143,7 @@ export declare const LandingSchema: import("mongoose").Schema<Landing, import("m
     }>;
     tags?: import("mongoose").SchemaDefinitionProperty<string[], Landing, Document<unknown, {}, Landing, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Landing & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Landing & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -158,7 +152,7 @@ export declare const LandingSchema: import("mongoose").Schema<Landing, import("m
     }>;
     customStyles?: import("mongoose").SchemaDefinitionProperty<Record<string, any>, Landing, Document<unknown, {}, Landing, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Landing & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Landing & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -167,7 +161,7 @@ export declare const LandingSchema: import("mongoose").Schema<Landing, import("m
     }>;
     customScripts?: import("mongoose").SchemaDefinitionProperty<Record<string, any>, Landing, Document<unknown, {}, Landing, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Landing & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Landing & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -176,7 +170,7 @@ export declare const LandingSchema: import("mongoose").Schema<Landing, import("m
     }>;
     publicadoEn?: import("mongoose").SchemaDefinitionProperty<Date, Landing, Document<unknown, {}, Landing, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Landing & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Landing & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -185,7 +179,7 @@ export declare const LandingSchema: import("mongoose").Schema<Landing, import("m
     }>;
     expiraEn?: import("mongoose").SchemaDefinitionProperty<Date, Landing, Document<unknown, {}, Landing, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Landing & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Landing & {
         _id: Types.ObjectId;
     } & {
         __v: number;
@@ -194,7 +188,7 @@ export declare const LandingSchema: import("mongoose").Schema<Landing, import("m
     }>;
     tituloRelacionado?: import("mongoose").SchemaDefinitionProperty<string, Landing, Document<unknown, {}, Landing, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Landing & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Landing & {
         _id: Types.ObjectId;
     } & {
         __v: number;

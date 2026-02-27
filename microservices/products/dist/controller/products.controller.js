@@ -12,14 +12,15 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 var ProductsController_1;
+var _a, _b, _c, _d;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProductsController = void 0;
 const common_1 = require("@nestjs/common");
 const microservices_1 = require("@nestjs/microservices");
-const create_product_dto_1 = require("../schemas/dto/create-product.dto");
-const products_service_1 = require("../service/products.service");
-const create_combo_dto_1 = require("../schemas/dto/create-combo.dto");
-const ofertas_service_1 = require("../service/ofertas.service");
+const create_product_dto_1 = require("@products/schemas/dto/create-product.dto");
+const products_service_1 = require("@products/service/products.service");
+const create_combo_dto_1 = require("@products/schemas/dto/create-combo.dto");
+const ofertas_service_1 = require("@products/service/ofertas.service");
 let ProductsController = ProductsController_1 = class ProductsController {
     constructor(productsService, ofertasService) {
         this.productsService = productsService;
@@ -86,13 +87,13 @@ exports.ProductsController = ProductsController;
 __decorate([
     (0, microservices_1.MessagePattern)({ cmd: 'createProducts' }),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_product_dto_1.CreateProductDto]),
+    __metadata("design:paramtypes", [typeof (_c = typeof create_product_dto_1.CreateProductDto !== "undefined" && create_product_dto_1.CreateProductDto) === "function" ? _c : Object]),
     __metadata("design:returntype", Promise)
 ], ProductsController.prototype, "createProduct", null);
 __decorate([
     (0, microservices_1.MessagePattern)({ cmd: 'createCombo' }),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_combo_dto_1.CreateComboDto]),
+    __metadata("design:paramtypes", [typeof (_d = typeof create_combo_dto_1.CreateComboDto !== "undefined" && create_combo_dto_1.CreateComboDto) === "function" ? _d : Object]),
     __metadata("design:returntype", Promise)
 ], ProductsController.prototype, "createCombo", null);
 __decorate([
@@ -146,6 +147,6 @@ __decorate([
 ], ProductsController.prototype, "getOfertas", null);
 exports.ProductsController = ProductsController = ProductsController_1 = __decorate([
     (0, common_1.Controller)(),
-    __metadata("design:paramtypes", [products_service_1.ProductsService, ofertas_service_1.OfertasService])
+    __metadata("design:paramtypes", [typeof (_a = typeof products_service_1.ProductsService !== "undefined" && products_service_1.ProductsService) === "function" ? _a : Object, typeof (_b = typeof ofertas_service_1.OfertasService !== "undefined" && ofertas_service_1.OfertasService) === "function" ? _b : Object])
 ], ProductsController);
 //# sourceMappingURL=products.controller.js.map

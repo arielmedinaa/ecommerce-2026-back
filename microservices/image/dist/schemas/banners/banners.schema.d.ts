@@ -10,19 +10,13 @@ export declare class Banners {
     creadoPor: string;
     modificadoPor: string;
 }
-export declare const BannersSchema: import("mongoose").Schema<Banners, import("mongoose").Model<Banners, any, any, any, (Document<unknown, any, Banners, any, import("mongoose").DefaultSchemaOptions> & Banners & {
+export declare const BannersSchema: import("mongoose").Schema<Banners, import("mongoose").Model<Banners, any, any, any, Document<unknown, any, Banners, any, import("mongoose").DefaultSchemaOptions> & Banners & {
     _id: import("mongoose").Types.ObjectId;
 } & {
     __v: number;
-} & {
+}, any, Banners>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Banners, Document<unknown, {}, Banners, {
     id: string;
-}) | (Document<unknown, any, Banners, any, import("mongoose").DefaultSchemaOptions> & Banners & {
-    _id: import("mongoose").Types.ObjectId;
-} & {
-    __v: number;
-}), any, Banners>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Banners, Document<unknown, {}, Banners, {
-    id: string;
-}, import("mongoose").DefaultSchemaOptions> & Omit<Banners & {
+}, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Banners & {
     _id: import("mongoose").Types.ObjectId;
 } & {
     __v: number;
@@ -31,7 +25,7 @@ export declare const BannersSchema: import("mongoose").Schema<Banners, import("m
 }, {
     nombre?: import("mongoose").SchemaDefinitionProperty<string, Banners, Document<unknown, {}, Banners, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Banners & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Banners & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -40,7 +34,7 @@ export declare const BannersSchema: import("mongoose").Schema<Banners, import("m
     }>;
     imagen?: import("mongoose").SchemaDefinitionProperty<string, Banners, Document<unknown, {}, Banners, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Banners & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Banners & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -49,7 +43,7 @@ export declare const BannersSchema: import("mongoose").Schema<Banners, import("m
     }>;
     variante?: import("mongoose").SchemaDefinitionProperty<string, Banners, Document<unknown, {}, Banners, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Banners & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Banners & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -58,7 +52,7 @@ export declare const BannersSchema: import("mongoose").Schema<Banners, import("m
     }>;
     formato?: import("mongoose").SchemaDefinitionProperty<string, Banners, Document<unknown, {}, Banners, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Banners & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Banners & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -67,7 +61,7 @@ export declare const BannersSchema: import("mongoose").Schema<Banners, import("m
     }>;
     ruta?: import("mongoose").SchemaDefinitionProperty<string, Banners, Document<unknown, {}, Banners, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Banners & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Banners & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -76,7 +70,7 @@ export declare const BannersSchema: import("mongoose").Schema<Banners, import("m
     }>;
     estado?: import("mongoose").SchemaDefinitionProperty<string, Banners, Document<unknown, {}, Banners, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Banners & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Banners & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -85,7 +79,7 @@ export declare const BannersSchema: import("mongoose").Schema<Banners, import("m
     }>;
     creadoPor?: import("mongoose").SchemaDefinitionProperty<string, Banners, Document<unknown, {}, Banners, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Banners & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Banners & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
@@ -94,7 +88,7 @@ export declare const BannersSchema: import("mongoose").Schema<Banners, import("m
     }>;
     modificadoPor?: import("mongoose").SchemaDefinitionProperty<string, Banners, Document<unknown, {}, Banners, {
         id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<Banners & {
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Banners & {
         _id: import("mongoose").Types.ObjectId;
     } & {
         __v: number;
