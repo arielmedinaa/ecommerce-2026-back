@@ -46,7 +46,6 @@ export class CartController {
         codigo ? codigo : 0,
       );
       
-      console.log('📥 Microservice getCart - Service result:', result);
       return result;
     } catch (error) {
       await this.cartErrorService.logMicroserviceError(
@@ -56,13 +55,6 @@ export class CartController {
         { payload }
       );
       
-      console.error('🚨 Microservice getCart - Error in service:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-        code: error.code,
-        fullError: error
-      });
       this.logger.error('Error al obtener los carritos', error);
       throw error;
     }
