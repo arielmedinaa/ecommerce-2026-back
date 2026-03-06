@@ -117,4 +117,12 @@ export class ProductsController {
       this.productsClient.send({ cmd: 'create_oferta' }, ofertaData)
     )
   }
+  
+  @UseGuards(JwtAuthGuard)
+  @Post('/createPromo')
+  async createPromo(@Body() promoData: any) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'create_promo' }, promoData)
+    )
+  }
 }

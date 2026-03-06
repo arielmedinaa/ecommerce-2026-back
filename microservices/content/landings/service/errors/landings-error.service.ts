@@ -18,29 +18,24 @@ export class LandingErrorService {
     context?: Record<string, any>,
   ): Promise<void> {
     try {
-      // Validar y convertir landingId si existe
       let landingObjectId: Types.ObjectId | undefined;
       if (landingId) {
         try {
           landingObjectId = new Types.ObjectId(landingId);
         } catch (e) {
-          // Si landingId no es un ObjectId válido, lo dejamos como undefined
           this.logger.warn(`landingId inválido: ${landingId}`);
         }
       }
 
-      // Validar y convertir userId si existe
       let userObjectId: Types.ObjectId | undefined;
       if (context?.userId) {
         try {
-          // Si ya es un ObjectId, usarlo directamente
           if (typeof context.userId === 'object' && context.userId._bsontype === 'ObjectId') {
             userObjectId = context.userId;
           } else {
             userObjectId = new Types.ObjectId(context.userId);
           }
         } catch (e) {
-          // Si userId no es un ObjectId válido, lo dejamos como undefined
           this.logger.warn(`userId inválido: ${context.userId}`);
         }
       }

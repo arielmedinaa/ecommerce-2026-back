@@ -6,11 +6,12 @@ import { Product } from '@products/schemas/product.schema';
 import { CreateComboDto } from '@products/schemas/dto/create-combo.dto';
 import { Combos } from '@products/schemas/combos.schema';
 import { OfertasService } from '@products/service/ofertas.service';
+import { PromosService } from '@products/service/promos.service';
 
 @Controller()
 export class ProductsController {
   private readonly logger = new Logger(ProductsController.name);
-  constructor(private readonly productsService: ProductsService, private readonly ofertasService: OfertasService) {}
+  constructor(private readonly productsService: ProductsService, private readonly ofertasService: OfertasService, private readonly promosService: PromosService) {}
 
   @MessagePattern({ cmd: 'createProducts' })
   public createProduct (createProductDto: CreateProductDto): Promise<Product> {
@@ -81,5 +82,10 @@ export class ProductsController {
   @MessagePattern({ cmd: 'get_ofertas' })
   async getOfertas() {
     return await this.ofertasService.getAllOfertas();
+  }
+  
+  @MessagePattern({ cmd: 'create_promo' })
+  async createPromo(promoData: any) {
+    return await this.promosService.createPromo(promoData);
   }
 }
