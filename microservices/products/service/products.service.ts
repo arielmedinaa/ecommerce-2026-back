@@ -1,19 +1,22 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
-import { Product } from '@products/schemas/product.schema';
+import { Injectable, NotFoundException, Logger, Inject } from '@nestjs/common';
 import { PromosService } from './promos.service';
 import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
-import { Model } from 'mongoose';
-import { InjectModel } from '@nestjs/mongoose';
-import { Combos } from '@products/schemas/combos.schema';
+import {
+  PrismaClient,
+  Product as PrismaProduct,
+  Combo as PrismaCombo,
+} from '@prisma/client';
 import { CreateComboDto } from '@products/schemas/dto/create-combo.dto';
+
+type Product = PrismaProduct;
+type Combo = PrismaCombo;
 
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
 
   constructor(
-    @InjectModel(Product.name) private readonly productModel: Model<Product>,
-    @InjectModel(Combos.name) private readonly combosModel: Model<Combos>,
+    private readonly prisma: PrismaClient,
     private readonly promosService: PromosService,
   ) {}
 
@@ -28,16 +31,6 @@ export class ProductsService {
   private readonly CACHE_TTL = 5 * 60 * 1000;
   private readonly PRODUCT_CACHE_TTL = 5 * 60 * 1000;
   private readonly MAX_CACHE_ENTRIES = 50;
-  private readonly camposNecesarios = {
-    nombre: 1,
-    precio: 1,
-    venta: 1,
-    ruta: 1,
-    codigo: 1,
-    'imagenes.url.300': 1,
-    'categorias.nombre': 1,
-    descuento: 1,
-  };
 
   private getCacheKey(filters: any): string {
     return JSON.stringify({
@@ -68,36 +61,72 @@ export class ProductsService {
       return { data: cached.data, total: cached.total };
     }
 
-    const query: any = {
-      estado: { $ne: 0 },
-      imagenes: { $exists: true, $ne: [] },
-      dias_ultimo_movimiento: { $lte: 30 },
+    const where: any = {
+      estado: { not: 0 },
+      imagenes: { not: null },
+      dias_ultimo_movimiento: { lte: 30 },
     };
-    if (filters.categoria) query['categorias._id'] = filters.categoria;
-    if (filters.subcategoria) query['subcategorias._id'] = filters.subcategoria;
+
+    if (filters.categoria) {
+      where.categorias = {
+        path: '$[*]._id',
+        equals: filters.categoria,
+      };
+    }
+    if (filters.subcategoria) {
+      where.subcategorias = {
+        path: '$[*]._id',
+        equals: filters.subcategoria,
+      };
+    }
 
     if (filters.precioMin || filters.precioMax) {
-      if (filters.precioMin) query.venta.$gte = Number(filters.precioMin);
-      if (filters.precioMax) query.venta.$lte = Number(filters.precioMax);
+      where.venta = {};
+      if (filters.precioMin) where.venta.gte = Number(filters.precioMin);
+      if (filters.precioMax) where.venta.lte = Number(filters.precioMax);
     }
 
     if (filters.search) {
-      query.$or = [{ codigo: filters.search }];
+      where.codigo = filters.search;
     }
 
     if (filters.nombre) {
-      query.nombre = { $regex: filters.nombre, $options: 'i' };
+      where.nombre = {
+        contains: filters.nombre,
+        mode: 'insensitive',
+      };
     }
 
     const [data, total] = await Promise.all([
-      this.productModel
-        .find(query)
-        .select(this.camposNecesarios)
-        .sort({ _id: 1 })
-        .skip(Number(filters.offset) || 0)
-        .limit(Number(filters.limit) || 20)
-        .lean(),
-      this.productModel.countDocuments(query),
+      this.prisma.product.findMany({
+        where,
+        select: {
+          id: true,
+          nombre: true,
+          precio: true,
+          venta: true,
+          ruta: true,
+          codigo: true,
+          imagenes: true,
+          categorias: true,
+          descuento: true,
+          cantidad: true,
+          dias_ultimo_movimiento: true,
+          web: true,
+          websc: true,
+          prioridad: true,
+          orden: true,
+          tipo: true,
+          estado: true,
+          deposito: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: { id: 'asc' },
+        skip: Number(filters.offset) || 0,
+        take: Number(filters.limit) || 20,
+      }),
+      this.prisma.product.count({ where }),
     ]);
 
     if (this.productosCache.size >= this.MAX_CACHE_ENTRIES) {
@@ -105,8 +134,12 @@ export class ProductsService {
       this.productosCache.delete(oldestKey);
     }
 
-    this.productosCache.set(cacheKey, { data, total, timestamp: now });
-    return { data, total };
+    this.productosCache.set(cacheKey, {
+      data: data as unknown as Product[],
+      total,
+      timestamp: now,
+    });
+    return { data: data as unknown as Product[], total };
   }
 
   async findAll(
@@ -116,85 +149,97 @@ export class ProductsService {
   }
 
   async findOne(id: string): Promise<Product> {
-    const product = await this.productModel
-      .findOne({
-        _id: id,
-        estado: { $ne: 0 },
-        imagenes: { $exists: true, $ne: [] },
-        dias_ultimo_movimiento: { $lte: 30 },
-      })
-      .lean();
+    const product = await this.prisma.product.findFirst({
+      where: {
+        id: String(parseInt(id)),
+        estado: { not: 0 },
+        dias_ultimo_movimiento: { lte: 30 },
+      },
+    });
 
     if (!product) {
       throw new NotFoundException(`Producto con ID ${id} no encontrado`);
     }
-    return product as Product;
+    return product;
   }
 
   async findByCode(codigo: string): Promise<Product | null> {
-    return this.productModel
-      .findOne({
+    return this.prisma.product.findFirst({
+      where: {
         codigo,
-        estado: { $ne: 0 },
-        imagenes: { $exists: true, $ne: [] },
-        dias_ultimo_movimiento: { $lte: 30 },
-      })
-      .lean();
+        estado: { not: 0 },
+        dias_ultimo_movimiento: { lte: 30 },
+      },
+    });
   }
 
   async create(createProductDto: CreateProductDto): Promise<Product> {
-    const createdProduct = new this.productModel({
-      ...createProductDto,
-      estado: 1,
-      fecha_creacion: new Date(),
-      fecha_actualizacion: new Date(),
+    const createdProduct = await this.prisma.product.create({
+      data: {
+        ...createProductDto,
+        estado: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
     });
     this.invalidateCache();
-    return createdProduct.save();
+    return createdProduct;
   }
 
-  async createCombo(createCombo: CreateComboDto): Promise<Combos> {
-    return await this.combosModel.create(createCombo);
+  async createCombo(createCombo: CreateComboDto): Promise<Combo> {
+    const createdCombo = await this.prisma.combo.create({
+      data: {
+        ...createCombo,
+        ruta: 'combo-default-route',
+        descripcion: createCombo.descripcion || 'Combo description',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    return createdCombo;
   }
 
   async update(
     id: string,
     updateProductDto: CreateProductDto,
   ): Promise<Product> {
-    const updatedProduct = await this.productModel
-      .findByIdAndUpdate(
-        id,
-        { ...updateProductDto, fecha_actualizacion: new Date() },
-        { new: true },
-      )
-      .lean();
+    try {
+      const updatedProduct = await this.prisma.product.update({
+        where: { id: String(parseInt(id)) },
+        data: {
+          ...updateProductDto,
+          updatedAt: new Date(),
+        },
+      });
 
-    if (!updatedProduct) {
+      this.invalidateCache();
+      return updatedProduct;
+    } catch (error) {
       throw new NotFoundException(`Producto con ID ${id} no encontrado`);
     }
-    this.invalidateCache();
-    return updatedProduct as Product;
   }
 
   async searchProducts(
     filters: any = {},
   ): Promise<{ data: Product[]; total: number }> {
-    const query = {
-      nombre: { $regex: filters.search, $options: 'i' },
+    const where: any = {
+      nombre: {
+        contains: filters.search,
+        mode: 'insensitive' as const,
+      },
       estado: 1,
       web: 1,
-      imagenes: { $exists: true, $ne: [] },
-      dias_ultimo_movimiento: { $lte: 30 },
+      dias_ultimo_movimiento: { lte: 30 },
     };
 
-    const total = await this.productModel.countDocuments(query);
-    const productos = await this.productModel
-      .find(query)
-      .sort({ prioridad: -1, _id: 1 })
-      .limit(total === 1 ? 1 : 4)
-      .lean();
+    const total = await this.prisma.product.count({ where });
+    const productos = await this.prisma.product.findMany({
+      where,
+      orderBy: [{ prioridad: 'desc' }, { id: 'asc' }],
+      take: total === 1 ? 1 : 4,
+    });
 
-    return { data: productos as Product[], total };
+    return { data: productos, total };
   }
 
   async getProductsByCategory(
@@ -202,41 +247,59 @@ export class ProductsService {
     limit: number = 10,
     offset: number = 0,
   ) {
-    const query = {
-      'categorias._id': categoryId,
+    const where: any = {
       estado: 1,
       web: 1,
-      imagenes: { $exists: true, $ne: [] },
-      dias_ultimo_movimiento: { $lte: 30 },
+      dias_ultimo_movimiento: { lte: 30 },
     };
+
+    // Simplified category filter for MariaDB
+    if (categoryId) {
+      where.categorias = {
+        contains: categoryId,
+      };
+    }
+
     const [data, total] = await Promise.all([
-      this.productModel
-        .find(query)
-        .sort({ prioridad: -1, _id: 1 })
-        .skip(Number(offset))
-        .limit(Number(limit))
-        .lean(),
-      this.productModel.countDocuments(query),
+      this.prisma.product.findMany({
+        where,
+        orderBy: [{ prioridad: 'desc' }, { id: 'asc' }],
+        skip: Number(offset),
+        take: Number(limit),
+      }),
+      this.prisma.product.count({ where }),
     ]);
     return { data, total };
   }
 
   async getProductsJota() {
-    const query = {
-      nombre: RegExp('jota', 'i'),
+    const where: any = {
+      nombre: {
+        contains: 'jota',
+        mode: 'insensitive' as const,
+      },
       estado: 1,
       web: 1,
-      imagenes: { $exists: true, $ne: [] },
-      dias_ultimo_movimiento: { $lte: 30 },
+      dias_ultimo_movimiento: { lte: 30 },
     };
+
     const [data, total] = await Promise.all([
-      this.productModel
-        .find(query)
-        .select(this.camposNecesarios)
-        .sort({ prioridad: -1, _id: 1 })
-        .limit(10)
-        .lean(),
-      this.productModel.countDocuments(query),
+      this.prisma.product.findMany({
+        where,
+        select: {
+          nombre: true,
+          precio: true,
+          venta: true,
+          ruta: true,
+          codigo: true,
+          imagenes: true,
+          categorias: true,
+          descuento: true,
+        },
+        orderBy: [{ prioridad: 'desc' }, { id: 'asc' }],
+        take: 10,
+      }),
+      this.prisma.product.count({ where }),
     ]);
     return { data, total };
   }
@@ -245,14 +308,16 @@ export class ProductsService {
     if (!ids || ids.length === 0) return [];
     const now = Date.now();
 
-    const projection = fields
-      ? fields
-          .split(',')
-          .reduce((acc, field) => ({ ...acc, [field.trim()]: 1 }), {
-            _id: 0,
-            codigo: 1,
-          })
-      : { _id: 0, codigo: 1 };
+    let select: any = {
+      codigo: true,
+    };
+
+    if (fields) {
+      const fieldList = fields.split(',').map((f) => f.trim());
+      fieldList.forEach((field) => {
+        select[field] = true;
+      });
+    }
 
     const productosEnCache: any[] = [];
     const codigosFaltantes: string[] = [];
@@ -268,18 +333,15 @@ export class ProductsService {
 
     let productosDB: any[] = [];
     if (codigosFaltantes.length > 0) {
-      productosDB = await this.productModel
-        .find(
-          {
-            codigo: { $in: codigosFaltantes },
-            estado: { $ne: 0 },
-            imagenes: { $exists: true, $ne: [] },
-            dias_ultimo_movimiento: { $lte: 30 },
-          },
-          projection,
-        )
-        .sort({ prioridad: -1, _id: 1 })
-        .lean();
+      productosDB = await this.prisma.product.findMany({
+        where: {
+          codigo: { in: codigosFaltantes },
+          estado: { not: 0 },
+          dias_ultimo_movimiento: { lte: 30 },
+        },
+        select,
+        orderBy: [{ prioridad: 'desc' }, { id: 'asc' }],
+      });
 
       for (const prod of productosDB) {
         if (prod && prod.codigo) {
@@ -318,33 +380,47 @@ export class ProductsService {
   }
 
   async findComboByCodigo(codigo: string) {
-    const filtro: any = {
+    const where: any = {
       codigo,
       estado: 1,
-      precio: { $gt: 9000 },
-      imagenes: { $size: { $gt: 0 } },
+      precio: { gt: 9000 },
       web: 1,
-      $or: [
-        { cantidad: { $gt: 0 }, dias_ultimo_movimiento: { $lte: 30 } },
-        { cantidad: 0, dias_ultimo_movimiento: { $lt: 30 } },
+      AND: [
+        {
+          OR: [
+            { cantidad: { gt: 0 }, dias_ultimo_movimiento: { lte: 30 } },
+            { cantidad: 0, dias_ultimo_movimiento: { lt: 30 } },
+          ],
+        },
       ],
     };
-    return this.combosModel.findOne(filtro).lean();
+
+    return this.prisma.combo.findFirst({ where });
   }
 
   async getCategories(): Promise<{ categorias: string[] }> {
     try {
-      const pipeline: any[] = [
-        { $unwind: '$categorias' },
-        { $group: { _id: '$categorias' } },
-        { $sort: { _id: 1 } },
-        { $limit: 20 },
-        { $project: { _id: 0, categoria: '$_id' } },
-      ];
+      const products = await this.prisma.product.findMany({
+        where: {
+          estado: 1,
+        },
+        select: {
+          categorias: true,
+        },
+      });
 
-      const result = await this.productModel.aggregate(pipeline).exec();
-      const categorias = result.map((item) => item.categoria);
+      const allCategories = new Set<string>();
+      products.forEach((product) => {
+        if (product.categorias && Array.isArray(product.categorias)) {
+          product.categorias.forEach((cat: any) => {
+            if (cat && cat.nombre) {
+              allCategories.add(cat.nombre);
+            }
+          });
+        }
+      });
 
+      const categorias = Array.from(allCategories).sort().slice(0, 20);
       return { categorias };
     } catch (error) {
       this.logger.error('Error al obtener categorías:', error);
