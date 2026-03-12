@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PromosService } from './promos.service';
 import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
 import {
@@ -62,32 +62,16 @@ export class ProductsService {
     }
 
     const where: any = {
-      estado: { not: 0 },
-      imagenes: { not: null },
-      dias_ultimo_movimiento: { lte: 30 },
+      activo: true,
+      baja: false,
     };
 
-    if (filters.categoria) {
-      where.categorias = {
-        path: '$[*]._id',
-        equals: filters.categoria,
-      };
-    }
-    if (filters.subcategoria) {
-      where.subcategorias = {
-        path: '$[*]._id',
-        equals: filters.subcategoria,
-      };
-    }
-
-    if (filters.precioMin || filters.precioMax) {
-      where.venta = {};
-      if (filters.precioMin) where.venta.gte = Number(filters.precioMin);
-      if (filters.precioMax) where.venta.lte = Number(filters.precioMax);
-    }
-
     if (filters.search) {
-      where.codigo = filters.search;
+      where.codigo = { contains: filters.search };
+    }
+
+    if (filters.codigo) {
+      where.codigo = filters.codigo;
     }
 
     if (filters.nombre) {
@@ -97,31 +81,21 @@ export class ProductsService {
       };
     }
 
+    if (filters.familia) {
+      where.familia = filters.familia;
+    }
+
+    if (filters.proveedor) {
+      where.proveedor = filters.proveedor;
+    }
+
+    if (filters.web !== undefined) {
+      where.web = filters.web === '1' ? 1 : 0;
+    }
+
     const [data, total] = await Promise.all([
       this.prisma.product.findMany({
         where,
-        select: {
-          id: true,
-          nombre: true,
-          precio: true,
-          venta: true,
-          ruta: true,
-          codigo: true,
-          imagenes: true,
-          categorias: true,
-          descuento: true,
-          cantidad: true,
-          dias_ultimo_movimiento: true,
-          web: true,
-          websc: true,
-          prioridad: true,
-          orden: true,
-          tipo: true,
-          estado: true,
-          deposito: true,
-          createdAt: true,
-          updatedAt: true,
-        },
         orderBy: { id: 'asc' },
         skip: Number(filters.offset) || 0,
         take: Number(filters.limit) || 20,
@@ -167,8 +141,8 @@ export class ProductsService {
     return this.prisma.product.findFirst({
       where: {
         codigo,
-        estado: { not: 0 },
-        dias_ultimo_movimiento: { lte: 30 },
+        activo: true,
+        baja: false,
       },
     });
   }

@@ -8,10 +8,10 @@ export class MariaDbService {
 
   constructor(private configService: ConfigService) {
     this.config = {
-      host: configService.get<string>('MARIA_DB_HOST') || 'localhost',
+      host: configService.get<string>('MARIA_DB_HOST') || '192.168.100.209',
       port: parseInt(configService.get<string>('MARIA_DB_PORT') || '3306'),
       user: configService.get<string>('MARIA_DB_USER') || 'root',
-      password: configService.get<string>('MARIA_DB_PASSWORD') || '',
+      password: configService.get<string>('MARIA_DB_PASSWORD') || 'classicS',
       database: configService.get<string>('MARIA_DB_DATABASE') || 'ecommerce',
       connectionLimit: 10,
     };
@@ -22,7 +22,6 @@ export class MariaDbService {
     
     try {
       connection = await mysql.createConnection(this.config);
-      console.log('Connecting to MariaDB...');
       
       const [rows] = await connection.execute(query, params);
       return rows as T[];
