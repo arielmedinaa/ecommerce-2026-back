@@ -16,6 +16,7 @@ import { ErrorLoggingInterceptor } from './interceptors/error-logging.intercepto
 import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
 import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
 import { ObtenerClaveService } from '@shared/common/utils/obtenerClave';
+import { MariaDbModule } from './config/mariadb.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ObtenerClaveService } from '@shared/common/utils/obtenerClave';
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1d' },
     }),
+    MariaDbModule,
     MongooseModule.forFeature([
       { name: Cart.name, schema: CartSchema },
       { name: Llave.name, schema: LlaveSchema },

@@ -1,4 +1,4 @@
-import { Cart } from '@cart/schemas/cart.schema';
+import { Cart } from '@cart/schemas/cart.schemas';
 import * as moment from 'moment-timezone';
 
 export const DEFAULT_CART: Partial<Cart> = {
@@ -41,15 +41,7 @@ export const DEFAULT_CART: Partial<Cart> = {
     contado: [],
     credito: [],
   },
-  atencion: 0,
-  estado: 1,
-  estados: {
-    articulos: {
-      contado: { codigo: 0, descripcion: '', detalle: '' },
-      credito: { codigo: 0, descripcion: '', detalle: '' },
-    },
-    progreso: { codigo: 0, descripcion: '' },
-  },
+  estado: '1',
 };
 
 export const DEFAULT_SOLICITUD: Partial<Cart> = {
@@ -93,7 +85,7 @@ export const DEFAULT_SOLICITUD: Partial<Cart> = {
     contado: [],
     credito: []
   },
-  estado: 1,
+  estado: '1',
   seguimiento: [],
   transaccion: []
 }

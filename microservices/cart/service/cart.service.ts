@@ -1,8 +1,12 @@
-import { Cart } from '../schemas/cart.schema';
-import { Transaccion } from '../schemas/transaccion.schema';
+import { Cart } from '../schemas/cart.schemas';
+import { Transaccion } from '../schemas/transaccion.schemas';
+import { Llave } from '../schemas/llave.schemas';
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { CartError } from '../schemas/errors/cart.error.schema';
 import { ObtenerClaveService } from '@shared/common/utils/obtenerClave';
 import {
   NEW_CART_INITIAL_STATE,
@@ -26,9 +30,10 @@ export class CartContadoService {
   private readonly cacheTTL = 30 * 1000;
 
   constructor(
-    @InjectModel(Cart.name) private readonly carrito: Model<Cart>,
-    @InjectModel(Transaccion.name)
-    private readonly transacciones: Model<Transaccion>,
+    @InjectRepository(Cart) private readonly carrito: Repository<Cart>,
+    @InjectRepository(Transaccion) private readonly transacciones: Repository<Transaccion>,
+    @InjectRepository(Llave) private readonly llave: Repository<Llave>,
+    @InjectModel(CartError.name) private readonly cartError: Model<CartError>,
     @Inject('PRODUCTS_SERVICE')
     private readonly productsService: ClientProxy,
     @Inject('PAYMENTS_SERVICE') private readonly paymentsService: ClientProxy,
@@ -72,20 +77,23 @@ export class CartContadoService {
 
     const articuloTipo = producto.credito ? 'credito' : 'contado';
     const carritoExistente = await this.carrito
-      .findOne(filtro)
-      .sort({ codigo: -1 });
+      .findOne({
+        where: filtro,
+        order: { codigo: 'DESC' }
+      });
 
     if (carritoExistente === null || carritoExistente === undefined) {
       const nuevoCodigo =
         await this.obtenerClaveService.obtenerClave('carrito');
-      const nuevoCarrito = new this.carrito({
+      const nuevoCarrito = this.carrito.create({
         ...NEW_CART_INITIAL_STATE(nuevoCodigo, clienteToken, cuenta),
         articulos: {
           [articuloTipo]: [producto],
           [articuloTipo === 'credito' ? 'contado' : 'credito']: [],
         },
+        estado: '1', // Convert to string for TypeORM
       });
-      await nuevoCarrito.save();
+      await this.carrito.save(nuevoCarrito);
       return {
         data: [nuevoCarrito],
         success: true,
@@ -94,13 +102,18 @@ export class CartContadoService {
     }
 
     if (carritoExistente.proceso) {
-      await this.transacciones.updateOne(
-        { carrito: carritoExistente.codigo, estado: 1 },
-        { $set: { estado: 0 } },
-      );
-      await this.carrito.updateOne(
-        { codigo: carritoExistente.codigo },
-        { $set: { proceso: '' } },
+      await this.transacciones
+        .createQueryBuilder()
+        .update(Transaccion)
+        .set({ estado: 0 })
+        .where('codigo = :codigo AND estado = :estado', { 
+          codigo: carritoExistente.codigo, 
+          estado: 1 
+        })
+        .execute();
+      await this.carrito.update(
+        carritoExistente.id,
+        { proceso: '' }
       );
     }
 
@@ -156,20 +169,22 @@ export class CartContadoService {
     );
     if (productoExistente) {
       actualizarCantidadProducto(carritoExistente, producto, articuloTipo);
-      await this.carrito.updateOne(
-        { codigo: carritoExistente.codigo },
+      await this.carrito.update(
+        carritoExistente.id,
         {
-          $set: {
-            [`articulos.${articuloTipo}`]:
-              carritoExistente.articulos[articuloTipo],
-          },
-        },
+          [`articulos.${articuloTipo}`]:
+            carritoExistente.articulos[articuloTipo],
+        }
       );
     } else {
       agregarNuevoProducto(carritoExistente, producto, articuloTipo);
-      await this.carrito.updateOne(
-        { codigo: carritoExistente.codigo },
-        { $push: { [`articulos.${articuloTipo}`]: producto } },
+      const currentArticulos = carritoExistente.articulos[articuloTipo] || [];
+      currentArticulos.push(producto);
+      await this.carrito.update(
+        carritoExistente.id,
+        {
+          [`articulos.${articuloTipo}`]: currentArticulos,
+        }
       );
     }
 
@@ -201,9 +216,13 @@ export class CartContadoService {
       };
     }
     const resultado = await this.carrito
-      .findOne(filtro, { _id: 0, proceso: 0, transaccion: 0, __v: 0 })
-      .sort({ codigo: -1 })
-      .lean();
+      .createQueryBuilder('cart')
+      .where('cart.cliente->>"$.equipo" = :equipo OR cart.cliente->>"$.correo" = :correo', 
+        { equipo: clienteToken, correo: cuenta })
+      .andWhere(codigo === 0 ? 'cart.estado = :estado' : 'cart.codigo = :codigo',
+        codigo === 0 ? { estado: '1' } : { codigo })
+      .orderBy('cart.codigo', 'DESC')
+      .getOne();
     if (!resultado) {
       return { data: [], success: false, message: 'Carrito no encontrado' };
     }
@@ -304,11 +323,12 @@ export class CartContadoService {
     estado: number = 0,
   ): Promise<{ data: Cart[]; success: boolean; message: string }> {
     const resultado = await this.carrito
-      .find({ 'cliente.equipo': clienteToken })
-      .lean()
+      .createQueryBuilder('cart')
+      .where("cart.cliente->>'$.equipo' = :equipo", { equipo: clienteToken })
+      .orderBy(`cart.${sort}`, order === 'desc' ? 'DESC' : 'ASC')
       .limit(limit)
       .skip(skip)
-      .sort({ [sort]: order === 'desc' ? -1 : 1 });
+      .getMany();
 
     const carritosConEstado = await Promise.all(
       resultado.map(async (carrito) => {
@@ -357,7 +377,11 @@ export class CartContadoService {
       filtro.cuenta = cuenta;
     }
 
-    const carrito = await this.carrito.findOne(filtro).lean();
+    const carrito = await this.carrito
+      .createQueryBuilder('cart')
+      .where("cart.cliente->>'$.equipo' = :equipo AND cart.codigo = :codigo AND cart.estado != :estado", 
+        { equipo: clienteToken, codigo, estado: '0' })
+      .getOne();
     if (!carrito) {
       const error = new Error(
         'CARRITO NO ENCONTRADO O CON POSIBLE PAGO CONFIRMADO',
@@ -441,23 +465,21 @@ export class CartContadoService {
         ),
       );
 
-      await this.carrito.updateOne(filtro, {
-        $set: {
-          pago: {
-            ...process,
-            pagoId: pagoResponse.data.idTransaccion,
-            registradoEnPayments: true,
-          },
-          estado: 0,
-          cliente: {
-            ...process.cliente,
-            equipo: clienteToken,
-          },
-          envio: process?.envio || {},
-          finished: moment()
-            .tz('America/Asuncion')
-            .format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
+      await this.carrito.update(carrito.id!, {
+        pago: {
+          ...process,
+          pagoId: pagoResponse.data.idTransaccion,
+          registradoEnPayments: true,
         },
+        estado: '0',
+        cliente: {
+          ...process.cliente,
+          equipo: clienteToken,
+        },
+        envio: process?.envio || {},
+        finished: moment()
+          .tz('America/Asuncion')
+          .format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
       });
 
       setImmediate(async () => {
@@ -574,7 +596,11 @@ export class CartContadoService {
     }
 
     try {
-      let datos = await this.carrito.findOne(filtro);
+      let datos = await this.carrito
+        .createQueryBuilder('cart')
+        .where("cart.cliente->>'$.equipo' = :equipo AND cart.codigo = :codigo", 
+          { equipo: clienteToken, codigo })
+        .getOne();
       if (!datos) {
         return {
           data: [],
@@ -627,7 +653,7 @@ export class CartContadoService {
         solicitudContado.estado = datos.estado;
         solicitudContado.envio =
           solicitud['envio'] || datos.envio || solicitudContado.envio;
-        solicitudContado.codigo = codigo!;
+        solicitudContado.codigo = Number(codigo);
 
         solicitudContado.articulos = {
           contado: datos.articulos.contado.map((item: any) => {
@@ -661,7 +687,7 @@ export class CartContadoService {
 
         const resultadoContado = await this.insertarCarritos(solicitudContado);
         resultados.push({
-          cuotas: 0, // 0 representa contado
+          cuotas: 0,
           success: resultadoContado === 1,
           articulosCount: datos.articulos.contado.length,
         });
@@ -687,7 +713,7 @@ export class CartContadoService {
         nuevaSolicitud.pago = datos.pago;
         nuevaSolicitud.envio =
           solicitud['envio'] || datos.envio || nuevaSolicitud.envio;
-        nuevaSolicitud.codigo = codigo!;
+        nuevaSolicitud.codigo = Number(codigo);
 
         nuevaSolicitud.articulos = {
           contado: [],

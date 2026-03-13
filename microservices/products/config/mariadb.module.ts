@@ -7,6 +7,7 @@ import { Combo } from '../schemas/combo.schemas';
 import { Oferta } from '../schemas/oferta.schemas';
 import { ProductoOferta } from '../schemas/producto-oferta.schemas';
 import { Promo } from '../schemas/promo.schemas';
+import { MariaDbConnectionService } from './mariadb-connection.service';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { Promo } from '../schemas/promo.schemas';
     }),
     TypeOrmModule.forFeature([Category, Product, Combo, Oferta, ProductoOferta, Promo]),
   ],
+  providers: [MariaDbConnectionService],
   exports: [TypeOrmModule],
 })
 export class MariaDbModule {}
