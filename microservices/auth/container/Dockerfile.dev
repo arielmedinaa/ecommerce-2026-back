@@ -20,7 +20,7 @@ RUN yarn config set network-timeout 600000 && \
     yarn config set registry https://registry.npmjs.org/ && \
     yarn install --network-timeout 600000 || \
     npm install --registry https://registry.npmjs.org/ --timeout=600000
-
+RUN yarn add @nestjs/typeorm typeorm mysql2
 RUN yarn add -D tsconfig-paths
 
 COPY microservices/auth/ ./src/

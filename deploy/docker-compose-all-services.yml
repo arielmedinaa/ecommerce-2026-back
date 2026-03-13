@@ -108,6 +108,11 @@ services:
       - PAYMENTS_SERVICE_URL=deploy-payments-1
       - PRODUCTS_SERVICE_URL=deploy-products-1
       - IMAGE_SERVICE_URL=deploy-image-1
+      - DATABASE_HOST=192.168.100.209
+      - DATABASE_PORT=3306
+      - DATABASE_USER=root
+      - DATABASE_PASSWORD=classicS
+      - DATABASE_NAME=ssss_emp1
     volumes:
       - ../:/usr/src/app
       - /usr/src/app/node_modules

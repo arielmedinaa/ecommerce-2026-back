@@ -1,15 +1,8 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PromosService } from './promos.service';
 import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
-import {
-  PrismaClient,
-  Product as PrismaProduct,
-  Combo as PrismaCombo,
-} from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { CreateComboDto } from '@products/schemas/dto/create-combo.dto';
-
-type Product = PrismaProduct;
-type Combo = PrismaCombo;
 
 @Injectable()
 export class ProductsService {
@@ -22,15 +15,15 @@ export class ProductsService {
 
   private productosCache = new Map<
     string,
-    { data: Product[]; timestamp: number; total: number }
+    { data: any[]; total: number; timestamp: number }
   >();
   private productoPorCodigoCache = new Map<
     string,
     { data: any; timestamp: number }
   >();
-  private readonly CACHE_TTL = 5 * 60 * 1000;
-  private readonly PRODUCT_CACHE_TTL = 5 * 60 * 1000;
-  private readonly MAX_CACHE_ENTRIES = 50;
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+  private readonly MAX_CACHE_ENTRIES = 100;
+  private readonly PRODUCT_CACHE_TTL = 10 * 60 * 1000; // 10 minutos
 
   private getCacheKey(filters: any): string {
     return JSON.stringify({
@@ -50,9 +43,9 @@ export class ProductsService {
     this.productoPorCodigoCache.clear();
   }
 
-  private async getCachedProductos(
+  private async getCachedPrismaProductos(
     filters: any = {},
-  ): Promise<{ data: Product[]; total: number }> {
+  ): Promise<{ data: any[]; total: number }> {
     const cacheKey = this.getCacheKey(filters);
     const now = Date.now();
     const cached = this.productosCache.get(cacheKey);
@@ -61,10 +54,7 @@ export class ProductsService {
       return { data: cached.data, total: cached.total };
     }
 
-    const where: any = {
-      activo: true,
-      baja: false,
-    };
+    const where: any = {};
 
     if (filters.search) {
       where.codigo = { contains: filters.search };
@@ -109,58 +99,51 @@ export class ProductsService {
     }
 
     this.productosCache.set(cacheKey, {
-      data: data as unknown as Product[],
+      data: data as any[],
       total,
       timestamp: now,
     });
-    return { data: data as unknown as Product[], total };
+    return { data: data as any[], total };
   }
 
-  async findAll(
-    filters: any = {},
-  ): Promise<{ data: Product[]; total: number }> {
-    return this.getCachedProductos(filters);
+  async findAll(filters: any = {}): Promise<{ data: any[]; total: number }> {
+    return this.getCachedPrismaProductos(filters);
   }
 
-  async findOne(id: string): Promise<Product> {
+  async findOne(id: string): Promise<any> {
     const product = await this.prisma.product.findFirst({
-      where: {
-        id: String(parseInt(id)),
-        estado: { not: 0 },
-        dias_ultimo_movimiento: { lte: 30 },
-      },
+      where: { id: id as any },
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto con ID ${id} no encontrado`);
+      throw new NotFoundException(`PrismaProducto con ID ${id} no encontrado`);
     }
     return product;
   }
 
-  async findByCode(codigo: string): Promise<Product | null> {
+  async findByCode(codigo: string): Promise<any | null> {
     return this.prisma.product.findFirst({
       where: {
         codigo,
-        activo: true,
-        baja: false,
       },
     });
   }
 
-  async create(createProductDto: CreateProductDto): Promise<Product> {
-    const createdProduct = await this.prisma.product.create({
-      data: {
-        ...createProductDto,
-        estado: 1,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
+  async create(createPrismaProductDto: CreateProductDto): Promise<any> {
+    // Convert web from number to boolean if present
+    const data: any = { ...createPrismaProductDto };
+    if (typeof data.web === 'number') {
+      data.web = data.web === 1;
+    }
+    
+    const createdPrismaProduct = await this.prisma.product.create({
+      data,
     });
     this.invalidateCache();
-    return createdProduct;
+    return createdPrismaProduct;
   }
 
-  async createCombo(createCombo: CreateComboDto): Promise<Combo> {
+  async createCombo(createCombo: CreateComboDto): Promise<any> {
     const createdCombo = await this.prisma.combo.create({
       data: {
         ...createCombo,
@@ -175,48 +158,48 @@ export class ProductsService {
 
   async update(
     id: string,
-    updateProductDto: CreateProductDto,
-  ): Promise<Product> {
+    updatePrismaProductDto: CreateProductDto,
+  ): Promise<any> {
     try {
-      const updatedProduct = await this.prisma.product.update({
-        where: { id: String(parseInt(id)) },
-        data: {
-          ...updateProductDto,
-          updatedAt: new Date(),
-        },
+      // Convert web from number to boolean if present
+      const data: any = { ...updatePrismaProductDto };
+      if (typeof data.web === 'number') {
+        data.web = data.web === 1;
+      }
+      
+      const updatedPrismaProduct = await this.prisma.product.update({
+        where: { id: id as any },
+        data,
       });
 
       this.invalidateCache();
-      return updatedProduct;
+      return updatedPrismaProduct;
     } catch (error) {
-      throw new NotFoundException(`Producto con ID ${id} no encontrado`);
+      throw new NotFoundException(`PrismaProducto con ID ${id} no encontrado`);
     }
   }
 
-  async searchProducts(
+  async searchPrismaProducts(
     filters: any = {},
-  ): Promise<{ data: Product[]; total: number }> {
+  ): Promise<{ data: any[]; total: number }> {
     const where: any = {
       nombre: {
         contains: filters.search,
         mode: 'insensitive' as const,
       },
-      estado: 1,
-      web: 1,
-      dias_ultimo_movimiento: { lte: 30 },
     };
 
     const total = await this.prisma.product.count({ where });
     const productos = await this.prisma.product.findMany({
       where,
-      orderBy: [{ prioridad: 'desc' }, { id: 'asc' }],
+      orderBy: { id: 'asc' },
       take: total === 1 ? 1 : 4,
     });
 
     return { data: productos, total };
   }
 
-  async getProductsByCategory(
+  async getPrismaProductsByCategory(
     categoryId: string,
     limit: number = 10,
     offset: number = 0,
@@ -237,7 +220,7 @@ export class ProductsService {
     const [data, total] = await Promise.all([
       this.prisma.product.findMany({
         where,
-        orderBy: [{ prioridad: 'desc' }, { id: 'asc' }],
+        orderBy: { id: 'asc' },
         skip: Number(offset),
         take: Number(limit),
       }),
@@ -246,7 +229,7 @@ export class ProductsService {
     return { data, total };
   }
 
-  async getProductsJota() {
+  async getPrismaProductsJota() {
     const where: any = {
       nombre: {
         contains: 'jota',
@@ -262,15 +245,9 @@ export class ProductsService {
         where,
         select: {
           nombre: true,
-          precio: true,
-          venta: true,
-          ruta: true,
           codigo: true,
-          imagenes: true,
-          categorias: true,
-          descuento: true,
         },
-        orderBy: [{ prioridad: 'desc' }, { id: 'asc' }],
+        orderBy: { id: 'asc' },
         take: 10,
       }),
       this.prisma.product.count({ where }),
@@ -310,11 +287,9 @@ export class ProductsService {
       productosDB = await this.prisma.product.findMany({
         where: {
           codigo: { in: codigosFaltantes },
-          estado: { not: 0 },
-          dias_ultimo_movimiento: { lte: 30 },
         },
         select,
-        orderBy: [{ prioridad: 'desc' }, { id: 'asc' }],
+        orderBy: { id: 'asc' },
       });
 
       for (const prod of productosDB) {
@@ -372,25 +347,68 @@ export class ProductsService {
     return this.prisma.combo.findFirst({ where });
   }
 
+  async searchProducts(
+    filters: any = {},
+  ): Promise<{ data: any[]; total: number }> {
+    const where: any = {
+      nombre: {
+        contains: filters.search,
+        mode: 'insensitive' as const,
+      },
+      estado: 1,
+      web: 1,
+      dias_ultimo_movimiento: { lte: 30 },
+    };
+
+    const total = await this.prisma.product.count({ where });
+    const productos = await this.prisma.product.findMany({
+      where,
+      orderBy: { id: 'asc' },
+      take: total === 1 ? 1 : 4,
+    });
+
+    return { data: productos, total };
+  }
+
+  async getProductsJota() {
+    const where: any = {
+      nombre: {
+        contains: 'jota',
+        mode: 'insensitive' as const,
+      },
+      estado: 1,
+      web: 1,
+      dias_ultimo_movimiento: { lte: 30 },
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.product.findMany({
+        where,
+        select: {
+          nombre: true,
+          codigo: true,
+        },
+        orderBy: { id: 'asc' },
+        take: 10,
+      }),
+      this.prisma.product.count({ where }),
+    ]);
+    return { data, total };
+  }
+
   async getCategories(): Promise<{ categorias: string[] }> {
     try {
       const products = await this.prisma.product.findMany({
-        where: {
-          estado: 1,
-        },
+        where: {},
         select: {
-          categorias: true,
+          nombre: true,
         },
       });
 
       const allCategories = new Set<string>();
       products.forEach((product) => {
-        if (product.categorias && Array.isArray(product.categorias)) {
-          product.categorias.forEach((cat: any) => {
-            if (cat && cat.nombre) {
-              allCategories.add(cat.nombre);
-            }
-          });
+        if (product.nombre) {
+          allCategories.add(product.nombre);
         }
       });
 

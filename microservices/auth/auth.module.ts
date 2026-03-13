@@ -10,10 +10,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { MariaDbModule } from './config/mariadb.module';
 
 @Module({
   imports: [
     DatabaseModule.forRoot(),
+    MariaDbModule,
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
       { name: GuestToken.name, schema: GuestTokenSchema },

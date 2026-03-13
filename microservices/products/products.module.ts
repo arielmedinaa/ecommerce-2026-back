@@ -11,10 +11,12 @@ import { OfertasService } from './service/ofertas.service';
 import { Ofertas, OfertasSchema } from './schemas/ofertas.schema';
 import { OfertasValidationService } from './service/errors/ofertas.spec';
 import { PromosValidationService } from './service/errors/promos.spec';
+import { MariaDbModule } from './config/mariadb.module';
 
 @Module({
   imports: [
     DatabaseModule.forRoot(),
+    MariaDbModule,
     MongooseModule.forFeature([
       { name: Product.name, schema: ProductSchema },
       { name: Promo.name, schema: PromoSchema },
