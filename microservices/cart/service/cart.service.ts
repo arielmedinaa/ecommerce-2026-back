@@ -24,9 +24,12 @@ export class CartContadoService {
   private readonly cacheTTL = 30 * 1000;
 
   constructor(
-    @InjectRepository(Cart) private readonly carrito: Repository<Cart>,
-    @InjectRepository(Transaccion)
-    private readonly transacciones: Repository<Transaccion>,
+    @InjectRepository(Cart, 'WRITE_CONNECTION')
+    private readonly carritoWrite: Repository<Cart>,
+    @InjectRepository(Cart, 'READ_CONNECTION')
+    private readonly carritoRead: Repository<Cart>,
+    @InjectRepository(Transaccion, 'READ_CONNECTION')
+    private readonly transaccionesRead: Repository<Transaccion>,
     @Inject('PRODUCTS_SERVICE')
     private readonly productsService: ClientProxy,
     @Inject('PAYMENTS_SERVICE') private readonly paymentsService: ClientProxy,
@@ -68,7 +71,7 @@ export class CartContadoService {
     }
 
     const articuloTipo = producto.credito ? 'credito' : 'contado';
-    let carritoExistente = await this.carrito
+    let carritoExistente = await this.carritoRead
       .createQueryBuilder('cart')
       .where("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.equipo')) = :equipo", {
         equipo: clienteToken,
@@ -81,18 +84,18 @@ export class CartContadoService {
       .getOne();
 
     if (carritoExistente) {
-      carritoExistente = await this.carrito.findOne({
+      carritoExistente = await this.carritoRead.findOne({
         where: { id: carritoExistente.id },
       });
     }
 
     if (!carritoExistente && codigo === 0) {
-      const maxCodigo = await this.carrito
+      const maxCodigo = await this.carritoRead
         .createQueryBuilder('cart')
         .select('MAX(cart.codigo)', 'max')
         .getRawOne();
       const nuevoCodigo = (maxCodigo?.max || 0) + 1;
-      const nuevoCarrito = this.carrito.create({
+      const nuevoCarrito = this.carritoWrite.create({
         ...NEW_CART_INITIAL_STATE(nuevoCodigo, clienteToken, cuenta),
         articulos: {
           [articuloTipo]: [producto],
@@ -100,9 +103,9 @@ export class CartContadoService {
         },
         estado: '1',
       });
-      await this.carrito.save(nuevoCarrito);
+      await this.carritoWrite.save(nuevoCarrito);
 
-      carritoExistente = await this.carrito.findOne({
+      carritoExistente = await this.carritoRead.findOne({
         where: { id: nuevoCarrito.id },
         order: { codigo: 'DESC' },
       });
@@ -115,7 +118,7 @@ export class CartContadoService {
     }
 
     if (carritoExistente.proceso) {
-      await this.transacciones
+      await this.transaccionesRead
         .createQueryBuilder()
         .update(Transaccion)
         .set({ estado: 0 })
@@ -124,7 +127,7 @@ export class CartContadoService {
           estado: 1,
         })
         .execute();
-      await this.carrito.update(carritoExistente.id, { proceso: '' });
+      await this.carritoWrite.update(carritoExistente.id, { proceso: '' });
     }
 
     const buscarProductoConMismasCondiciones = (
@@ -206,7 +209,7 @@ export class CartContadoService {
     );
     carritoExistente.articulos[articuloTipo] = articulosUnicos;
 
-    await this.carrito.save(carritoExistente);
+    await this.carritoWrite.save(carritoExistente);
 
     return {
       data: [carritoExistente],
@@ -232,7 +235,7 @@ export class CartContadoService {
       };
     }
 
-    const resultado = await this.carrito
+    const resultado = await this.carritoRead
       .createQueryBuilder('cart')
       .where(
         "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.equipo')) = :equipo OR JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.correo')) = :correo",
@@ -343,12 +346,11 @@ export class CartContadoService {
     order: string = 'desc',
     estado: number = 0,
   ): Promise<{ data: Cart[]; success: boolean; message: string }> {
-    const resultado = await this.carrito
+    const resultado = await this.carritoRead
       .createQueryBuilder('cart')
-      .where(
-        "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.equipo')) = :equipo",
-        { equipo: clienteToken },
-      )
+      .where("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.equipo')) = :equipo", {
+        equipo: clienteToken,
+      })
       .orderBy(`cart.${sort}`, order === 'desc' ? 'DESC' : 'ASC')
       .limit(limit)
       .skip(skip)
@@ -401,7 +403,7 @@ export class CartContadoService {
       filtro.cuenta = cuenta;
     }
 
-    const carrito = await this.carrito
+    const carrito = await this.carritoRead
       .createQueryBuilder('cart')
       .where(
         "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.equipo')) = :equipo AND cart.codigo = :codigo AND cart.estado != :estado",
@@ -482,7 +484,7 @@ export class CartContadoService {
         ),
       );
 
-      await this.carrito.update(carrito.id!, {
+      await this.carritoWrite.update(carrito.id!, {
         pago: {
           ...process,
           pagoId: pagoResponse.data.idTransaccion,
@@ -610,7 +612,7 @@ export class CartContadoService {
     }
 
     try {
-      let datos = await this.carrito
+      let datos = await this.carritoRead
         .createQueryBuilder('cart')
         .where(
           "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.equipo')) = :equipo AND cart.codigo = :codigo",

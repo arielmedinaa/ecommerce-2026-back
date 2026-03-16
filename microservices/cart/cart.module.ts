@@ -1,9 +1,6 @@
 import { Module } from '@nestjs/common';
-import { DatabaseModule } from '@shared/config/database/database.module';
-import { Cart, CartSchema } from './schemas/cart.schema'
 import { MongooseModule } from "@nestjs/mongoose";
-import { Llave, LlaveSchema } from './schemas/llave.schema';
-import { Transaccion, TransaccionSchema } from './schemas/transaccion.schema';
+import { DatabaseModule } from '@shared/config/database/database.module';
 import { CartError, CartErrorSchema } from './schemas/errors/cart.error.schema';
 import { CartContadoService } from './service/cart.service';
 import { CartErrorService } from './service/errors/cart-error.service';
@@ -24,18 +21,18 @@ import { MariaDbModule } from './config/mariadb.module';
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1d' },
     }),
-    MariaDbModule,
+    MariaDbModule.forWrite(),
+    MariaDbModule.forRead(),
+    MariaDbModule.forFeature(),
+    MariaDbModule.forFeatureRead(),
     MongooseModule.forFeature([
-      { name: Cart.name, schema: CartSchema },
-      { name: Llave.name, schema: LlaveSchema },
-      { name: Transaccion.name, schema: TransaccionSchema },
       { name: CartError.name, schema: CartErrorSchema },
     ]),
     MicroserviceModule.forRoot([
       'PRODUCTS_SERVICE',
       'PAYMENTS_SERVICE',
     ]),
-    DatabaseModule.forRoot(),
+    DatabaseModule.forRoot(), // Necesario para CartErrorService
   ],
   controllers: [CartController],
   providers: [
@@ -44,7 +41,7 @@ import { MariaDbModule } from './config/mariadb.module';
     CartValidationService,
     ResilientService,
     CachePersistenteService,
-    ObtenerClaveService,
+    //ObtenerClaveService,
     {
       provide: APP_INTERCEPTOR,
       useClass: ErrorLoggingInterceptor,
