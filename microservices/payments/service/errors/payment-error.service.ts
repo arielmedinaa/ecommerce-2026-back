@@ -1,15 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { PaymentError, PaymentErrorDocument } from '../../schemas/errors/payment.error.schema';
+import { Injectable, Logger } from '@nestjs/common';
 import moment from 'moment-timezone';
 
 @Injectable()
 export class PaymentErrorService {
-  constructor(
-    @InjectModel(PaymentError.name)
-    private readonly paymentErrorModel: Model<PaymentErrorDocument>,
-  ) {}
+  private readonly logger = new Logger(PaymentErrorService.name);
 
   async logError(
     paymentId: string,
@@ -18,9 +12,9 @@ export class PaymentErrorService {
     context?: Record<string, any>,
     stackTrace?: string,
     path?: string,
-  ): Promise<PaymentErrorDocument | null> {
+  ): Promise<any | null> {
     try {
-      const errorLog = new this.paymentErrorModel({
+      const errorLog = {
         paymentId,
         errorCode,
         message,
@@ -31,9 +25,10 @@ export class PaymentErrorService {
         },
         stackTrace,
         path,
-      });
+      };
 
-      return await errorLog.save();
+      this.logger.error(`Payment Error [${errorCode}]: ${message}`, errorLog);
+      return errorLog;
     } catch (logError) {
       console.error('Error al guardar log de error de pago:', logError);
       return null;
@@ -45,7 +40,7 @@ export class PaymentErrorService {
     paymentId?: string,
     operation?: string,
     additionalContext?: Record<string, any>,
-  ): Promise<PaymentErrorDocument | null> {
+  ): Promise<any | null> {
     const errorCode = error.name || 'UNKNOWN_ERROR';
     const message = error.message || 'Error desconocido';
     
@@ -68,35 +63,22 @@ export class PaymentErrorService {
     );
   }
 
-  async getErrorLogs(paymentId?: string, limit = 100): Promise<PaymentErrorDocument[]> {
-    const filter = paymentId ? { paymentId } : {};
-    return this.paymentErrorModel
-      .find(filter)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .exec();
+  async getErrorLogs(paymentId?: string, limit = 100): Promise<any[]> {
+    // Implementación simple sin MongoDB
+    this.logger.log(`Getting error logs for payment: ${paymentId}, limit: ${limit}`);
+    return [];
   }
 
   async getErrorStats(): Promise<any> {
-    const stats = await this.paymentErrorModel.aggregate([
-      {
-        $group: {
-          _id: '$errorCode',
-          count: { $sum: 1 },
-          lastOccurrence: { $max: '$createdAt' },
-        },
-      },
-      { $sort: { count: -1 } },
-    ]);
-
-    return stats;
+    // Implementación simple sin MongoDB
+    this.logger.log('Getting error stats');
+    return {};
   }
 
-  async getPaymentErrorHistory(paymentId: string): Promise<PaymentErrorDocument[]> {
-    return this.paymentErrorModel
-      .find({ paymentId })
-      .sort({ createdAt: -1 })
-      .exec();
+  async getPaymentErrorHistory(paymentId: string): Promise<any[]> {
+    // Implementación simple sin MongoDB
+    this.logger.log(`Getting payment error history for: ${paymentId}`);
+    return [];
   }
 
   async logPaymentGatewayError(
@@ -104,7 +86,7 @@ export class PaymentErrorService {
     gateway: string,
     gatewayResponse: any,
     error: any,
-  ): Promise<PaymentErrorDocument | null> {
+  ): Promise<any | null> {
     return this.logError(
       paymentId,
       'GATEWAY_ERROR',
@@ -128,7 +110,7 @@ export class PaymentErrorService {
     field: string,
     value: any,
     validationRule: string,
-  ): Promise<PaymentErrorDocument | null> {
+  ): Promise<any | null> {
     return this.logError(
       paymentId,
       'VALIDATION_ERROR',

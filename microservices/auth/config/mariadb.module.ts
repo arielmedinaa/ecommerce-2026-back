@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { User } from '../schemas/user.schemas';
-import { GuestToken } from '../schemas/guest-token.schemas';
 import { MariaDbConnectionService } from './mariadb-connection.service';
 
 @Module({
@@ -16,13 +15,13 @@ import { MariaDbConnectionService } from './mariadb-connection.service';
         username: configService.get<string>('DATABASE_USER'),
         password: configService.get<string>('DATABASE_PASSWORD'),
         database: configService.get<string>('DATABASE_NAME'),
-        entities: [User, GuestToken],
-        synchronize: false,
+        entities: [User],
+        synchronize: true, // Temporal para desarrollo
         logging: true,
       }),
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([User, GuestToken]),
+    TypeOrmModule.forFeature([User]),
   ],
   providers: [MariaDbConnectionService],
   exports: [TypeOrmModule],

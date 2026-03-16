@@ -1,13 +1,8 @@
-import { Cart } from '../schemas/cart.schemas';
-import { Transaccion } from '../schemas/transaccion.schemas';
-import { Llave } from '../schemas/llave.schemas';
+import { Cart } from '@cart/schemas/cart.schemas';
+import { Transaccion } from '@cart/schemas/transaccion.schemas';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { CartError } from '../schemas/errors/cart.error.schema';
-import { ObtenerClaveService } from '@shared/common/utils/obtenerClave';
 import {
   NEW_CART_INITIAL_STATE,
   NEW_SOLICITUD_INITIAL_STATE,
@@ -17,7 +12,6 @@ import { ResilientService } from '@shared/common/decorators/resilient-client.dec
 import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
 import { CartValidationService } from './cart.service.spec';
 import { CartErrorService } from './errors/cart-error.service';
-import moment from 'moment-timezone';
 import * as https from 'https';
 import * as mysql from 'mysql2/promise';
 import { ESTADO_SOLICITUD_MAP } from '@cart/constants/cart.constants';
@@ -31,13 +25,11 @@ export class CartContadoService {
 
   constructor(
     @InjectRepository(Cart) private readonly carrito: Repository<Cart>,
-    @InjectRepository(Transaccion) private readonly transacciones: Repository<Transaccion>,
-    @InjectRepository(Llave) private readonly llave: Repository<Llave>,
-    @InjectModel(CartError.name) private readonly cartError: Model<CartError>,
+    @InjectRepository(Transaccion)
+    private readonly transacciones: Repository<Transaccion>,
     @Inject('PRODUCTS_SERVICE')
     private readonly productsService: ClientProxy,
     @Inject('PAYMENTS_SERVICE') private readonly paymentsService: ClientProxy,
-    private readonly obtenerClaveService: ObtenerClaveService,
     private readonly cartValidationService: CartValidationService,
     private readonly cartErrorService: CartErrorService,
     private readonly resilientService: ResilientService,
@@ -76,26 +68,47 @@ export class CartContadoService {
     }
 
     const articuloTipo = producto.credito ? 'credito' : 'contado';
-    const carritoExistente = await this.carrito
-      .findOne({
-        where: filtro,
-        order: { codigo: 'DESC' }
-      });
+    let carritoExistente = await this.carrito
+      .createQueryBuilder('cart')
+      .where("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.equipo')) = :equipo", {
+        equipo: clienteToken,
+      })
+      .andWhere(
+        codigo === 0 ? 'cart.estado = :estado' : 'cart.codigo = :codigo',
+        codigo === 0 ? { estado: '1' } : { codigo },
+      )
+      .orderBy('cart.codigo', 'DESC')
+      .getOne();
 
-    if (carritoExistente === null || carritoExistente === undefined) {
-      const nuevoCodigo =
-        await this.obtenerClaveService.obtenerClave('carrito');
+    if (carritoExistente) {
+      carritoExistente = await this.carrito.findOne({
+        where: { id: carritoExistente.id },
+      });
+    }
+
+    if (!carritoExistente && codigo === 0) {
+      const maxCodigo = await this.carrito
+        .createQueryBuilder('cart')
+        .select('MAX(cart.codigo)', 'max')
+        .getRawOne();
+      const nuevoCodigo = (maxCodigo?.max || 0) + 1;
       const nuevoCarrito = this.carrito.create({
         ...NEW_CART_INITIAL_STATE(nuevoCodigo, clienteToken, cuenta),
         articulos: {
           [articuloTipo]: [producto],
           [articuloTipo === 'credito' ? 'contado' : 'credito']: [],
         },
-        estado: '1', // Convert to string for TypeORM
+        estado: '1',
       });
       await this.carrito.save(nuevoCarrito);
+
+      carritoExistente = await this.carrito.findOne({
+        where: { id: nuevoCarrito.id },
+        order: { codigo: 'DESC' },
+      });
+
       return {
-        data: [nuevoCarrito],
+        data: [carritoExistente],
         success: true,
         message: 'CARRITO CREADO CON ÉXITO',
       };
@@ -106,15 +119,12 @@ export class CartContadoService {
         .createQueryBuilder()
         .update(Transaccion)
         .set({ estado: 0 })
-        .where('codigo = :codigo AND estado = :estado', { 
-          codigo: carritoExistente.codigo, 
-          estado: 1 
+        .where('codigo = :codigo AND estado = :estado', {
+          codigo: carritoExistente.codigo,
+          estado: 1,
         })
         .execute();
-      await this.carrito.update(
-        carritoExistente.id,
-        { proceso: '' }
-      );
+      await this.carrito.update(carritoExistente.id, { proceso: '' });
     }
 
     const buscarProductoConMismasCondiciones = (
@@ -122,17 +132,27 @@ export class CartContadoService {
       producto: any,
       tipo: string,
     ) => {
+      if (!carrito.articulos || !carrito.articulos[tipo]) {
+        return null;
+      }
+
       const productosMismoCodigo = carrito.articulos[tipo].filter(
         (articulo: any) => String(articulo.codigo) === String(producto.codigo),
       );
 
       if (tipo === 'credito') {
-        return productosMismoCodigo.find(
+        const encontrado = productosMismoCodigo.find(
           (articulo: any) =>
-            articulo.credito?.cuota === producto.credito?.cuota,
+            articulo.credito?.cuota === producto.credito?.cuota &&
+            articulo.credito?.precio === producto.credito?.precio,
         );
+        return encontrado;
       }
-      return productosMismoCodigo[0];
+
+      const encontrado = productosMismoCodigo.find(
+        (articulo: any) => !articulo.credito,
+      );
+      return encontrado;
     };
 
     const actualizarCantidadProducto = (
@@ -140,14 +160,20 @@ export class CartContadoService {
       producto: any,
       tipo: string,
     ) => {
+      if (!carrito.articulos || !carrito.articulos[tipo]) {
+        return;
+      }
+
       carrito.articulos[tipo] = carrito.articulos[tipo].map((articulo: any) => {
         if (tipo === 'credito') {
           return String(articulo.codigo) === String(producto.codigo) &&
-            articulo.credito?.cuota === producto.credito?.cuota
+            articulo.credito?.cuota === producto.credito?.cuota &&
+            articulo.credito?.precio === producto.credito?.precio
             ? { ...articulo, cantidad: articulo.cantidad + producto.cantidad }
             : articulo;
         } else {
-          return String(articulo.codigo) === String(producto.codigo)
+          return String(articulo.codigo) === String(producto.codigo) &&
+            !articulo.credito
             ? { ...articulo, cantidad: articulo.cantidad + producto.cantidad }
             : articulo;
         }
@@ -167,26 +193,20 @@ export class CartContadoService {
       producto,
       articuloTipo,
     );
+
     if (productoExistente) {
       actualizarCantidadProducto(carritoExistente, producto, articuloTipo);
-      await this.carrito.update(
-        carritoExistente.id,
-        {
-          [`articulos.${articuloTipo}`]:
-            carritoExistente.articulos[articuloTipo],
-        }
-      );
     } else {
       agregarNuevoProducto(carritoExistente, producto, articuloTipo);
-      const currentArticulos = carritoExistente.articulos[articuloTipo] || [];
-      currentArticulos.push(producto);
-      await this.carrito.update(
-        carritoExistente.id,
-        {
-          [`articulos.${articuloTipo}`]: currentArticulos,
-        }
-      );
     }
+
+    const articulosUnicos = this.eliminarDuplicados(
+      carritoExistente.articulos[articuloTipo],
+      articuloTipo,
+    );
+    carritoExistente.articulos[articuloTipo] = articulosUnicos;
+
+    await this.carrito.save(carritoExistente);
 
     return {
       data: [carritoExistente],
@@ -198,12 +218,8 @@ export class CartContadoService {
   async getCart(
     clienteToken: string,
     cuenta?: string,
-    codigo?: 0,
+    codigo?: number,
   ): Promise<{ data: Record<string, any>; success: boolean; message: string }> {
-    const filtro: any = {
-      $or: [{ 'cliente.equipo': clienteToken }, { 'cliente.correo': cuenta }],
-    };
-    codigo === 0 ? (filtro.estado = 1) : (filtro.codigo = codigo);
     const cacheKey = `cart_${clienteToken}_${cuenta}_${codigo}`;
     const now = Date.now();
     const cached = this.cartCache.get(cacheKey);
@@ -215,12 +231,17 @@ export class CartContadoService {
         message: 'Carrito recuperado',
       };
     }
+
     const resultado = await this.carrito
       .createQueryBuilder('cart')
-      .where('cart.cliente->>"$.equipo" = :equipo OR cart.cliente->>"$.correo" = :correo', 
-        { equipo: clienteToken, correo: cuenta })
-      .andWhere(codigo === 0 ? 'cart.estado = :estado' : 'cart.codigo = :codigo',
-        codigo === 0 ? { estado: '1' } : { codigo })
+      .where(
+        "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.equipo')) = :equipo OR JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.correo')) = :correo",
+        { equipo: clienteToken, correo: cuenta },
+      )
+      .andWhere(
+        codigo === 0 ? 'cart.estado = :estado' : 'cart.codigo = :codigo',
+        codigo === 0 ? { estado: '1' } : { codigo },
+      )
       .orderBy('cart.codigo', 'DESC')
       .getOne();
     if (!resultado) {
@@ -229,9 +250,9 @@ export class CartContadoService {
 
     const articulosRaw = [...(resultado.articulos?.contado || [])];
     const codigos = [...new Set(articulosRaw.map((a) => String(a.codigo)))];
-    
+
     const productsCacheKey = `cart_products_${codigos.join('_')}`;
-    
+
     try {
       const [productos]: any = await this.cacheService.getWithFallback(
         productsCacheKey,
@@ -280,7 +301,7 @@ export class CartContadoService {
           };
         });
       };
-      
+
       if (resultado.articulos) {
         if (resultado.articulos.contado) {
           resultado.articulos.contado = enriquecerArticulos(
@@ -324,7 +345,10 @@ export class CartContadoService {
   ): Promise<{ data: Cart[]; success: boolean; message: string }> {
     const resultado = await this.carrito
       .createQueryBuilder('cart')
-      .where("cart.cliente->>'$.equipo' = :equipo", { equipo: clienteToken })
+      .where(
+        "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.equipo')) = :equipo",
+        { equipo: clienteToken },
+      )
       .orderBy(`cart.${sort}`, order === 'desc' ? 'DESC' : 'ASC')
       .limit(limit)
       .skip(skip)
@@ -379,22 +403,14 @@ export class CartContadoService {
 
     const carrito = await this.carrito
       .createQueryBuilder('cart')
-      .where("cart.cliente->>'$.equipo' = :equipo AND cart.codigo = :codigo AND cart.estado != :estado", 
-        { equipo: clienteToken, codigo, estado: '0' })
+      .where(
+        "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.equipo')) = :equipo AND cart.codigo = :codigo AND cart.estado != :estado",
+        { equipo: clienteToken, codigo, estado: '0' },
+      )
       .getOne();
     if (!carrito) {
       const error = new Error(
         'CARRITO NO ENCONTRADO O CON POSIBLE PAGO CONFIRMADO',
-      );
-      await this.cartErrorService.logMicroserviceError(
-        error,
-        codigo?.toString(),
-        'finishCart',
-        {
-          motivo: 'carrito_no_encontrado_o_con_posible_pago_confirmado',
-          filtro,
-          codigo,
-        },
       );
       throw error;
     }
@@ -443,6 +459,7 @@ export class CartContadoService {
     descripcion = paymentData.getDescripcion();
 
     try {
+      this.logger.log('Registrando pago en payments service');
       const pagoResponse = await firstValueFrom(
         this.paymentsService.send(
           { cmd: 'registrar_pago' },
@@ -477,9 +494,6 @@ export class CartContadoService {
           equipo: clienteToken,
         },
         envio: process?.envio || {},
-        finished: moment()
-          .tz('America/Asuncion')
-          .format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
       });
 
       setImmediate(async () => {
@@ -598,8 +612,10 @@ export class CartContadoService {
     try {
       let datos = await this.carrito
         .createQueryBuilder('cart')
-        .where("cart.cliente->>'$.equipo' = :equipo AND cart.codigo = :codigo", 
-          { equipo: clienteToken, codigo })
+        .where(
+          "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.equipo')) = :equipo AND cart.codigo = :codigo",
+          { equipo: clienteToken, codigo },
+        )
         .getOne();
       if (!datos) {
         return {
@@ -827,5 +843,37 @@ export class CartContadoService {
       console.error('Error consultando base de datos Econt:', error);
       return '00';
     }
+  }
+
+  private eliminarDuplicados(articulos: any[], tipo: string): any[] {
+    if (!articulos || articulos.length === 0) {
+      return [];
+    }
+
+    const mapaUnicos = new Map();
+
+    articulos.forEach((articulo) => {
+      if (tipo === 'credito') {
+        const clave = `${articulo.codigo}_${articulo.credito?.cuota}_${articulo.credito?.precio}`;
+
+        if (!mapaUnicos.has(clave)) {
+          mapaUnicos.set(clave, articulo);
+        } else {
+          const existente = mapaUnicos.get(clave);
+          existente.cantidad += articulo.cantidad;
+        }
+      } else {
+        const clave = String(articulo.codigo);
+
+        if (!mapaUnicos.has(clave)) {
+          mapaUnicos.set(clave, articulo);
+        } else {
+          const existente = mapaUnicos.get(clave);
+          existente.cantidad += articulo.cantidad;
+        }
+      }
+    });
+
+    return Array.from(mapaUnicos.values());
   }
 }

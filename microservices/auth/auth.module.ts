@@ -2,9 +2,6 @@ import { Module } from '@nestjs/common';
 import { AuthController } from './controller/auth.controller';
 import { AuthService } from './service/auth.service';
 import { GuestService } from './service/guest.service';
-import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from './schemas/user.schema';
-import { GuestToken, GuestTokenSchema } from './schemas/guest-token.schema';
 import { DatabaseModule } from '@shared/config/database/database.module';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -16,10 +13,6 @@ import { MariaDbModule } from './config/mariadb.module';
   imports: [
     DatabaseModule.forRoot(),
     MariaDbModule,
-    MongooseModule.forFeature([
-      { name: User.name, schema: UserSchema },
-      { name: GuestToken.name, schema: GuestTokenSchema },
-    ]),
     PassportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'default-secret',

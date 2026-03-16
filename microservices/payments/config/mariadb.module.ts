@@ -1,9 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { Cart } from '../schemas/cart.schemas';
-import { Llave } from '../schemas/llave.schemas';
-import { Transaccion } from '../schemas/transaccion.schemas';
+import { Payment } from '../schemas/payments.schema';
 import { MariaDbConnectionService } from './mariadb-connection.service';
 
 @Module({
@@ -13,17 +11,17 @@ import { MariaDbConnectionService } from './mariadb-connection.service';
       useFactory: (configService: ConfigService) => ({
         type: 'mysql',
         host: configService.get<string>('DATABASE_HOST'),
-        port: configService.get<number>('DATABASE_PORT', 3306),
+        port: configService.get<number>('DATABASE_PORT'),
         username: configService.get<string>('DATABASE_USER'),
         password: configService.get<string>('DATABASE_PASSWORD'),
         database: configService.get<string>('DATABASE_NAME'),
-        entities: [Cart, Llave, Transaccion],
-        synchronize: true, // Cambiar a true para crear tablas automáticamente
-        logging: true,
+        entities: [Payment],
+        synchronize: true, // Solo para desarrollo
+        logging: configService.get<string>('NODE_ENV') === 'development',
       }),
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([Cart, Llave, Transaccion]),
+    TypeOrmModule.forFeature([Payment]),
   ],
   providers: [MariaDbConnectionService],
   exports: [TypeOrmModule],

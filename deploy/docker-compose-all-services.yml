@@ -186,7 +186,7 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - PORT=3104
-      - PAYMENTS_PORT=3104
+      - PAYMENTS_PORT=3105
       - IS_DOCKER=true
       - RUN_MODE=all
       - SERVICE_NAME=PAYMENTS_SERVICE

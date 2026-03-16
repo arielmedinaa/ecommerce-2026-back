@@ -11,17 +11,14 @@ RUN apk add --no-cache \
 
 RUN npm install -g nodemon ts-node tsconfig-paths
 
-COPY microservices/cart/package*.json ./
+COPY microservices/cart/package*.json .
 COPY yarn.lock ./
 COPY tsconfig.json ./
 COPY tsconfig.paths.json ./
 
-RUN yarn config set network-timeout 600000 && \
-    yarn config set registry https://registry.npmjs.org/ && \
-    yarn install --network-timeout 600000 || \
-    npm install --registry https://registry.npmjs.org/ --timeout=600000
-RUN yarn add @nestjs/typeorm typeorm mysql2
-RUN yarn add -D tsconfig-paths
+RUN yarn install --network-timeout 600000 && \
+    yarn add @nestjs/typeorm typeorm mysql2 && \
+    yarn add -D tsconfig-paths
 
 COPY microservices/cart/ ./src/
 COPY shared/ ./shared/

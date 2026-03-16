@@ -1,57 +1,29 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
-export type PaymentsDocument = Payments & Document;
+@Entity('pagos')
+export class Payment {
+  @PrimaryGeneratedColumn()
+  id: number;
 
-@Schema({
-  timestamps: true,
-  collection: 'transacciones',
-})
-export class Payments {
-  @Prop()
-  createdAt: Date;
-
-  @Prop()
-  updatedAt: Date;
-  @Prop({ type: Number, required: true })
+  @Column({ name: 'codigo_carrito' })
   codigoCarrito: number;
 
-  @Prop({ type: Object, required: true })
+  @Column({ type: 'json', default: '{}' })
   carrito: Record<string, any>;
 
-  @Prop({
-    type: String,
-    required: true,
-    enum: [
-      'pendiente',
-      'procesando',
-      'completado',
-      'fallido',
-      'cancelado',
-      'reembolsado',
-    ],
-  })
+  @Column({ type: 'varchar', length: 20 })
   estado: string;
 
-  @Prop({
-    type: String,
-    required: true,
-    enum: [
-      'pagopar',
-      'bancard',
-      'efectivo contra entrega',
-      'tarjeta contra entrega',
-    ],
-  })
+  @Column({ type: 'varchar', length: 50 })
   metodoPago: string;
 
-  @Prop({ type: Number, required: true })
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   monto: number;
 
-  @Prop({ type: String, required: true })
+  @Column({ type: 'varchar', length: 10, default: 'PYG' })
   moneda: string;
 
-  @Prop({ type: Object, default: {} })
+  @Column({ type: 'json', default: '{}' })
   respuestaPagopar: {
     idPago?: string;
     estado?: string;
@@ -61,7 +33,7 @@ export class Payments {
     respuesta?: any;
   };
 
-  @Prop({ type: Object, default: {} })
+  @Column({ type: 'json', default: '{}' })
   respuestaBancard: {
     idPago?: string;
     estado?: string;
@@ -70,24 +42,13 @@ export class Payments {
     respuesta?: any;
   };
 
-  @Prop({ type: String })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   idTransaccion: string;
 
-  @Prop({ type: String })
+  @Column({ type: 'text', nullable: true })
   descripcion: string;
 
-  @Prop({
-    type: Object,
-    required: true,
-    default: {
-      equipo: '',
-      nombre: '',
-      email: '',
-      telefono: '',
-      documento: '',
-      nroDocumento: '',
-    },
-  })
+  @Column({ type: 'json', default: '{}' })
   cliente: {
     equipo: string;
     nombre: string;
@@ -97,22 +58,22 @@ export class Payments {
     nroDocumento: string;
   };
 
-  @Prop({ type: Object, default: {} })
+  @Column({ type: 'json', default: '{}' })
   metadatos: Record<string, any>;
 
-  @Prop({ type: Date })
+  @Column({ type: 'datetime', nullable: true })
   finalizado: Date;
 
-  @Prop({ type: String })
+  @Column({ type: 'text', nullable: true })
   motivoFallo: string;
 
-  @Prop({ type: Number, default: 0 })
+  @Column({ type: 'int', default: 0 })
   intentosReintentar: number;
 
-  @Prop({ type: Date })
+  @Column({ type: 'datetime', nullable: true })
   proximoReintento: Date;
 
-  @Prop({ type: Object, default: {} })
+  @Column({ type: 'json', default: '[]' })
   reembolsos: Array<{
     monto: number;
     motivo: string;
@@ -121,11 +82,21 @@ export class Payments {
     idReembolso?: string;
   }>;
 
-  @Prop({ type: Date })
+  @Column({ type: 'datetime', nullable: true })
   procesado: Date;
 
-  @Prop({ type: Date })
+  @Column({ type: 'datetime', nullable: true })
   expira: Date;
-}
 
-export const PaymentsSchema = SchemaFactory.createForClass(Payments);
+  @Column({ type: 'boolean', default: false })
+  finalizadoFlag: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  procesadoFlag: boolean;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+}

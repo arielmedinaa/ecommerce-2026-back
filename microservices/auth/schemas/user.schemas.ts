@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
-@Entity('users')
+@Entity('usuarios')
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
@@ -9,26 +9,35 @@ export class User {
   email: string;
 
   @Column({ nullable: true })
-  name: string;
+  nombre: string;
 
   @Column({ nullable: true })
   avatar: string;
 
   @Column()
-  provider: string;
+  proveedor: string;
 
   @Column()
-  providerId: string;
+  idProveedor: string;
 
   @Column({ default: true })
-  isActive: boolean;
+  estaActivo: boolean;
 
   @Column({ type: 'datetime', nullable: true })
-  lastLoginAt: Date;
+  ultimoInicioSesion: Date;
+
+  @Column({ default: false })
+  esInvitado: boolean;
+
+  @Column({ type: 'json', nullable: true })
+  infoDispositivo?: any;
+
+  @Column({ type: 'datetime', nullable: true })
+  fechaExpiracion?: Date;
 
   @CreateDateColumn()
-  createdAt: Date;
+  fechaCreacion: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  fechaActualizacion: Date;
 }

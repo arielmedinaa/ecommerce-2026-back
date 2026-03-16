@@ -3,10 +3,6 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AuthService } from '../service/auth.service';
 import { GuestService } from '../service/guest.service';
 
-interface AuthenticatedRequest {
-  user?: any;
-}
-
 @Controller()
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
@@ -17,9 +13,14 @@ export class AuthController {
   ) {}
 
   @MessagePattern({ cmd: 'create_guest_session' })
-  async createGuestSession(@Payload() payload: { ipAddress: string; userAgent: string }) {
+  async createGuestSession(
+    @Payload() payload: { ipAddress: string; userAgent: string },
+  ) {
     try {
-      const result = await this.guestService.createGuestToken(payload.ipAddress, payload.userAgent);
+      const result = await this.guestService.createGuestToken(
+        payload.ipAddress,
+        payload.userAgent,
+      );
 
       return {
         access_token: result.token,
@@ -79,27 +80,6 @@ export class AuthController {
       return await this.authService.login(payload);
     } catch (error) {
       this.logger.error('Error in login_user:', error);
-      throw error;
-    }
-  }
-
-  @MessagePattern({ cmd: 'validate_guest_token' })
-  async validateGuestToken(@Payload() payload: { token: string; ipAddress: string }) {
-    try {
-      return await this.guestService.validateGuestToken(payload.token, payload.ipAddress);
-    } catch (error) {
-      this.logger.error('Error in validate_guest_token:', error);
-      throw error;
-    }
-  }
-
-  @MessagePattern({ cmd: 'revoke_guest_token' })
-  async revokeGuestToken(@Payload() payload: { token: string }) {
-    try {
-      await this.guestService.revokeGuestToken(payload.token);
-      return { success: true };
-    } catch (error) {
-      this.logger.error('Error in revoke_guest_token:', error);
       throw error;
     }
   }

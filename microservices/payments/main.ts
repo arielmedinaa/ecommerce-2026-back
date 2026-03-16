@@ -13,7 +13,7 @@ async function bootstrap() {
     app.connectMicroservice({
         transport: Transport.TCP,
         options: {
-            host: process.env.PAYMENTS_HOST || '0.0.0.0',
+            host: process.env.PAYMENTS_SERVICE_HOST || '0.0.0.0',
             port,
         },
     })

@@ -1,7 +1,7 @@
+import { User } from '@auth/schemas/user.schemas';
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { User } from '../schemas/user.schema';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
@@ -9,28 +9,75 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
-    @InjectModel(User.name) private readonly userModel: Model<User>,
+    @InjectRepository(User) private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
   ) {}
 
-  async validateGoogleUser(profile: any): Promise<User> {
-    const { providerId, email, name, avatar } = profile;
+  async createGuestUser(deviceInfo?: any): Promise<User> {
+    const guestToken = this.generateGuestToken();
+    const guestEmail = `guest_${guestToken}@temp.ecommerce`;
 
-    let user = await this.userModel.findOne({ providerId, provider: 'google' });
-    
+    const guestUser = this.userRepository.create({
+      email: guestEmail,
+      nombre: 'Usuario Invitado',
+      proveedor: 'guest',
+      idProveedor: guestToken,
+      esInvitado: true,
+      infoDispositivo: deviceInfo || {},
+      ultimoInicioSesion: new Date(),
+      fechaExpiracion: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días
+    });
+
+    await this.userRepository.save(guestUser);
+    this.logger.log(`Created new guest user: ${guestToken}`);
+    return guestUser;
+  }
+
+  async validateGuestUser(guestToken: string): Promise<User | null> {
+    const user = await this.userRepository.findOne({
+      where: {
+        idProveedor: guestToken,
+        proveedor: 'guest',
+        esInvitado: true,
+      },
+    });
+
+    // Verificar si no ha expirado
+    if (user && user.fechaExpiracion && user.fechaExpiracion < new Date()) {
+      return null;
+    }
+
+    return user;
+  }
+
+  private generateGuestToken(): string {
+    return (
+      Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15)
+    );
+  }
+
+  async validateGoogleUser(profile: any): Promise<User> {
+    const { idProveedor, email, nombre, avatar } = profile;
+
+    let user = await this.userRepository.findOne({
+      where: { idProveedor, proveedor: 'google' },
+    });
+
     if (!user) {
-      user = await this.userModel.create({
+      user = this.userRepository.create({
         email,
-        name,
+        nombre,
         avatar,
-        provider: 'google',
-        providerId,
-        lastLoginAt: new Date(),
+        proveedor: 'google',
+        idProveedor,
+        ultimoInicioSesion: new Date(),
       });
+      await this.userRepository.save(user);
       this.logger.log(`Created new Google user: ${email}`);
     } else {
-      user.lastLoginAt = new Date();
-      await user.save();
+      user.ultimoInicioSesion = new Date();
+      await this.userRepository.save(user);
     }
 
     return user;
@@ -38,22 +85,58 @@ export class AuthService {
 
   async login(user: any) {
     const payload = {
-      sub: user._id,
+      sub: user.id,
       email: user.email,
-      provider: user.provider,
-      name: user.name,
+      provider: user.proveedor,
+      name: user.nombre,
+      esInvitado: user.esInvitado || false,
     };
 
     return {
       access_token: this.jwtService.sign(payload),
       user: {
-        id: user._id,
+        id: user.id,
         email: user.email,
-        name: user.name,
-        provider: user.provider,
+        name: user.nombre,
+        provider: user.proveedor,
         avatar: user.avatar,
+        esInvitado: user.esInvitado || false,
+        guestToken: user.esInvitado ? user.idProveedor : null,
       },
     };
+  }
+
+  async loginGuest(guestToken: string): Promise<any> {
+    const user = await this.validateGuestUser(guestToken);
+    if (!user) {
+      throw new Error('Guest token expired or invalid');
+    }
+
+    return this.login(user);
+  }
+
+  async migrateGuestToRegistered(
+    guestToken: string,
+    googleProfile: any,
+  ): Promise<User> {
+    const guestUser = await this.validateGuestUser(guestToken);
+    if (!guestUser) {
+      throw new Error('Guest token expired or invalid');
+    }
+
+    // Crear usuario Google
+    const googleUser = await this.validateGoogleUser(googleProfile);
+
+    // Migrar carritos del guest al Google user (actualizar cliente.equipo)
+    // Esto se haría en el servicio de cart
+
+    // Eliminar usuario invitado
+    await this.userRepository.delete(guestUser.id);
+
+    this.logger.log(
+      `Migrated guest ${guestToken} to Google user ${googleUser.email}`,
+    );
+    return googleUser;
   }
 
   async extractTokenFromContext(context: any): Promise<string | null> {

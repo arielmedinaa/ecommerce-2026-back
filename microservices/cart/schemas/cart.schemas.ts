@@ -5,7 +5,7 @@ export class Cart {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ unique: true })
   codigo: number;
 
   @Column({ nullable: true })

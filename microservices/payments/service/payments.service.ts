@@ -1,15 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Payments, PaymentsDocument } from '../schemas/payments.schema';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Payment } from '../schemas/payments.schema';
 import moment from 'moment-timezone';
 import { PaymentErrorService } from './errors/payment-error.service';
 
 @Injectable()
 export class PaymentsService {
+
   constructor(
-    @InjectModel(Payments.name)
-    private readonly paymentsModel: Model<PaymentsDocument>,
+    @InjectRepository(Payment)
+    private readonly paymentRepository: Repository<Payment>,
     private readonly paymentErrorService: PaymentErrorService,
   ) {}
 
@@ -23,10 +24,10 @@ export class PaymentsService {
     descripcion?: string,
     respuestaPagopar?: any,
     respuestaBancard?: any,
-  ): Promise<{ data: Payments | null; success: boolean; message: string }> {
+  ): Promise<{ data: Payment | null; success: boolean; message: string }> {
     const idTransaccion = this.generarIdTransaccion();
     try {
-      const nuevoPago = new this.paymentsModel({
+      const nuevoPago = this.paymentRepository.create({
         codigoCarrito,
         carrito,
         estado: 'pendiente',
@@ -35,7 +36,14 @@ export class PaymentsService {
         moneda,
         idTransaccion,
         descripcion: descripcion || `Pago del carrito ${codigoCarrito}`,
-        cliente: cliente || {},
+        cliente: cliente || {
+          equipo: '',
+          nombre: '',
+          email: '',
+          telefono: '',
+          documento: '',
+          nroDocumento: '',
+        },
         respuestaPagopar: respuestaPagopar || {},
         respuestaBancard: respuestaBancard || {},
         metadatos: {},
@@ -43,7 +51,7 @@ export class PaymentsService {
         expira: this.calcularFechaExpiracion(metodoPago),
       });
 
-      await nuevoPago.save();
+      await this.paymentRepository.save(nuevoPago);
       return {
         data: nuevoPago,
         success: true,
@@ -65,12 +73,12 @@ export class PaymentsService {
 
   async listarPagosPorCarrito(
     codigoCarrito: number,
-  ): Promise<{ data: Payments[]; success: boolean; message: string }> {
+  ): Promise<{ data: Payment[]; success: boolean; message: string }> {
     try {
-      const pagos = await this.paymentsModel
-        .find({ codigoCarrito })
-        .sort({ codigoCarrito: -1 })
-        .lean();
+      const pagos = await this.paymentRepository.find({
+        where: { codigoCarrito },
+        order: { codigoCarrito: 'DESC' },
+      });
 
       if (!pagos || pagos.length === 0) {
         return {
@@ -98,12 +106,11 @@ export class PaymentsService {
     codigoCarrito: number,
   ): Promise<{ data: any[]; success: boolean; message: string }> {
     try {
-      const pagos = await this.paymentsModel
-        .find({
-          codigoCarrito,
-          'reembolsos.0': { $exists: true },
-        })
-        .lean();
+      const pagos = await this.paymentRepository
+        .createQueryBuilder('payment')
+        .where('payment.codigoCarrito = :codigoCarrito', { codigoCarrito })
+        .andWhere("JSON_EXTRACT(payment.reembolsos, '$') IS NOT NULL AND JSON_EXTRACT(payment.reembolsos, '$') != '[]'")
+        .getMany();
 
       if (!pagos || pagos.length === 0) {
         return {
@@ -133,16 +140,15 @@ export class PaymentsService {
     codigoCarrito: number,
   ): Promise<{ data: any; success: boolean; message: string }> {
     try {
-      const pagoRechazado = await this.paymentsModel
-        .findOne({
+      const pagoRechazado = await this.paymentRepository.findOne({
+        where: {
           codigoCarrito,
           estado: 'fallido',
-          motivoFallo: { $exists: true, $ne: null },
-        })
-        .sort({ createdAt: -1 })
-        .lean();
+        },
+        order: { createdAt: 'DESC' },
+      });
 
-      if (!pagoRechazado) {
+      if (!pagoRechazado || !pagoRechazado.motivoFallo) {
         return {
           data: null,
           success: false,
@@ -177,7 +183,7 @@ export class PaymentsService {
     respuestaPagopar?: any,
     respuestaBancard?: any,
     motivoFallo?: string,
-  ): Promise<{ data: Payments | null; success: boolean; message: string }> {
+  ): Promise<{ data: Payment | null; success: boolean; message: string }> {
     try {
       const updateData: any = {
         estado,
@@ -185,6 +191,7 @@ export class PaymentsService {
 
       if (estado === 'completado') {
         updateData.finalizado = moment().tz('America/Asuncion').toDate();
+        updateData.finalizadoFlag = true;
       }
 
       if (respuestaPagopar) {
@@ -199,13 +206,9 @@ export class PaymentsService {
         updateData.motivoFallo = motivoFallo;
       }
 
-      const pagoActualizado = await this.paymentsModel
-        .findOneAndUpdate(
-          { idTransaccion },
-          { $set: updateData },
-          { new: true },
-        )
-        .lean();
+      const pagoActualizado = await this.paymentRepository.findOne({
+        where: { idTransaccion },
+      });
 
       if (!pagoActualizado) {
         return {
@@ -215,8 +218,12 @@ export class PaymentsService {
         };
       }
 
+      // Actualizar campos
+      Object.assign(pagoActualizado, updateData);
+      await this.paymentRepository.save(pagoActualizado);
+
       return {
-        data: pagoActualizado as Payments,
+        data: pagoActualizado,
         success: true,
         message: 'ESTADO DE PAGO ACTUALIZADO CON ÉXITO',
       };
