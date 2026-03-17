@@ -373,6 +373,58 @@ export class CartContadoService {
     };
   }
 
+  async getMissingCart(
+    clienteToken: string,
+    limit: number,
+    skip: number,
+    sort: string,
+    order: 'asc' | 'desc' = 'desc',
+  ): Promise<{
+    data: Cart[];
+    success: boolean;
+    message: string;
+  }> {
+    const cacheKey = `missing-cart-${clienteToken}-${limit}-${skip}-${sort}-${order}-${1}`;
+    const now = Date.now();
+    const cached = this.cartCache.get(cacheKey);
+
+    if (cached && now - cached.timestamp < this.cacheTTL) {
+      return {
+        data: [cached.data],
+        success: true,
+        message: 'CARRITOS RECUPERADOS POR CACHE',
+      };
+    }
+
+    let resultado: Cart | null = null;
+    try {
+      resultado = await this.carritoRead
+        .createQueryBuilder('cart')
+        .where(
+          "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.equipo')) = :equipo",
+          { equipo: clienteToken },
+        )
+        .andWhere('cart.estado = :estado', { estado: '1' })
+        .orderBy('cart.codigo', order as 'ASC' | 'DESC')
+        .getOne();
+      if (!resultado) {
+        return { data: [], success: false, message: 'Carrito no encontrado' };
+      }
+    } catch (error) {
+      this.logger.error('Error al obtener carrito faltante:', error);
+      return {
+        data: [error],
+        success: false,
+        message: 'Error al obtener carrito faltante',
+      };
+    } finally {
+      this.cartCache.set(cacheKey, {
+        data: resultado,
+        timestamp: Date.now(),
+      });
+    }
+  }
+
   async finishCart(
     clienteToken: string,
     cuenta?: string,

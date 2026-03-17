@@ -60,10 +60,16 @@ export class CartController {
     }
   }
 
-  @MessagePattern({ cmd: "get_all_cart" })
+  @MessagePattern({ cmd: 'get_all_cart' })
   async getAllCartByClient(@Payload() payload: any) {
     const { token, limit, skip, sort, order, estado } = payload;
     return this.cartService.getAllCart(token, limit, skip, sort, order, estado);
+  }
+
+  @MessagePattern({ cmd: 'get_missing_cart' })
+  async getMissingCart(@Payload() payload: any) {
+    const { token, limit, skip, sort, order } = payload;
+    return this.cartService.getMissingCart(token, limit, skip, sort, order);
   }
 
   @MessagePattern({ cmd: 'finish_cart' })
