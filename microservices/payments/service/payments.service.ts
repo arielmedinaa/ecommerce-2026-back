@@ -9,8 +9,10 @@ import { PaymentErrorService } from './errors/payment-error.service';
 export class PaymentsService {
 
   constructor(
-    @InjectRepository(Payment)
-    private readonly paymentRepository: Repository<Payment>,
+    @InjectRepository(Payment, 'WRITE_CONNECTION')
+    private readonly paymentRepositoryWrite: Repository<Payment>,
+    @InjectRepository(Payment, 'READ_CONNECTION')
+    private readonly paymentRepositoryRead: Repository<Payment>,
     private readonly paymentErrorService: PaymentErrorService,
   ) {}
 
@@ -27,7 +29,7 @@ export class PaymentsService {
   ): Promise<{ data: Payment | null; success: boolean; message: string }> {
     const idTransaccion = this.generarIdTransaccion();
     try {
-      const nuevoPago = this.paymentRepository.create({
+      const nuevoPago = this.paymentRepositoryWrite.create({
         codigoCarrito,
         carrito,
         estado: 'pendiente',
@@ -51,7 +53,7 @@ export class PaymentsService {
         expira: this.calcularFechaExpiracion(metodoPago),
       });
 
-      await this.paymentRepository.save(nuevoPago);
+      await this.paymentRepositoryWrite.save(nuevoPago);
       return {
         data: nuevoPago,
         success: true,
@@ -75,7 +77,7 @@ export class PaymentsService {
     codigoCarrito: number,
   ): Promise<{ data: Payment[]; success: boolean; message: string }> {
     try {
-      const pagos = await this.paymentRepository.find({
+      const pagos = await this.paymentRepositoryRead.find({
         where: { codigoCarrito },
         order: { codigoCarrito: 'DESC' },
       });
@@ -106,7 +108,7 @@ export class PaymentsService {
     codigoCarrito: number,
   ): Promise<{ data: any[]; success: boolean; message: string }> {
     try {
-      const pagos = await this.paymentRepository
+      const pagos = await this.paymentRepositoryRead
         .createQueryBuilder('payment')
         .where('payment.codigoCarrito = :codigoCarrito', { codigoCarrito })
         .andWhere("JSON_EXTRACT(payment.reembolsos, '$') IS NOT NULL AND JSON_EXTRACT(payment.reembolsos, '$') != '[]'")
@@ -140,7 +142,7 @@ export class PaymentsService {
     codigoCarrito: number,
   ): Promise<{ data: any; success: boolean; message: string }> {
     try {
-      const pagoRechazado = await this.paymentRepository.findOne({
+      const pagoRechazado = await this.paymentRepositoryRead.findOne({
         where: {
           codigoCarrito,
           estado: 'fallido',
@@ -206,7 +208,7 @@ export class PaymentsService {
         updateData.motivoFallo = motivoFallo;
       }
 
-      const pagoActualizado = await this.paymentRepository.findOne({
+      const pagoActualizado = await this.paymentRepositoryRead.findOne({
         where: { idTransaccion },
       });
 
@@ -220,7 +222,7 @@ export class PaymentsService {
 
       // Actualizar campos
       Object.assign(pagoActualizado, updateData);
-      await this.paymentRepository.save(pagoActualizado);
+      await this.paymentRepositoryWrite.save(pagoActualizado);
 
       return {
         data: pagoActualizado,

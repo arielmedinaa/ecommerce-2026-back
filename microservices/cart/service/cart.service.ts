@@ -248,7 +248,7 @@ export class CartContadoService {
       .orderBy('cart.codigo', 'DESC')
       .getOne();
     if (!resultado) {
-      return { data: [], success: false, message: 'Carrito no encontrado' };
+      return { data: [], success: false, message: 'Su carrito está vacío' };
     }
 
     const articulosRaw = [...(resultado.articulos?.contado || [])];
@@ -338,6 +338,10 @@ export class CartContadoService {
     }
   }
 
+  async getCartByCode(codigo: number) {
+    return this.carritoRead.findOne({ where: { codigo } });
+  }
+
   async getAllCart(
     clienteToken: string,
     limit: number,
@@ -355,6 +359,14 @@ export class CartContadoService {
       .limit(limit)
       .skip(skip)
       .getMany();
+
+    if (!resultado) {
+      return {
+        data: [],
+        success: false,
+        message: 'No se encontraron carritos',
+      };
+    }
 
     const carritosConEstado = await Promise.all(
       resultado.map(async (carrito) => {
@@ -374,7 +386,6 @@ export class CartContadoService {
   }
 
   async getMissingCart(
-    clienteToken: string,
     limit: number,
     skip: number,
     sort: string,
@@ -384,7 +395,7 @@ export class CartContadoService {
     success: boolean;
     message: string;
   }> {
-    const cacheKey = `missing-cart-${clienteToken}-${limit}-${skip}-${sort}-${order}-${1}`;
+    const cacheKey = `missing-cart-${'administrador'}-${limit}-${skip}-${sort}-${order}-${1}`;
     const now = Date.now();
     const cached = this.cartCache.get(cacheKey);
 
@@ -396,19 +407,22 @@ export class CartContadoService {
       };
     }
 
-    let resultado: Cart | null = null;
+    let resultado: Cart | any = [];
     try {
       resultado = await this.carritoRead
         .createQueryBuilder('cart')
-        .where(
-          "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.equipo')) = :equipo",
-          { equipo: clienteToken },
-        )
-        .andWhere('cart.estado = :estado', { estado: '1' })
+        .where('cart.estado = :estado', { estado: '1' })
+        .select([
+          'cart.codigo',
+          'cart.estado',
+          'cart.articulos',
+          'cart.seguimiento',
+          'cart.cliente',
+        ])
         .orderBy('cart.codigo', order as 'ASC' | 'DESC')
-        .getOne();
-      if (!resultado) {
-        return { data: [], success: false, message: 'Carrito no encontrado' };
+        .getMany();
+      if (!resultado || resultado.length === 0) {
+        return { data: [], success: false, message: 'No se encontraron carritos' };
       }
     } catch (error) {
       this.logger.error('Error al obtener carrito faltante:', error);
@@ -423,6 +437,11 @@ export class CartContadoService {
         timestamp: Date.now(),
       });
     }
+    return {
+      data: resultado,
+      success: true,
+      message: 'Carrito faltante recuperado',
+    };
   }
 
   async finishCart(

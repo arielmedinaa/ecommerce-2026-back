@@ -89,15 +89,11 @@ export class CartController {
     skip: number;
     sort: string;
     order: string;
-  }, @Req() request: Request){
-    const authorization = request.headers.authorization;
-    const token = authorization?.split(' ')[1] || '';
-    
+  }){
     return await firstValueFrom(
       this.cartClient.send({
         cmd: 'get_missing_cart'
-      }, {
-        token: token, 
+      }, { 
         limit: body.limit, 
         skip: body.skip, 
         sort: body.sort, 
