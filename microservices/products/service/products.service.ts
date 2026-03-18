@@ -1,15 +1,30 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, In } from 'typeorm';
 import { PromosService } from './promos.service';
 import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
-import { PrismaClient } from '@prisma/client';
 import { CreateComboDto } from '@products/schemas/dto/create-combo.dto';
+import { Product } from '../schemas/product.schemas';
+import { Combo } from '../schemas/combo.schemas';
+import { Promo } from '../schemas/promo.schemas';
 
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
 
   constructor(
-    private readonly prisma: PrismaClient,
+    @InjectRepository(Product, 'WRITE_CONNECTION')
+    private readonly productWriteRepository: Repository<Product>,
+    @InjectRepository(Product, 'READ_CONNECTION')
+    private readonly productReadRepository: Repository<Product>,
+    @InjectRepository(Combo, 'WRITE_CONNECTION')
+    private readonly comboWriteRepository: Repository<Combo>,
+    @InjectRepository(Combo, 'READ_CONNECTION')
+    private readonly comboReadRepository: Repository<Combo>,
+    @InjectRepository(Promo, 'WRITE_CONNECTION')
+    private readonly promoWriteRepository: Repository<Promo>,
+    @InjectRepository(Promo, 'READ_CONNECTION')
+    private readonly promoReadRepository: Repository<Promo>,
     private readonly promosService: PromosService,
   ) {}
 
@@ -21,9 +36,9 @@ export class ProductsService {
     string,
     { data: any; timestamp: number }
   >();
-  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+  private readonly CACHE_TTL = 5 * 60 * 1000;
   private readonly MAX_CACHE_ENTRIES = 100;
-  private readonly PRODUCT_CACHE_TTL = 10 * 60 * 1000; // 10 minutos
+  private readonly PRODUCT_CACHE_TTL = 10 * 60 * 1000;
 
   private getCacheKey(filters: any): string {
     return JSON.stringify({
@@ -54,44 +69,17 @@ export class ProductsService {
       return { data: cached.data, total: cached.total };
     }
 
-    const where: any = {};
+    const limit = Number(filters.limit) || 0;
+    const offset = Number(filters.offset) || 0;
 
-    if (filters.search) {
-      where.codigo = { contains: filters.search };
-    }
+    const result = await this.productReadRepository.query(
+      'CALL proc_obtener_listado_articulos_ecommerce(?, ?)',
+      [limit, offset]
+    );
 
-    if (filters.codigo) {
-      where.codigo = filters.codigo;
-    }
-
-    if (filters.nombre) {
-      where.nombre = {
-        contains: filters.nombre,
-        mode: 'insensitive',
-      };
-    }
-
-    if (filters.familia) {
-      where.familia = filters.familia;
-    }
-
-    if (filters.proveedor) {
-      where.proveedor = filters.proveedor;
-    }
-
-    if (filters.web !== undefined) {
-      where.web = filters.web === '1' ? 1 : 0;
-    }
-
-    const [data, total] = await Promise.all([
-      this.prisma.product.findMany({
-        where,
-        orderBy: { id: 'asc' },
-        skip: Number(filters.offset) || 0,
-        take: Number(filters.limit) || 20,
-      }),
-      this.prisma.product.count({ where }),
-    ]);
+    //console.log("result", result[0]?.codigo_articulo)
+    const data = result[0] || [];
+    const total = data.length; 
 
     if (this.productosCache.size >= this.MAX_CACHE_ENTRIES) {
       const oldestKey = this.productosCache.keys().next().value;
@@ -103,6 +91,7 @@ export class ProductsService {
       total,
       timestamp: now,
     });
+
     return { data: data as any[], total };
   }
 
@@ -110,19 +99,21 @@ export class ProductsService {
     return this.getCachedPrismaProductos(filters);
   }
 
-  async findOne(id: string): Promise<any> {
-    const product = await this.prisma.product.findFirst({
-      where: { id: id as any },
+  async findOne(codigo_articulo: string): Promise<any> {
+    const product = await this.productReadRepository.findOne({
+      where: { codigo_articulo },
     });
 
     if (!product) {
-      throw new NotFoundException(`PrismaProducto con ID ${id} no encontrado`);
+      throw new NotFoundException(
+        `PrismaProducto con codigo_articulo ${codigo_articulo} no encontrado`,
+      );
     }
     return product;
   }
 
   async findByCode(codigo: string): Promise<any | null> {
-    return this.prisma.product.findFirst({
+    return this.productReadRepository.findOne({
       where: {
         codigo,
       },
@@ -130,28 +121,25 @@ export class ProductsService {
   }
 
   async create(createPrismaProductDto: CreateProductDto): Promise<any> {
-    // Convert web from number to boolean if present
     const data: any = { ...createPrismaProductDto };
     if (typeof data.web === 'number') {
       data.web = data.web === 1;
     }
-    
-    const createdPrismaProduct = await this.prisma.product.create({
-      data,
+
+    const createdPrismaProduct = await this.productWriteRepository.save({
+      ...data,
     });
     this.invalidateCache();
     return createdPrismaProduct;
   }
 
   async createCombo(createCombo: CreateComboDto): Promise<any> {
-    const createdCombo = await this.prisma.combo.create({
-      data: {
-        ...createCombo,
-        ruta: 'combo-default-route',
-        descripcion: createCombo.descripcion || 'Combo description',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
+    const createdCombo = await this.comboWriteRepository.save({
+      ...createCombo,
+      ruta: 'combo-default-route',
+      descripcion: createCombo.descripcion || 'Combo description',
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
     return createdCombo;
   }
@@ -161,16 +149,15 @@ export class ProductsService {
     updatePrismaProductDto: CreateProductDto,
   ): Promise<any> {
     try {
-      // Convert web from number to boolean if present
       const data: any = { ...updatePrismaProductDto };
       if (typeof data.web === 'number') {
         data.web = data.web === 1;
       }
-      
-      const updatedPrismaProduct = await this.prisma.product.update({
-        where: { id: id as any },
+
+      const updatedPrismaProduct = await this.productWriteRepository.update(
+        id as any,
         data,
-      });
+      );
 
       this.invalidateCache();
       return updatedPrismaProduct;
@@ -189,10 +176,10 @@ export class ProductsService {
       },
     };
 
-    const total = await this.prisma.product.count({ where });
-    const productos = await this.prisma.product.findMany({
+    const total = await this.productReadRepository.count({ where });
+    const productos = await this.productReadRepository.find({
       where,
-      orderBy: { id: 'asc' },
+      order: { codigo_articulo: 'asc' },
       take: total === 1 ? 1 : 4,
     });
 
@@ -218,13 +205,13 @@ export class ProductsService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.product.findMany({
+      this.productReadRepository.find({
         where,
-        orderBy: { id: 'asc' },
+        order: { codigo_articulo: 'asc' },
         skip: Number(offset),
         take: Number(limit),
       }),
-      this.prisma.product.count({ where }),
+      this.productReadRepository.count({ where }),
     ]);
     return { data, total };
   }
@@ -241,21 +228,21 @@ export class ProductsService {
     };
 
     const [data, total] = await Promise.all([
-      this.prisma.product.findMany({
+      this.productReadRepository.find({
         where,
         select: {
           nombre: true,
           codigo: true,
         },
-        orderBy: { id: 'asc' },
+        order: { codigo_articulo: 'asc' },
         take: 10,
       }),
-      this.prisma.product.count({ where }),
+      this.productReadRepository.count({ where }),
     ]);
     return { data, total };
   }
 
-  async findByIds(ids: string[], fields?: string, filters: any = {}) {
+  async findManyByIds(ids: string[], fields?: string, filters: any = {}) {
     if (!ids || ids.length === 0) return [];
     const now = Date.now();
 
@@ -284,12 +271,12 @@ export class ProductsService {
 
     let productosDB: any[] = [];
     if (codigosFaltantes.length > 0) {
-      productosDB = await this.prisma.product.findMany({
+      productosDB = await this.productReadRepository.find({
         where: {
-          codigo: { in: codigosFaltantes },
+          codigo: In(codigosFaltantes),
         },
         select,
-        orderBy: { id: 'asc' },
+        order: { codigo_articulo: 'asc' },
       });
 
       for (const prod of productosDB) {
@@ -315,7 +302,7 @@ export class ProductsService {
     return productosFinal.slice(offset, offset + limit);
   }
 
-  async findByPromos(filters: any = {}) {
+  async findManyByPromos(filters: any = {}) {
     const promos = await this.promosService.findAll(filters);
     const codigos: string[] = promos
       .flatMap((promo: any) =>
@@ -325,10 +312,10 @@ export class ProductsService {
       )
       .filter((codigo) => !!codigo);
 
-    return this.findByIds(codigos, filters.fields, filters);
+    return this.findManyByIds(codigos, filters.fields, filters);
   }
 
-  async findComboByCodigo(codigo: string) {
+  async findManyComboByCodigo(codigo: string) {
     const where: any = {
       codigo,
       estado: 1,
@@ -344,7 +331,7 @@ export class ProductsService {
       ],
     };
 
-    return this.prisma.combo.findFirst({ where });
+    return this.comboReadRepository.findOne({ where });
   }
 
   async searchProducts(
@@ -360,10 +347,10 @@ export class ProductsService {
       dias_ultimo_movimiento: { lte: 30 },
     };
 
-    const total = await this.prisma.product.count({ where });
-    const productos = await this.prisma.product.findMany({
+    const total = await this.productReadRepository.count({ where });
+    const productos = await this.productReadRepository.find({
       where,
-      orderBy: { id: 'asc' },
+      order: { codigo_articulo: 'asc' },
       take: total === 1 ? 1 : 4,
     });
 
@@ -382,23 +369,23 @@ export class ProductsService {
     };
 
     const [data, total] = await Promise.all([
-      this.prisma.product.findMany({
+      this.productReadRepository.find({
         where,
         select: {
           nombre: true,
           codigo: true,
         },
-        orderBy: { id: 'asc' },
+        order: { codigo_articulo: 'asc' },
         take: 10,
       }),
-      this.prisma.product.count({ where }),
+      this.productReadRepository.count({ where }),
     ]);
     return { data, total };
   }
 
   async getCategories(): Promise<{ categorias: string[] }> {
     try {
-      const products = await this.prisma.product.findMany({
+      const products = await this.productReadRepository.find({
         where: {},
         select: {
           nombre: true,

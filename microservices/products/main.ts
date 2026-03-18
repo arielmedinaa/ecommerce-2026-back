@@ -8,9 +8,9 @@ import { ConfigService } from '@nestjs/config';
 async function bootstrap() {
   const app = await NestFactory.create(ProductsModule);
   const configService = app.get(ConfigService);
-
   const microservicePort = configService.get<number>('PRODUCTS_PORT', SERVICE_PORTS.PRODUCTS);
-  const microservice = app.connectMicroservice<MicroserviceOptions>({
+  
+  app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.TCP,
     options: {
       host: process.env.PRODUCTS_SERVICE_HOST || '0.0.0.0',

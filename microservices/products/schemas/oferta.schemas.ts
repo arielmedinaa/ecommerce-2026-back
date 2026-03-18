@@ -18,6 +18,6 @@ export class Oferta {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @OneToMany(() => ProductoOferta, productoOferta => productoOferta.oferta)
+  @OneToMany(() => ProductoOferta, productoOferta => productoOferta.oferta, { cascade: true })
   productos: ProductoOferta[];
 }

@@ -1,30 +1,30 @@
-import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Promo } from '@products/schemas/promos.schema';
+import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { PromosValidationService } from './errors/promos.spec';
+import { Promo } from '../schemas/promo.schemas';
 
 @Injectable()
 export class PromosService {
+  private readonly logger = new Logger(PromosService.name);
+
   constructor(
-    @InjectModel(Promo.name) private readonly promoModel: Model<Promo>,
+    @InjectRepository(Promo, 'WRITE_CONNECTION')
+    private readonly promoWriteRepository: Repository<Promo>,
+    @InjectRepository(Promo, 'READ_CONNECTION')
+    private readonly promoReadRepository: Repository<Promo>,
     private readonly promosValidationService: PromosValidationService,
   ) {}
 
   async findAll(filters: any = {}): Promise<Promo[]> {
-    const query: any = { 'estado.descripcion': 'Vigente' };
-    const projection = { 'contenido.producto': { $slice: 1 } };
-
-    return this.promoModel
-      .find(query, projection)
-      .limit(Number(filters.limit))
-      .skip(Number(filters.offset))
-      .sort({ _id: 1 })
-      .lean();
+    return this.promoReadRepository.find({
+      take: Number(filters.limit) || 10,
+      skip: Number(filters.offset) || 0,
+    });
   }
 
-  async createPromo(promo: Promo): Promise<{data: Promo, success: boolean, message: string}> {
-    const validation = await this.promosValidationService.validatePromoPayload(promo);
+  async createPromo(promoData: any): Promise<{ data: any; success: boolean; message: string }> {
+    const validation = await this.promosValidationService.validatePromoPayload(promoData);
     if (!validation.isValid) {
       return {
         data: null,
@@ -32,11 +32,22 @@ export class PromosService {
         message: validation.error.message,
       };
     }
-    const result = await this.promoModel.create(promo);
-    return {
-      data: result,
-      success: true,
-      message: 'PROMO CREADA EXITOSAMENTE',
-    };
+    
+    try {
+      const newPromo = this.promoWriteRepository.create(promoData);
+      const result = await this.promoWriteRepository.save(newPromo);
+      return {
+        data: result,
+        success: true,
+        message: 'PROMO CREADA EXITOSAMENTE',
+      };
+    } catch (error) {
+      this.logger.error('Error createPromo', error);
+      return {
+        data: null,
+        success: false,
+        message: `Error al crear promo: ${error.message}`,
+      };
+    }
   }
 }

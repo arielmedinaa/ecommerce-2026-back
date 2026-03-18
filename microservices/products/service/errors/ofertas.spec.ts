@@ -156,29 +156,16 @@ export class OfertasValidationService {
   }
 
   async validateOfertaId(
-    id: string,
+    id: string | number,
   ): Promise<{ isValid: boolean; error?: any }> {
-    if (!id || id.trim() === '') {
+    const numId = Number(id);
+    if (!id || isNaN(numId) || numId <= 0) {
       this.logger.error('ID de oferta inválido');
       return {
         isValid: false,
         error: {
           success: false,
           message: 'ID de oferta inválido',
-          data: [],
-        },
-      };
-    }
-
-    // Validar formato de ObjectId de MongoDB
-    const objectIdRegex = /^[0-9a-fA-F]{24}$/;
-    if (!objectIdRegex.test(id)) {
-      this.logger.error('ID de oferta no tiene formato válido');
-      return {
-        isValid: false,
-        error: {
-          success: false,
-          message: 'ID de oferta no tiene formato válido',
           data: [],
         },
       };

@@ -1,14 +1,18 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  PrimaryColumn,
+} from 'typeorm';
 
 @Entity('articulo')
 export class Product {
-  @PrimaryGeneratedColumn()
-  id: number;
-
   @Column({ unique: true, nullable: true })
   codigo: string;
 
-  @Column({ unique: true, nullable: true })
+  @PrimaryColumn()
   codigo_articulo: string;
 
   @Column()
@@ -31,12 +35,6 @@ export class Product {
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   precioventa: number;
-
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  precio: number;
-
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  venta: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   impuesto: number;
@@ -162,9 +160,6 @@ export class Product {
   stock2: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  cantidad: number;
-
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   peso: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
@@ -202,25 +197,4 @@ export class Product {
 
   @UpdateDateColumn()
   updated_at: Date;
-
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  descuento: number;
-
-  @Column({ nullable: true })
-  ruta: string;
-
-  @Column({ type: 'json', nullable: true })
-  imagenes: any;
-
-  @Column({ type: 'json', nullable: true })
-  categorias: any;
-
-  @Column({ type: 'int', nullable: true, default: 0 })
-  dias_ultimo_movimiento: number;
-
-  @Column({ type: 'int', nullable: true, default: 0 })
-  prioridad: number;
-
-  @Column({ type: 'int', nullable: true, default: 1 })
-  estado: number;
 }

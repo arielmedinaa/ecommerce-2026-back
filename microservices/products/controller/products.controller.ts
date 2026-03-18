@@ -18,31 +18,30 @@ export class ProductsController {
     return this.productsService.create(createProductDto);
   }
 
-  @MessagePattern({ cmd: 'createCombo' })
-  public createCombo (createComboDto: CreateComboDto): Promise<Combos> {
-    return this.productsService.createCombo(createComboDto);
-  }
+  // @MessagePattern({ cmd: 'createCombo' })
+  // public createCombo (createComboDto: CreateComboDto): Promise<Combos> {
+  //   return this.productsService.createCombo(createComboDto);
+  // }
 
   @MessagePattern({ cmd: 'get_products' })
   async findAll(@Body() filters: { offset: number; limit: number }) {
     try {
-      const products = await this.productsService.findAll(filters);
-      return products;
+      return await this.productsService.findAll(filters);
     } catch (error) {
       this.logger.error('Error in get_products:', error);
       throw error;
     }
   }
 
-  @MessagePattern({ cmd: 'get_products_by_promos' })
-  async findByPromos(filters: any = {}) {
-    try {
-      return await this.productsService.findByPromos(filters);
-    } catch (error) {
-      this.logger.error('Error in findByPromos:', error);
-      throw error;
-    }
-  }
+  // @MessagePattern({ cmd: 'get_products_by_promos' })
+  // async findByPromos(filters: any = {}) {
+  //   try {
+  //     return await this.productsService.findByPromos(filters);
+  //   } catch (error) {
+  //     this.logger.error('Error in findByPromos:', error);
+  //     throw error;
+  //   }
+  // }
 
   @MessagePattern({ cmd: 'search_products' })
   async searchProducts(filters: any = {}) {
@@ -54,10 +53,10 @@ export class ProductsController {
     }
   }
 
-  @MessagePattern({ cmd: 'search_combo_by_codigo' })
-  async searchComboByCodigo(codigo: string) {
-    return await this.productsService.findComboByCodigo(codigo);
-  }
+  // @MessagePattern({ cmd: 'search_combo_by_codigo' })
+  // async searchComboByCodigo(codigo: string) {
+  //   return await this.productsService.findComboByCodigo(codigo);
+  // }
 
   @MessagePattern({ cmd: 'get_categories' })
   async getCategories() {

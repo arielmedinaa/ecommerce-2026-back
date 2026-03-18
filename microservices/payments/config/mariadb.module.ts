@@ -11,7 +11,9 @@ import { MariaDbConnectionService } from './mariadb-connection.service';
     MariaDbModule.forFeature(),
     MariaDbModule.forFeatureRead(),
   ],
-  providers: [MariaDbConnectionService],
+  providers: [
+    // MariaDbConnectionService, // Temporalmente deshabilitado - causa conflicto de dependencias
+  ],
   exports: [TypeOrmModule],
 })
 export class MariaDbModule {
