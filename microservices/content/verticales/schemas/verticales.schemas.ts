@@ -2,8 +2,8 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  Timestamp,
   CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 
 @Entity('verticales')
@@ -24,11 +24,11 @@ export class Vertical {
   created_by: string;
 
   @CreateDateColumn()
-  created_at: Timestamp;
+  created_at: Date;
 
   @Column({ nullable: true })
   updated_by: string;
 
-  @Column({ nullable: true })
-  updated_at: Timestamp;
+  @UpdateDateColumn({ nullable: true })
+  updated_at: Date;
 }

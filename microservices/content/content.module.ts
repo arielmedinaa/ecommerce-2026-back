@@ -1,17 +1,20 @@
 import { Module } from '@nestjs/common';
 import { HomeModule } from './home/home.module';
 import { LandingsModule } from './landings/landings.module';
-import { DatabaseModule } from '@shared/config/database/database.module';
+import { ConfigModule } from '@nestjs/config';
 import { VerticalesModule } from './verticales/verticales.module';
-import { VerticalesService } from './verticales/service/verticales.service';
 import { MariaDbModule } from './config/mariadb.module';
+import { CuponesModule } from './cupones/cupones.module';
 
 @Module({
   imports: [
-    DatabaseModule.forRoot(),
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     HomeModule,
     LandingsModule,
     VerticalesModule,
+    CuponesModule,
     MariaDbModule
   ],
   exports: [
@@ -19,6 +22,5 @@ import { MariaDbModule } from './config/mariadb.module';
     LandingsModule,
     VerticalesModule,
   ],
-  providers: [VerticalesService],
 })
 export class ContentModule {}

@@ -1,74 +1,67 @@
-import { Prop, SchemaFactory, Schema } from '@nestjs/mongoose';
-import { Types, Document } from 'mongoose';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
-export type LandingDocument = Landing & Document;
-
-@Schema({ timestamps: true, collection: 'landings' })
+@Entity('landings')
 export class Landing {
-  @Prop({ required: true, trim: true })
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({ length: 255, unique: true })
   title: string;
 
-  @Prop({ required: true, trim: true })
+  @Column({ length: 255, unique: true })
   slug: string;
 
-  @Prop({ required: true })
+  @Column('longtext')
   content: string;
 
-  @Prop({ type: String, required: true, index: true })
+  @Column({ length: 255 })
   createdBy: string;
 
-  @Prop({ type: String })
+  @Column({ length: 255, nullable: true })
   updatedBy?: string;
 
-  @Prop({ default: true })
+  @Column({ default: true })
   isActive: boolean;
 
-  @Prop({ default: false })
+  @Column({ default: false })
   isPublished: boolean;
 
-  @Prop({ trim: true })
+  @Column({ type: 'text', nullable: true })
   description?: string;
 
-  @Prop({ trim: true })
+  @Column({ length: 255, nullable: true })
   metaTitle?: string;
 
-  @Prop({ trim: true })
+  @Column({ type: 'text', nullable: true })
   metaDescription?: string;
 
-  @Prop({ type: [String], default: [] })
+  @Column('simple-array', { nullable: true })
   metaKeywords?: string[];
 
-  @Prop({ default: 0 })
+  @Column({ default: 0 })
   viewCount: number;
 
-  @Prop({ type: [String], default: [] })
+  @Column('simple-array', { nullable: true })
   tags: string[];
 
-  @Prop({ type: Object })
+  @Column('json', { nullable: true })
   customStyles?: Record<string, any>;
 
-  @Prop({ type: Object })
+  @Column('json', { nullable: true })
   customScripts?: Record<string, any>;
 
-  @Prop({ type: Date })
+  @Column({ type: 'timestamp', nullable: true })
   publicadoEn?: Date;
 
-  @Prop({ type: Date })
+  @Column({ type: 'timestamp', nullable: true })
   expiraEn?: Date;
 
-  @Prop({ type: String })
+  @Column({ length: 255, nullable: true })
   tituloRelacionado: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
-
-export const LandingSchema = SchemaFactory.createForClass(Landing);
-
-LandingSchema.index({ title: 1 }, { unique: true, name: 'title_unique' });
-LandingSchema.index({ slug: 1 }, { unique: true, name: 'slug_unique' });
-
-LandingSchema.index({ createdBy: 1 });
-LandingSchema.index({ isActive: 1 });
-LandingSchema.index({ isPublished: 1 });
-LandingSchema.index({ createdAt: -1 });
-LandingSchema.index({ updatedAt: -1 });
-LandingSchema.index({ tags: 1 });
-LandingSchema.index({ publishedAt: -1 });

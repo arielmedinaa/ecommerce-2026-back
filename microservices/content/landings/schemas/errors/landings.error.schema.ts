@@ -1,42 +1,40 @@
-import { Prop, SchemaFactory, Schema } from "@nestjs/mongoose";
-import { Types, Document } from "mongoose";
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
-export type LandingErrorDocument = LandingError & Document;
-
-@Schema({ timestamps: true, collection: 'logs_landings' })
+@Entity('logs_landings')
 export class LandingError {
-    @Prop({ type: Types.ObjectId, ref: 'Landing', index: true })
-    landingId?: Types.ObjectId;
+    @PrimaryGeneratedColumn('uuid')
+    id: string;
 
-    @Prop({ required: true })
+    @Column({ length: 255, nullable: true })
+    landingId?: string;
+
+    @Column({ length: 255 })
     errorCode: string;
 
-    @Prop({ required: true })
+    @Column('text')
     message: string;
 
-    @Prop({ type: Object })
+    @Column('json', { nullable: true })
     context: Record<string, any>;
 
-    @Prop()
+    @Column('longtext', { nullable: true })
     stackTrace?: string;
 
-    @Prop()
+    @Column({ length: 255, nullable: true })
     path?: string;
 
-    @Prop({ type: Types.ObjectId, ref: 'User' })
-    userId?: Types.ObjectId;
+    @Column({ length: 255, nullable: true })
+    userId?: string;
 
-    @Prop({ trim: true })
+    @Column({ length: 255, nullable: true })
     operation?: string;
 
-    @Prop({ type: Object })
+    @Column('json', { nullable: true })
     requestPayload?: Record<string, any>;
+
+    @CreateDateColumn()
+    createdAt: Date;
+
+    @UpdateDateColumn()
+    updatedAt: Date;
 }
-
-export const LandingErrorSchema = SchemaFactory.createForClass(LandingError);
-
-LandingErrorSchema.index({ landingId: 1 });
-LandingErrorSchema.index({ errorCode: 1 });
-LandingErrorSchema.index({ createdAt: -1 });
-LandingErrorSchema.index({ userId: 1 });
-LandingErrorSchema.index({ operation: 1 });

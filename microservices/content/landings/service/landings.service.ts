@@ -4,11 +4,11 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { Landing, LandingDocument } from '@landings/schemas/landings.schemas';
-import { Formato, FormatoDocument } from '@landings/schemas/formatos.schema';
-import { FORMATOS_TEMPLATES } from '@landings/const/formatos.const';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, Like, In, FindOptionsWhere } from 'typeorm';
+import { Landing } from '@content/landings/schemas/landings.schemas';
+import { Formato } from '@content/landings/schemas/formatos.schema';
+import { FORMATOS_TEMPLATES } from '@content/landings/const/formatos.const';
 import { LandingValidationService } from './landings.service.spec';
 import { LandingErrorService } from './errors/landings-error.service';
 
@@ -17,8 +17,10 @@ export class LandingsService {
   private readonly logger = new Logger(LandingsService.name);
 
   constructor(
-    @InjectModel(Landing.name) private landingModel: Model<LandingDocument>,
-    @InjectModel(Formato.name) private formatoModel: Model<FormatoDocument>,
+    @InjectRepository(Landing, 'WRITE_CONNECTION') private landingRepo: Repository<Landing>,
+    @InjectRepository(Landing, 'READ_CONNECTION') private landingReadRepo: Repository<Landing>,
+    @InjectRepository(Formato, 'WRITE_CONNECTION') private formatoRepo: Repository<Formato>,
+    @InjectRepository(Formato, 'READ_CONNECTION') private formatoReadRepo: Repository<Formato>,
     private readonly landingValidationService: LandingValidationService,
     private readonly landingErrorService: LandingErrorService,
   ) {}
@@ -48,21 +50,21 @@ export class LandingsService {
         );
       }
 
-      const landing = new this.landingModel({
+      const landing = this.landingRepo.create({
         ...createLandingDto,
         createdBy: userId,
         slug: this.generateUniqueSlug(createLandingDto.title),
         tituloRelacionado: this.normalizeText(createLandingDto.title),
       });
 
-      const savedLanding = await landing.save();
+      const savedLanding = await this.landingRepo.save(landing);
       return {
         data: savedLanding,
         message: 'LANDING CREADA EXITOSAMENTE',
       };
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
-        error,
+        error as Error,
         '',
         'crearLanding',
         { createLandingDto, userId },
@@ -90,17 +92,12 @@ export class LandingsService {
       const skip = (page - 1) * limit;
       const query = this.buildQuery(filters);
 
-      const [landings, total] = await Promise.all([
-        this.landingModel
-          .find(query)
-          .populate('createdBy', 'name email')
-          .populate('updatedBy', 'name email')
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit)
-          .exec(),
-        this.landingModel.countDocuments(query),
-      ]);
+      const [landings, total] = await this.landingReadRepo.findAndCount({
+        where: query,
+        order: { createdAt: 'DESC' },
+        skip,
+        take: limit,
+      });
 
       return {
         landings,
@@ -110,7 +107,7 @@ export class LandingsService {
       };
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
-        error,
+        error as Error,
         '',
         'getAllLandings',
         { page, limit, filters },
@@ -135,16 +132,12 @@ export class LandingsService {
         isPublished: true,
       };
 
-      const [landings, total] = await Promise.all([
-        this.landingModel
-          .find(query)
-          .populate('createdBy', 'name email')
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit)
-          .exec(),
-        this.landingModel.countDocuments(query),
-      ]);
+      const [landings, total] = await this.landingReadRepo.findAndCount({
+        where: query,
+        order: { createdAt: 'DESC' },
+        skip,
+        take: limit,
+      });
 
       return {
         landings,
@@ -154,7 +147,7 @@ export class LandingsService {
       };
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
-        error,
+        error as Error,
         '',
         'getActiveLandings',
         { page, limit },
@@ -163,13 +156,9 @@ export class LandingsService {
     }
   }
 
-  async getLandingById(id: string): Promise<Landing> {
+  async getLandingById(id: number): Promise<Landing> {
     try {
-      const landing = await this.landingModel
-        .findById(id)
-        .populate('createdBy', 'name email')
-        .populate('updatedBy', 'name email')
-        .exec();
+      const landing = await this.landingReadRepo.findOne({ where: { id } });
 
       if (!landing) {
         throw new NotFoundException('Landing no encontrada');
@@ -178,7 +167,7 @@ export class LandingsService {
       return landing;
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
-        error,
+        error as Error,
         '',
         'getLandingById',
         { id },
@@ -189,23 +178,17 @@ export class LandingsService {
 
   async getLandingBySlug(slug: string): Promise<Landing> {
     try {
-      const landing = await this.landingModel
-        .findOne({ slug })
-        .populate('createdBy', 'name email')
-        .populate('updatedBy', 'name email')
-        .exec();
+      const landing = await this.landingReadRepo.findOne({ where: { slug } });
 
       if (!landing) {
         throw new NotFoundException('Landing no encontrada');
       }
-      await this.landingModel.findByIdAndUpdate(landing._id, {
-        $inc: { viewCount: 1 },
-      });
+      await this.landingRepo.increment({ id: landing.id }, 'viewCount', 1);
 
       return landing;
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
-        error,
+        error as Error,
         '',
         'getLandingBySlug',
         { slug },
@@ -215,35 +198,30 @@ export class LandingsService {
   }
 
   async updateLanding(
-    id: string,
+    id: number,
     updateLandingDto: any,
     userId: string,
   ): Promise<Landing> {
     try {
       const landing = await this.getLandingById(id);
+      
       if (updateLandingDto.title && updateLandingDto.title !== landing.title) {
         updateLandingDto.slug = this.generateUniqueSlug(updateLandingDto.title);
+        updateLandingDto.tituloRelacionado = this.normalizeText(updateLandingDto.title);
       }
 
-      const updatedLanding: any = await this.landingModel
-        .findByIdAndUpdate(
-          id,
-          {
-            ...updateLandingDto,
-            updatedBy: new Types.ObjectId(userId),
-            updatedAt: new Date(),
-          },
-          { new: true, runValidators: true },
-        )
-        .populate('createdBy', 'name email')
-        .populate('updatedBy', 'name email')
-        .exec();
+      await this.landingRepo.update(id, {
+        ...updateLandingDto,
+        updatedBy: userId,
+        updatedAt: new Date(),
+      });
 
+      const updatedLanding = await this.getLandingById(id);
       this.logger.log(`Landing actualizada: ${id}`);
       return updatedLanding;
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
-        error,
+        error as Error,
         '',
         'updateLanding',
         { id, updateLandingDto, userId },
@@ -254,8 +232,7 @@ export class LandingsService {
 
   async deleteLanding(id: string): Promise<void> {
     try {
-      const landing = await this.getLandingById(id);
-      await this.landingModel.findByIdAndUpdate(id, {
+      await this.landingRepo.update(id, {
         isActive: false,
         updatedAt: new Date(),
       });
@@ -263,7 +240,7 @@ export class LandingsService {
       this.logger.log(`Landing eliminada (soft delete): ${id}`);
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
-        error,
+        error as Error,
         '',
         'deleteLanding',
         { id },
@@ -272,31 +249,25 @@ export class LandingsService {
     }
   }
 
-  async togglePublishLanding(id: string, userId: string): Promise<Landing> {
+  async togglePublishLanding(id: number, userId: string): Promise<Landing> {
     try {
       const landing = await this.getLandingById(id);
-      const updatedLanding: any = await this.landingModel
-        .findByIdAndUpdate(
-          id,
-          {
-            isPublished: !landing.isPublished,
-            publishedAt: !landing.isPublished ? new Date() : undefined,
-            updatedBy: new Types.ObjectId(userId),
-            updatedAt: new Date(),
-          },
-          { new: true },
-        )
-        .populate('createdBy', 'name email')
-        .populate('updatedBy', 'name email')
-        .exec();
+      
+      await this.landingRepo.update(id, {
+        isPublished: !landing.isPublished,
+        publicadoEn: !landing.isPublished ? new Date() : null,
+        updatedBy: userId,
+        updatedAt: new Date(),
+      });
 
+      const updatedLanding = await this.getLandingById(id);
       this.logger.log(
         `Landing ${!landing.isPublished ? 'publicada' : 'despublicada'}: ${id}`,
       );
       return updatedLanding;
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
-        error,
+        error as Error,
         '',
         'togglePublishLanding',
         { id, userId },
@@ -321,17 +292,12 @@ export class LandingsService {
       const skip = (page - 1) * limit;
       const query = this.buildFormatosQuery(filters);
 
-      const [formatos, total] = await Promise.all([
-        this.formatoModel
-          .find(query)
-          .populate('createdBy', 'name email')
-          .populate('updatedBy', 'name email')
-          .sort({ sortOrder: 1, createdAt: -1 })
-          .skip(skip)
-          .limit(limit)
-          .exec(),
-        this.formatoModel.countDocuments(query),
-      ]);
+      const [formatos, total] = await this.formatoReadRepo.findAndCount({
+        where: query,
+        order: { sortOrder: 'ASC', createdAt: 'DESC' },
+        skip,
+        take: limit,
+      });
 
       return {
         formatos,
@@ -341,7 +307,7 @@ export class LandingsService {
       };
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
-        error,
+        error as Error,
         '',
         'getAllFormatos',
         { page, limit, filters },
@@ -352,13 +318,13 @@ export class LandingsService {
 
   async getActiveFormatos(): Promise<Formato[]> {
     try {
-      return await this.formatoModel
-        .find({ isActive: true })
-        .sort({ sortOrder: 1, usageCount: -1 })
-        .exec();
+      return await this.formatoReadRepo.find({
+        where: { isActive: true },
+        order: { sortOrder: 'ASC', usageCount: 'DESC' },
+      });
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
-        error,
+        error as Error,
         '',
         'getActiveFormatos',
         {},
@@ -369,11 +335,7 @@ export class LandingsService {
 
   async getFormatoById(id: string): Promise<Formato> {
     try {
-      const formato = await this.formatoModel
-        .findById(id)
-        .populate('createdBy', 'name email')
-        .populate('updatedBy', 'name email')
-        .exec();
+      const formato = await this.formatoReadRepo.findOne({ where: { id } });
 
       if (!formato) {
         throw new NotFoundException('Formato no encontrado');
@@ -382,7 +344,7 @@ export class LandingsService {
       return formato;
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
-        error,
+        error as Error,
         '',
         'getFormatoById',
         { id },
@@ -393,23 +355,17 @@ export class LandingsService {
 
   async getFormatoBySlug(slug: string): Promise<Formato> {
     try {
-      const formato = await this.formatoModel
-        .findOne({ slug, isActive: true })
-        .populate('createdBy', 'name email')
-        .populate('updatedBy', 'name email')
-        .exec();
+      const formato = await this.formatoReadRepo.findOne({ where: { slug, isActive: true } });
 
       if (!formato) {
         throw new NotFoundException('Formato no encontrado');
       }
-      await this.formatoModel.findByIdAndUpdate(formato._id, {
-        $inc: { usageCount: 1 },
-      });
+      await this.formatoRepo.increment({ id: formato.id }, 'usageCount', 1);
 
       return formato;
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
-        error,
+        error as Error,
         '',
         'getFormatoBySlug',
         { slug },
@@ -420,19 +376,20 @@ export class LandingsService {
 
   async createFormato(createFormatoDto: any, userId: string): Promise<Formato> {
     try {
-      const formato = new this.formatoModel({
+      const formatoData: any = {
         ...createFormatoDto,
-        createdBy: new Types.ObjectId(userId),
+        createdBy: userId,
         slug: this.generateUniqueSlug(createFormatoDto.name, 'formato'),
-      });
+      };
+      const formato = this.formatoRepo.create(formatoData as Formato);
 
-      const savedFormato = await formato.save();
+      const savedFormato = await this.formatoRepo.save(formato);
 
-      this.logger.log(`Formato creado exitosamente: ${savedFormato._id}`);
+      this.logger.log(`Formato creado exitosamente: ${savedFormato.id}`);
       return savedFormato;
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
-        error,
+        error as Error,
         '',
         'createFormato',
         { createFormatoDto, userId },
@@ -456,25 +413,18 @@ export class LandingsService {
         );
       }
 
-      const updatedFormato: any = await this.formatoModel
-        .findByIdAndUpdate(
-          id,
-          {
-            ...updateFormatoDto,
-            updatedBy: new Types.ObjectId(userId),
-            updatedAt: new Date(),
-          },
-          { new: true, runValidators: true },
-        )
-        .populate('createdBy', 'name email')
-        .populate('updatedBy', 'name email')
-        .exec();
+      await this.formatoRepo.update(id, {
+        ...updateFormatoDto,
+        updatedBy: userId,
+        updatedAt: new Date(),
+      });
 
+      const updatedFormato = await this.getFormatoById(id);
       this.logger.log(`Formato actualizado: ${id}`);
       return updatedFormato;
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
-        error,
+        error as Error,
         '',
         'updateFormato',
         { id, updateFormatoDto, userId },
@@ -485,9 +435,7 @@ export class LandingsService {
 
   async deleteFormato(id: string): Promise<void> {
     try {
-      const formato = await this.getFormatoById(id);
-
-      await this.formatoModel.findByIdAndUpdate(id, {
+      await this.formatoRepo.update(id, {
         isActive: false,
         updatedAt: new Date(),
       });
@@ -495,7 +443,7 @@ export class LandingsService {
       this.logger.log(`Formato eliminado: ${id}`);
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
-        error,
+        error as Error,
         '',
         'deleteFormato',
         { id },
@@ -509,7 +457,7 @@ export class LandingsService {
       return FORMATOS_TEMPLATES;
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
-        error,
+        error as Error,
         '',
         'getPredefinedTemplates',
         {},
@@ -528,19 +476,19 @@ export class LandingsService {
         throw new NotFoundException('Template no encontrado');
       }
 
-      const existingFormato = await this.formatoModel.findOne({
-        slug: template.slug,
+      const existingFormato = await this.formatoReadRepo.findOne({
+        where: { slug: template.slug }
       });
       if (existingFormato) {
         throw new BadRequestException('Ya existe un formato con este slug');
       }
 
-      const formato = new this.formatoModel({
+      const formato = this.formatoRepo.create({
         name: template.name,
         slug: template.slug,
         description: template.description,
         template: template.template,
-        type: template.type,
+        type: template.type as 'html'|'react'|'jsx',
         category: template.category,
         tags: template.tags,
         config: template.config,
@@ -548,19 +496,19 @@ export class LandingsService {
         isActive: true,
         isPremium: false,
         usageCount: 0,
-        createdBy: new Types.ObjectId(userId),
+        createdBy: userId,
         sortOrder: 0,
       });
 
-      const savedFormato = await formato.save();
+      const savedFormato = await this.formatoRepo.save(formato);
 
       this.logger.log(
-        `Template importado como formato: ${templateKey} -> ${savedFormato._id}`,
+        `Template importado como formato: ${templateKey} -> ${savedFormato.id}`,
       );
       return savedFormato;
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
-        error,
+        error as Error,
         '',
         'importTemplate',
         { templateKey, userId },
@@ -571,31 +519,33 @@ export class LandingsService {
 
   async getLandingsStats(): Promise<any> {
     try {
-      const [totalLandings, activeLandings, publishedLandings, totalViews] =
-        await Promise.all([
-          this.landingModel.countDocuments(),
-          this.landingModel.countDocuments({ isActive: true }),
-          this.landingModel.countDocuments({ isPublished: true }),
-          this.landingModel.aggregate([
-            { $group: { _id: null, totalViews: { $sum: '$viewCount' } } },
-          ]),
-        ]);
+      const totalLandings = await this.landingReadRepo.count();
+      const activeLandings = await this.landingReadRepo.count({ where: { isActive: true } });
+      const publishedLandings = await this.landingReadRepo.count({ where: { isPublished: true } });
+      
+      const viewsResult = await this.landingReadRepo
+        .createQueryBuilder('landing')
+        .select('SUM(landing.viewCount)', 'total')
+        .getRawOne();
+      const totalViews = viewsResult?.total ? Number(viewsResult.total) : 0;
+
+      const recentLandings = await this.landingReadRepo.find({
+        where: { isActive: true },
+        order: { createdAt: 'DESC' },
+        take: 5,
+        select: ['title', 'slug', 'createdAt', 'viewCount']
+      });
 
       return {
         totalLandings,
         activeLandings,
         publishedLandings,
-        totalViews: totalViews[0]?.totalViews || 0,
-        recentLandings: await this.landingModel
-          .find({ isActive: true })
-          .sort({ createdAt: -1 })
-          .limit(5)
-          .select('title slug createdAt viewCount')
-          .exec(),
+        totalViews,
+        recentLandings,
       };
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
-        error,
+        error as Error,
         '',
         'getLandingsStats',
         {},
@@ -606,31 +556,33 @@ export class LandingsService {
 
   async getFormatosStats(): Promise<any> {
     try {
-      const [totalFormatos, activeFormatos, premiumFormatos, totalUsages] =
-        await Promise.all([
-          this.formatoModel.countDocuments(),
-          this.formatoModel.countDocuments({ isActive: true }),
-          this.formatoModel.countDocuments({ isPremium: true }),
-          this.formatoModel.aggregate([
-            { $group: { _id: null, totalUsages: { $sum: '$usageCount' } } },
-          ]),
-        ]);
+      const totalFormatos = await this.formatoReadRepo.count();
+      const activeFormatos = await this.formatoReadRepo.count({ where: { isActive: true } });
+      const premiumFormatos = await this.formatoReadRepo.count({ where: { isPremium: true } });
+      
+      const usagesResult = await this.formatoReadRepo
+        .createQueryBuilder('formato')
+        .select('SUM(formato.usageCount)', 'total')
+        .getRawOne();
+      const totalUsages = usagesResult?.total ? Number(usagesResult.total) : 0;
+
+      const popularFormatos = await this.formatoReadRepo.find({
+        where: { isActive: true },
+        order: { usageCount: 'DESC' },
+        take: 5,
+        select: ['name', 'slug', 'usageCount', 'category']
+      });
 
       return {
         totalFormatos,
         activeFormatos,
         premiumFormatos,
-        totalUsages: totalUsages[0]?.totalUsages || 0,
-        popularFormatos: await this.formatoModel
-          .find({ isActive: true })
-          .sort({ usageCount: -1 })
-          .limit(5)
-          .select('name slug usageCount category')
-          .exec(),
+        totalUsages,
+        popularFormatos,
       };
     } catch (error) {
       await this.landingErrorService.logMicroserviceError(
-        error,
+        error as Error,
         '',
         'getFormatosStats',
         {},
@@ -648,8 +600,8 @@ export class LandingsService {
     return `${prefix}-${baseSlug}-${timestamp}`;
   }
 
-  private buildQuery(filters: any): any {
-    const query: any = {};
+  private buildQuery(filters: any): FindOptionsWhere<Landing> | FindOptionsWhere<Landing>[] {
+    const query: FindOptionsWhere<Landing> = {};
 
     if (filters?.isActive !== undefined) {
       query.isActive = filters.isActive;
@@ -660,30 +612,22 @@ export class LandingsService {
     }
 
     if (filters?.createdBy) {
-      query.createdBy = new Types.ObjectId(filters.createdBy);
-    }
-
-    if (filters?.category) {
-      query.category = filters.category;
-    }
-
-    if (filters?.tags && filters.tags.length > 0) {
-      query.tags = { $in: filters.tags };
+      query.createdBy = filters.createdBy;
     }
 
     if (filters?.search) {
-      query.$or = [
-        { title: { $regex: filters.search, $options: 'i' } },
-        { description: { $regex: filters.search, $options: 'i' } },
-        { content: { $regex: filters.search, $options: 'i' } },
+      return [
+        { ...query, title: Like(`%${filters.search}%`) },
+        { ...query, description: Like(`%${filters.search}%`) },
+        { ...query, content: Like(`%${filters.search}%`) },
       ];
     }
 
     return query;
   }
 
-  private buildFormatosQuery(filters: any): any {
-    const query: any = {};
+  private buildFormatosQuery(filters: any): FindOptionsWhere<Formato> | FindOptionsWhere<Formato>[] {
+    const query: FindOptionsWhere<Formato> = {};
 
     if (filters?.isActive !== undefined) {
       query.isActive = filters.isActive;
@@ -701,14 +645,10 @@ export class LandingsService {
       query.category = filters.category;
     }
 
-    if (filters?.tags && filters.tags.length > 0) {
-      query.tags = { $in: filters.tags };
-    }
-
     if (filters?.search) {
-      query.$or = [
-        { name: { $regex: filters.search, $options: 'i' } },
-        { description: { $regex: filters.search, $options: 'i' } },
+      return [
+        { ...query, name: Like(`%${filters.search}%`) },
+        { ...query, description: Like(`%${filters.search}%`) }
       ];
     }
 
@@ -734,18 +674,16 @@ export class LandingsService {
       .split(' ')
       .filter((word) => word.length > 0)
       .map((word) => word.replace(/[^a-z0-9]/g, ''))
-      .join('.*');
-    const query: any = {
-      tituloRelacionado: {
-        $regex: new RegExp(`^${regexPattern}$`, 'i'),
-      },
-    };
+      .join('%');
+      
+    const queryBuilder = this.landingReadRepo.createQueryBuilder('landing')
+      .where('landing.tituloRelacionado LIKE :pattern', { pattern: `%${regexPattern}%` });
 
     if (excludeId) {
-      query._id = { $ne: new Types.ObjectId(excludeId) };
+      queryBuilder.andWhere('landing.id != :excludeId', { excludeId });
     }
 
-    const existing = await this.landingModel.findOne(query).lean().exec();
+    const existing = await queryBuilder.getOne();
     return !!existing;
   }
 }

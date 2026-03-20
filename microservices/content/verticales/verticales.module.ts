@@ -6,10 +6,11 @@ import { VerticalValidation } from './service/valid/vertical.validation';
 
 @Module({
     imports: [
-        MariaDbModule
+        MariaDbModule.forFeature(),
+        MariaDbModule.forFeatureRead()
     ],
     controllers: [VerticalController],
     providers: [VerticalesService, VerticalValidation],
-    exports: [VerticalesService, VerticalValidation, VerticalController],
+    exports: [VerticalesService, VerticalValidation],
 })
 export class VerticalesModule {}

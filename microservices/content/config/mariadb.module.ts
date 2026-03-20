@@ -4,6 +4,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Vertical } from '@content/verticales/schemas/verticales.schemas';
 import { Landing } from '@content/landings/schemas/landings.schemas';
 import { Formato } from '@content/landings/schemas/formatos.schema';
+import { LandingError } from '@content/landings/schemas/errors/landings.error.schema';
+import { Cupon } from '@content/cupones/schemas/cupon.schema';
 
 @Module({
     imports: [
@@ -26,9 +28,9 @@ export class MariaDbModule {
         username: configService.get<string>('DATABASE_USER'),
         password: configService.get<string>('DATABASE_PASSWORD'),
         database: configService.get<string>('DATABASE_NAME'),
-        entities: [Vertical, Landing, Formato],
-        synchronize: false,
-        logging: true,
+        entities: [Vertical, Landing, Formato, LandingError, Cupon],
+        synchronize: true,
+        logging: false,
         timezone: '-03:00',
         charset: 'utf8mb4',
       }),
@@ -47,9 +49,9 @@ export class MariaDbModule {
         username: configService.get<string>('DATABASE_USER_REPLIC'),
         password: configService.get<string>('DATABASE_PASSWORD_REPLIC'),
         database: configService.get<string>('DATABASE_NAME_REPLIC'),
-        entities: [Vertical, Landing, Formato],
-        synchronize: false,
-        logging: true,
+        entities: [Vertical, Landing, Formato, LandingError, Cupon],
+        synchronize: true,
+        logging: false,
         timezone: '-03:00',
         charset: 'utf8mb4',
       }),
@@ -58,10 +60,10 @@ export class MariaDbModule {
   }
 
   static forFeature(): DynamicModule {
-    return TypeOrmModule.forFeature([Vertical, Landing, Formato], 'WRITE_CONNECTION');
+    return TypeOrmModule.forFeature([Vertical, Landing, Formato, LandingError, Cupon], 'WRITE_CONNECTION');
   }
 
   static forFeatureRead(): DynamicModule {
-    return TypeOrmModule.forFeature([Vertical, Landing, Formato], 'READ_CONNECTION');
+    return TypeOrmModule.forFeature([Vertical, Landing, Formato, LandingError, Cupon], 'READ_CONNECTION');
   }
 }

@@ -1,39 +1,39 @@
-import { Prop, SchemaFactory, Schema } from "@nestjs/mongoose";
-import { Types, Document } from "mongoose";
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
-export type FormatoDocument = Formato & Document;
-
-@Schema({ timestamps: true, collection: 'formatos_landing' })
+@Entity('formatos_landing')
 export class Formato {
-    @Prop({ required: true, trim: true })
+    @PrimaryGeneratedColumn('uuid')
+    id: string;
+
+    @Column({ length: 255 })
     name: string;
 
-    @Prop({ required: true, trim: true, unique: true })
+    @Column({ length: 255, unique: true })
     slug: string;
 
-    @Prop({ required: true, trim: true })
+    @Column('text')
     description: string;
 
-    @Prop({ required: true })
+    @Column('longtext')
     template: string;
 
-    @Prop({ required: true, enum: ['html', 'react', 'jsx'] })
+    @Column({ type: 'enum', enum: ['html', 'react', 'jsx'], default: 'html' })
     type: 'html' | 'react' | 'jsx';
 
-    @Prop({ required: true, trim: true })
+    @Column({ length: 255 })
     category: string;
 
-    @Prop({ type: [String], default: [] })
+    @Column('simple-array', { nullable: true })
     tags: string[];
 
-    @Prop({ type: Object })
+    @Column('json', { nullable: true })
     preview?: {
         thumbnail?: string;
         screenshot?: string;
         demoUrl?: string;
     };
 
-    @Prop({ type: Object })
+    @Column('json', { nullable: true })
     config?: {
         customizableSections?: string[];
         requiredProps?: string[];
@@ -41,7 +41,7 @@ export class Formato {
         dependencies?: string[];
     };
 
-    @Prop({ type: Object })
+    @Column('json', { nullable: true })
     variables?: {
         name: string;
         type: string;
@@ -50,39 +50,33 @@ export class Formato {
         defaultValue?: any;
     }[];
 
-    @Prop({ default: true })
+    @Column({ default: true })
     isActive: boolean;
 
-    @Prop({ default: false })
+    @Column({ default: false })
     isPremium: boolean;
 
-    @Prop({ default: 0 })
+    @Column({ default: 0 })
     usageCount: number;
 
-    @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-    createdBy: Types.ObjectId;
+    @Column({ length: 255 })
+    createdBy: string;
 
-    @Prop({ type: Types.ObjectId, ref: 'User' })
-    updatedBy?: Types.ObjectId;
+    @Column({ length: 255, nullable: true })
+    updatedBy?: string;
 
-    @Prop({ type: Number, default: 0 })
+    @Column({ default: 0 })
     sortOrder: number;
 
-    @Prop({ trim: true })
+    @Column('text', { nullable: true })
     documentation?: string;
 
-    @Prop({ type: Object })
+    @Column('json', { nullable: true })
     metadata?: Record<string, any>;
+
+    @CreateDateColumn()
+    createdAt: Date;
+
+    @UpdateDateColumn()
+    updatedAt: Date;
 }
-
-export const FormatoSchema = SchemaFactory.createForClass(Formato);
-
-FormatoSchema.index({ slug: 1 });
-FormatoSchema.index({ type: 1 });
-FormatoSchema.index({ category: 1 });
-FormatoSchema.index({ isActive: 1 });
-FormatoSchema.index({ isPremium: 1 });
-FormatoSchema.index({ createdBy: 1 });
-FormatoSchema.index({ createdAt: -1 });
-FormatoSchema.index({ sortOrder: 1 });
-FormatoSchema.index({ tags: 1 });
