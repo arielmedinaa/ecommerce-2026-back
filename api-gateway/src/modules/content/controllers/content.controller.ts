@@ -79,7 +79,7 @@ export class ContentController {
 
   @Get('landing/:id')
   @SneakyThrows('ContentService', 'getLandingById')
-  async getLandingById(@Param('id') id: string) {
+  async getLandingById(@Param('id') id: number) {
     const landing = await firstValueFrom(
       this.contentClient.send({ cmd: 'getLandingById' }, { id }),
     );
@@ -98,7 +98,7 @@ export class ContentController {
   @Put('landing/:id')
   @SneakyThrows('ContentController', 'updateLanding')
   async updateLanding(
-    @Param('id') id: string,
+    @Param('id') id: number,
     @Body() body: { updateLandingDto: any; userId: string },
   ) {
     const landing = await firstValueFrom(
@@ -109,7 +109,7 @@ export class ContentController {
 
   @Delete('landing/:id')
   @SneakyThrows('ContentController', 'deleteLanding')
-  async deleteLanding(@Param('id') id: string) {
+  async deleteLanding(@Param('id') id: number) {
     await firstValueFrom(
       this.contentClient.send({ cmd: 'deleteLanding' }, { id }),
     );
@@ -119,7 +119,7 @@ export class ContentController {
   @Put('landing/:id/toggle-publish')
   @SneakyThrows('ContentController', 'togglePublishLanding')
   async togglePublishLanding(
-    @Param('id') id: string,
+    @Param('id') id: number,
     @Body() body: { userId: string },
   ) {
     const landing = await firstValueFrom(
@@ -239,5 +239,85 @@ export class ContentController {
       this.contentClient.send({ cmd: 'getFormatStats' }, {}),
     );
     return stats;
+  }
+  
+  @Post('vertical')
+  @SneakyThrows('ContentController', 'createVertical')
+  async createVertical(@Body() body: { vertical: any; userId: string }) {
+    const vertical = await firstValueFrom(
+      this.contentClient.send({ cmd: 'createVertical' }, body),
+    );
+    return vertical;
+  }
+
+  @Get('vertical/:id')
+  @SneakyThrows('ContentController', 'getVerticalById')
+  async getVerticalById(@Param('id') id: string) {
+    const vertical = await firstValueFrom(
+      this.contentClient.send({ cmd: 'getVerticalById' }, { id }),
+    );
+    return vertical;
+  }
+  
+  @Post('vertical/listar')
+  @SneakyThrows('ContentController', 'getAllVerticales')
+  async getAllVerticales(@Body() filters: any) {
+    const verticales = await firstValueFrom(
+      this.contentClient.send({ cmd: 'getAllVerticales' }, filters),
+    );
+    return verticales;
+  }
+  
+  @Post('cupon')
+  @SneakyThrows('ContentController', 'crearCupon')
+  async crearCupon(@Body() body: { createCuponDto: any }) {
+    const cupon = await firstValueFrom(
+      this.contentClient.send({ cmd: 'crearCupon' }, body),
+    );
+    return cupon;
+  }
+
+  @Get('cupones')
+  @SneakyThrows('ContentController', 'listarCupones')
+  async listarCupones(
+    @Query('page', ParseIntPipe) page: number = 1,
+    @Query('limit', ParseIntPipe) limit: number = 10,
+    @Query('filters') filters?: string,
+  ) {
+    const parsedFilters = filters ? JSON.parse(filters) : {};
+    const cupones = await firstValueFrom(
+      this.contentClient.send(
+        { cmd: 'listarCupones' },
+        { page, limit, filters: parsedFilters },
+      ),
+    );
+    return cupones;
+  }
+
+  @Post('cupon/validar')
+  @SneakyThrows('ContentController', 'validarCupon')
+  async validarCupon(@Body() body: { codigo: string; montoCarrito: number }) {
+    const result = await firstValueFrom(
+      this.contentClient.send({ cmd: 'validarCupon' }, body),
+    );
+    return result;
+  }
+
+  @Put('cupon/:codigo/usar')
+  @SneakyThrows('ContentController', 'registrarUsoCupon')
+  async registrarUsoCupon(@Param('codigo') codigo: string) {
+    const result = await firstValueFrom(
+      this.contentClient.send({ cmd: 'registrarUsoCupon' }, { codigo }),
+    );
+    return result;
+  }
+
+  @Delete('cupon/:id')
+  @SneakyThrows('ContentController', 'desactivarCupon')
+  async desactivarCupon(@Param('id', ParseIntPipe) id: number) {
+    const result = await firstValueFrom(
+      this.contentClient.send({ cmd: 'desactivarCupon' }, { id }),
+    );
+    return { message: 'Cupón desactivado exitosamente', cupon: result };
   }
 }
