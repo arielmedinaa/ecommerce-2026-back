@@ -1,5 +1,13 @@
-import { IsString, IsEnum, IsNumber, IsBoolean, IsOptional, IsDateString, Min } from 'class-validator';
-import { TipoDescuento } from '../schemas/cupon.schema';
+import {
+  IsString,
+  IsEnum,
+  IsNumber,
+  IsBoolean,
+  IsOptional,
+  IsDateString,
+  Min,
+} from 'class-validator';
+import { TipoDescuento } from '../cupon.schema';
 
 export class CreateCuponDto {
   @IsString()
@@ -15,6 +23,10 @@ export class CreateCuponDto {
   @IsNumber()
   @Min(0)
   valorDescuento: number;
+
+  @IsNumber()
+  @Min(0)
+  porcentajeDescuento: number;
 
   @IsOptional()
   @IsNumber()

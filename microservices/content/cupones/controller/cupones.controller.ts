@@ -1,7 +1,6 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { CuponesService } from '../service/cupones.service';
-import { CreateCuponDto } from '../dto/create-cupon.dto';
 
 @Controller()
 export class CuponesController {

@@ -1,4 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 export enum TipoDescuento {
   PORCENTAJE = 'PORCENTAJE',
@@ -25,6 +31,9 @@ export class Cupon {
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   valorDescuento: number;
+  
+  @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
+  porcentajeDescuento: number;
 
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
   montoMinimoCompra: number;
