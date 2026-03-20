@@ -6,7 +6,7 @@ import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
 import { CreateComboDto } from '@products/schemas/dto/create-combo.dto';
 import { Product } from '../schemas/product.schemas';
 import { Combo } from '../schemas/combo.schemas';
-import { Promo } from '../schemas/promo.schemas';
+//import { Promo } from '../schemas/promo.schemas';
 
 @Injectable()
 export class ProductsService {
@@ -21,10 +21,6 @@ export class ProductsService {
     private readonly comboWriteRepository: Repository<Combo>,
     @InjectRepository(Combo, 'READ_CONNECTION')
     private readonly comboReadRepository: Repository<Combo>,
-    @InjectRepository(Promo, 'WRITE_CONNECTION')
-    private readonly promoWriteRepository: Repository<Promo>,
-    @InjectRepository(Promo, 'READ_CONNECTION')
-    private readonly promoReadRepository: Repository<Promo>,
     private readonly promosService: PromosService,
   ) {}
 
@@ -77,8 +73,18 @@ export class ProductsService {
       [limit, offset]
     );
 
-    //console.log("result", result[0]?.codigo_articulo)
-    const data = result[0] || [];
+    const dataWithTrimmedNames = result[0]?.map((item: any) => ({
+      ...item,
+      codigo_articulo: item.codigo_articulo.trim(),
+      nombre_articulo: item.nombre_articulo.trim(),
+      nombre_subcategoria: item.nombre_subcategoria.trim(),
+      nombre_marca: item.nombre_marca.trim(),
+      nombre_proveedor: item.nombre_proveedor.trim(),
+      codigo_de_barra: item.codigo_de_barra.trim(),
+      nota: item.nota.trim(),
+    }));
+    console.log("dta", dataWithTrimmedNames)
+    const data = dataWithTrimmedNames || [];
     const total = data.length; 
 
     if (this.productosCache.size >= this.MAX_CACHE_ENTRIES) {

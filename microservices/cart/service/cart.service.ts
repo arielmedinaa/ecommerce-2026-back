@@ -253,7 +253,6 @@ export class CartContadoService {
 
     const articulosRaw = [...(resultado.articulos?.contado || [])];
     const codigos = [...new Set(articulosRaw.map((a) => String(a.codigo)))];
-
     const productsCacheKey = `cart_products_${codigos.join('_')}`;
 
     try {
@@ -333,7 +332,7 @@ export class CartContadoService {
     } finally {
       this.cartCache.set(cacheKey, {
         data: resultado,
-        timestamp: Date.now(),
+        timestamp: now,
       });
     }
   }
