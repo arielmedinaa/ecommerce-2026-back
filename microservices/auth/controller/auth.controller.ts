@@ -17,22 +17,22 @@ export class AuthController {
     @Payload() payload: { ipAddress: string; userAgent: string },
   ) {
     try {
-      const result = await this.guestService.createGuestToken(
+      return await this.guestService.createGuestToken(
         payload.ipAddress,
         payload.userAgent,
       );
-
-      return {
-        access_token: result.token,
-        user: {
-          id: result.user._id,
-          email: result.user.email,
-          name: result.user.name,
-          provider: result.user.provider,
-        },
-      };
     } catch (error) {
       this.logger.error('Error in create_guest_session:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'create_basic_user' })
+  async createBasicUser(@Payload() payload: { email: string }) {
+    try {
+      return await this.authService.createBasicUser(payload.email);
+    } catch (error) {
+      this.logger.error('Error in create_basic_user:', error);
       throw error;
     }
   }
@@ -80,6 +80,17 @@ export class AuthController {
       return await this.authService.login(payload);
     } catch (error) {
       this.logger.error('Error in login_user:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'ultimo_inicio_sesion_usuario' })
+  async ultimoInicioSesionUsuario(@Payload() payload: { token: string; email?: string }) {
+    try {
+      await this.authService.ultimoInicioSesionUsuario(payload.token, payload.email);
+      return { success: true };
+    } catch (error) {
+      this.logger.error('Error in ultimo_inicio_sesion_usuario:', error);
       throw error;
     }
   }

@@ -15,6 +15,7 @@ export class AuthService {
 
   async createGuestUser(deviceInfo?: any): Promise<User> {
     const guestToken = this.generateGuestToken();
+    this.logger.log(`Generated guest token: ${guestToken}`);
     const guestEmail = `guest_${guestToken}@temp.ecommerce`;
 
     const guestUser = this.userRepository.create({
@@ -25,12 +26,35 @@ export class AuthService {
       esInvitado: true,
       infoDispositivo: deviceInfo || {},
       ultimoInicioSesion: new Date(),
-      fechaExpiracion: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días
+      fechaExpiracion: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 
     await this.userRepository.save(guestUser);
     this.logger.log(`Created new guest user: ${guestToken}`);
     return guestUser;
+  }
+
+  async createBasicUser(email: string): Promise<{data: User; message: string; success: boolean; token: string}> {
+    const user = this.userRepository.create({
+      email,
+      nombre: email.split('@')[0],
+      proveedor: 'usuario basico',
+      idProveedor: email,
+      esInvitado: false,
+      ultimoInicioSesion: new Date(),
+    });
+
+    await this.userRepository.save(user);
+    this.logger.log(`Created new basic user: ${email}`);
+    
+    const token = this.generateUserToken(user);
+    
+    return {
+      data: user,
+      message: 'USUARIO CREADO EXITOSAMENTE',
+      success: true,
+      token,
+    };
   }
 
   async validateGuestUser(guestToken: string): Promise<User | null> {
@@ -42,7 +66,6 @@ export class AuthService {
       },
     });
 
-    // Verificar si no ha expirado
     if (user && user.fechaExpiracion && user.fechaExpiracion < new Date()) {
       return null;
     }
@@ -51,10 +74,25 @@ export class AuthService {
   }
 
   private generateGuestToken(): string {
-    return (
-      Math.random().toString(36).substring(2, 15) +
-      Math.random().toString(36).substring(2, 15)
-    );
+    const payload = {
+      sub: 'guest',
+      email: `guest_${Date.now()}@temp.ecommerce`,
+      name: 'Usuario Invitado',
+      provider: 'guest',
+    };
+    
+    return this.jwtService.sign(payload, { expiresIn: '7d' });
+  }
+
+  private generateUserToken(user: User): string {
+    const payload = {
+      sub: user.id.toString(),
+      email: user.email,
+      name: user.nombre,
+      provider: user.proveedor,
+    };
+    
+    return this.jwtService.sign(payload, { expiresIn: '24h' });
   }
 
   async validateGoogleUser(profile: any): Promise<User> {
@@ -156,6 +194,18 @@ export class AuthService {
       return this.jwtService.verify(token);
     } catch (error) {
       return null;
+    }
+  }
+
+  async ultimoInicioSesionUsuario(token: string, email?: string): Promise<void> {
+    if (!email) {
+      await this.userRepository.update(`guest_${token}`, {
+        ultimoInicioSesion: new Date(),
+      });
+    } else {
+      await this.userRepository.update(email, {
+        ultimoInicioSesion: new Date(),
+      });
     }
   }
 }

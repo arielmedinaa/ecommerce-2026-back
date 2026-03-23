@@ -13,7 +13,6 @@ export class CreateCuponDto {
   @IsString()
   codigo: string;
 
-  @IsOptional()
   @IsString()
   descripcion?: string;
 
@@ -28,7 +27,6 @@ export class CreateCuponDto {
   @Min(0)
   porcentajeDescuento: number;
 
-  @IsOptional()
   @IsNumber()
   @Min(0)
   montoMinimoCompra?: number;
@@ -39,12 +37,10 @@ export class CreateCuponDto {
   @IsDateString()
   fechaFin: string;
 
-  @IsOptional()
   @IsNumber()
   @Min(0)
-  limiteUsos?: number;
+  limiteUsos: number;
 
-  @IsOptional()
   @IsBoolean()
-  activo?: boolean;
+  activo: boolean;
 }

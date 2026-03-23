@@ -270,7 +270,7 @@ export class ContentController {
   
   @Post('cupon')
   @SneakyThrows('ContentController', 'crearCupon')
-  async crearCupon(@Body() body: { createCuponDto: any }) {
+  async crearCupon(@Body() body: any) {
     const cupon = await firstValueFrom(
       this.contentClient.send({ cmd: 'crearCupon' }, body),
     );

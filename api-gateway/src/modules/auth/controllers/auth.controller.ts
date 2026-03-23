@@ -27,6 +27,20 @@ export class AuthController {
     }
   }
 
+  @Post('basic')
+  async createBasicUser(@Body() body: { email: string }) {
+    try {
+      const result = await firstValueFrom(
+        this.authClient.send({ cmd: 'create_basic_user' }, { email: body.email })
+      );
+
+      return result;
+    } catch (error) {
+      console.error('Error in createBasicUser:', error);
+      throw new Error('Error al crear usuario básico: ' + error.message);
+    }
+  }
+
   @Get('google')
   @UseGuards(AuthGuard('google'))
   async googleAuth() {
@@ -99,6 +113,20 @@ export class AuthController {
     } catch (error) {
       console.error('Error in validateToken:', error);
       throw new Error('Error al validar token: ' + error.message);
+    }
+  }
+
+  @Post('ultimo-inicio-sesion')
+  async ultimoInicioSesion(@Body() body: { token: string; email?: string }) {
+    try {
+      const result = await firstValueFrom(
+        this.authClient.send({ cmd: 'ultimo_inicio_sesion_usuario' }, body)
+      );
+
+      return result;
+    } catch (error) {
+      console.error('Error in ultimoInicioSesion:', error);
+      throw new Error('Error al actualizar último inicio de sesión: ' + error.message);
     }
   }
 }

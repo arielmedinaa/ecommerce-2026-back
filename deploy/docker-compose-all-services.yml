@@ -1,12 +1,11 @@
 services:
-
   # Balanceador de Carga (Nginx)
   nginx-lb:
     image: nginx:latest
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
-      - "3100:80"
+      - '3100:80'
     depends_on:
       - api-gateway
     networks:
@@ -14,7 +13,7 @@ services:
 
   # API Gateway
   api-gateway:
-    build: 
+    build:
       context: ..
       dockerfile: deploy/Dockerfile.dev
     environment:
@@ -61,7 +60,7 @@ services:
 
   # Auth Service
   auth:
-    build: 
+    build:
       context: ..
       dockerfile: microservices/auth/container/Dockerfile.dev
     env_file:
@@ -90,7 +89,7 @@ services:
 
   # Products Service
   products:
-    build: 
+    build:
       context: ..
       dockerfile: microservices/products/container/Dockerfile.dev
     env_file:
@@ -119,7 +118,7 @@ services:
 
   # Cart Service
   cart:
-    build: 
+    build:
       context: ..
       dockerfile: microservices/cart/container/Dockerfile.dev
     env_file:
@@ -145,10 +144,10 @@ services:
     command: yarn start:dev:cart
     networks:
       - app-network
-  
+
   # Content Service
   content:
-    build: 
+    build:
       context: ..
       dockerfile: microservices/content/container/Dockerfile.dev
     env_file:
@@ -177,7 +176,7 @@ services:
 
   # Payments Service
   payments:
-    build: 
+    build:
       context: ..
       dockerfile: microservices/payments/container/Dockerfile.dev
     env_file:
@@ -206,7 +205,7 @@ services:
 
   # Image Service
   image:
-    build: 
+    build:
       context: ..
       dockerfile: microservices/image/container/Dockerfile.dev
     env_file:
@@ -227,6 +226,23 @@ services:
     command: yarn start:dev:image
     networks:
       - app-network
+
+#   mariadb:
+#     image: mariadb:latest
+#     container_name: ssss_ecommerce
+#     restart: always
+#     environment:
+#       MARIADB_ROOT_PASSWORD: classicS
+#       MARIADB_DATABASE: ssss_ecommerce
+#       MARIADB_USER: root
+#       MARIADB_PASSWORD: classicS
+#     ports:
+#       - '3306:3306'
+#     volumes:
+#       - mariadb_data:/var/lib/mysql
+
+# volumes:
+#   mariadb_data:
 
 networks:
   app-network:

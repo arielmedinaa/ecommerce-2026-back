@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../schemas/user.schemas';
 import * as crypto from 'crypto';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class GuestService {
@@ -10,6 +11,7 @@ export class GuestService {
 
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
+    private readonly jwtService: JwtService,
   ) {}
 
   async createGuestToken(ipAddress: string, userAgent: string): Promise<{ token: string; user: any }> {
@@ -27,7 +29,8 @@ export class GuestService {
       existingGuest.ultimoInicioSesion = new Date();
       await this.userRepository.save(existingGuest);
       
-      return { token, user: existingGuest };
+      const jwtToken = this.jwtService.sign({ sub: existingGuest.id });
+      return { token: jwtToken, user: existingGuest };
     }
 
     const guestUser = this.userRepository.create({
@@ -42,6 +45,7 @@ export class GuestService {
     });
 
     await this.userRepository.save(guestUser);
-    return { token, user: guestUser };
+    const jwtToken = this.jwtService.sign({ sub: guestUser.id });
+    return { token: jwtToken, user: guestUser };
   }
 }

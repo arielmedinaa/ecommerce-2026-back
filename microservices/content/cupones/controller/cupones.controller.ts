@@ -8,7 +8,7 @@ export class CuponesController {
 
   @MessagePattern({ cmd: 'crearCupon' })
   async crearCupon(@Payload() payload: any) {
-    const { createCuponDto } = payload;
+    const createCuponDto = payload?.createCuponDto || payload;
     return await this.cuponesService.crearCupon(createCuponDto);
   }
 
