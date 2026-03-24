@@ -1,0 +1,23 @@
+services:
+  mariadb:
+    image: mariadb:latest
+    container_name: ssss_ecommerce_mariadb
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: classicS
+      MARIADB_DATABASE: ssss_ecommerce
+      MARIADB_USER: root
+      MARIADB_PASSWORD: classicS
+    ports:
+      - "3306:3306"
+    volumes:
+      - ssss_ecommerce_mariadb_data:/var/lib/mysql
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    external: true
+
+volumes:
+  ssss_ecommerce_mariadb_data:

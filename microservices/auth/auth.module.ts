@@ -2,16 +2,18 @@ import { Module } from '@nestjs/common';
 import { AuthController } from './controller/auth.controller';
 import { AuthService } from './service/auth.service';
 import { GuestService } from './service/guest.service';
-import { DatabaseModule } from '@shared/config/database/database.module';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { MariaDbModule } from './config/mariadb.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
-    DatabaseModule.forRoot(),
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     MariaDbModule,
     PassportModule,
     JwtModule.register({

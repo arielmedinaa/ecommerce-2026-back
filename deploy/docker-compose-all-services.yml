@@ -246,5 +246,4 @@ services:
 
 networks:
   app-network:
-    driver: bridge
-    attachable: true
+    external: true
