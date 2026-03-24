@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { BannerError, BannerErrorDocument } from '../../schemas/errors/banners.error.schema';
-import moment from 'moment-timezone';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { BannerError } from '../../schemas/errors/banners.error.schema';
+import * as moment from 'moment-timezone';
 
 @Injectable()
 export class BannerErrorService {
   constructor(
-    @InjectModel('BannerError')
-    private readonly bannerErrorModel: Model<BannerErrorDocument>,
+    @InjectRepository(BannerError, 'WRITE_CONNECTION')
+    private readonly bannerErrorRepository: Repository<BannerError>,
   ) {}
 
   async logError(
@@ -22,9 +22,9 @@ export class BannerErrorService {
     userId?: string,
     fileName?: string,
     device?: string,
-  ): Promise<BannerErrorDocument | null> {
+  ): Promise<BannerError | null> {
     try {
-      const errorLog = new this.bannerErrorModel({
+      const errorLog = this.bannerErrorRepository.create({
         bannerId,
         errorCode,
         message,
@@ -41,7 +41,7 @@ export class BannerErrorService {
         device,
       });
 
-      return await errorLog.save();
+      return await this.bannerErrorRepository.save(errorLog);
     } catch (logError) {
       console.error('Error al guardar log de error de banner:', logError);
       return null;
@@ -56,7 +56,7 @@ export class BannerErrorService {
     userId?: string,
     fileName?: string,
     device?: string,
-  ): Promise<BannerErrorDocument | null> {
+  ): Promise<BannerError | null> {
     const errorCode = error.name || 'UNKNOWN_ERROR';
     const message = error.message || 'Error desconocido';
     
@@ -89,7 +89,7 @@ export class BannerErrorService {
     motivo: string,
     additionalData?: Record<string, any>,
     userId?: string,
-  ): Promise<BannerErrorDocument | null> {
+  ): Promise<BannerError | null> {
     return this.logError(
       bannerId,
       'VALIDATION_ERROR',
@@ -112,7 +112,7 @@ export class BannerErrorService {
     error: any,
     operation: string = 'process_image',
     userId?: string,
-  ): Promise<BannerErrorDocument | null> {
+  ): Promise<BannerError | null> {
     return this.logError(
       bannerId,
       'FILE_PROCESSING_ERROR',
@@ -135,53 +135,55 @@ export class BannerErrorService {
     );
   }
 
-  async getErrorLogs(bannerId?: string, limit = 100): Promise<BannerErrorDocument[]> {
+  async getErrorLogs(bannerId?: string, limit = 100): Promise<BannerError[]> {
     const filter = bannerId ? { bannerId } : {};
-    return this.bannerErrorModel
-      .find(filter)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .exec();
+    return this.bannerErrorRepository.find({
+      where: filter,
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
   }
 
   async getErrorStats(): Promise<any> {
-    const stats = await this.bannerErrorModel.aggregate([
-      {
-        $group: {
-          _id: '$errorCode',
-          count: { $sum: 1 },
-          lastOccurrence: { $max: '$createdAt' },
-        },
-      },
-      { $sort: { count: -1 } },
-    ]);
+    const stats = await this.bannerErrorRepository.createQueryBuilder('error')
+      .select('error.errorCode', '_id')
+      .addSelect('COUNT(*)', 'count')
+      .addSelect('MAX(error.createdAt)', 'lastOccurrence')
+      .groupBy('error.errorCode')
+      .orderBy('count', 'DESC')
+      .getRawMany();
 
-    return stats;
+    return stats.map(stat => ({
+      ...stat,
+      count: parseInt(stat.count, 10), // MariaDB COUNT is typically returned as string by mysql2
+    }));
   }
 
-  async getErrorsByOperation(operation: string, limit = 50): Promise<BannerErrorDocument[]> {
-    return this.bannerErrorModel
-      .find({ operation })
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .exec();
+  async getErrorsByOperation(operation: string, limit = 50): Promise<BannerError[]> {
+    return this.bannerErrorRepository.find({
+      where: { operation },
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
   }
 
-  async getErrorsByDevice(device: string, limit = 50): Promise<BannerErrorDocument[]> {
-    return this.bannerErrorModel
-      .find({ device })
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .exec();
+  async getErrorsByDevice(device: string, limit = 50): Promise<BannerError[]> {
+    return this.bannerErrorRepository.find({
+      where: { device },
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
   }
 
   async clearOldLogs(daysOld = 30): Promise<{ deletedCount: number }> {
     const cutoffDate = moment().tz('America/Asuncion').subtract(daysOld, 'days').toDate();
     
-    const result = await this.bannerErrorModel.deleteMany({
-      createdAt: { $lt: cutoffDate }
-    });
+    const result = await this.bannerErrorRepository.createQueryBuilder()
+      .delete()
+      .from(BannerError)
+      .where("createdAt < :cutoffDate", { cutoffDate })
+      .execute();
 
-    return { deletedCount: result.deletedCount || 0 };
+    return { deletedCount: result.affected || 0 };
   }
 }

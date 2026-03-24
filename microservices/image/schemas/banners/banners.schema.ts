@@ -1,41 +1,51 @@
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document } from 'mongoose';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+} from 'typeorm';
 
-export type BannersDocument = Banners & Document;
-
-@Schema({
-    timestamps: true,
-    collection: 'banners'
-})
+@Entity('banners')
+@Index(['creadoPor'])
+@Index(['modificadoPor'])
+@Index(['createdAt'])
+@Index(['updatedAt'])
 export class Banners {
-    @Prop({required: true, unique: true, trim: true})
-    nombre: string;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-    @Prop({required: true}) 
-    imagen: string;
+  @Column({ unique: true })
+  nombre: string;
 
-    @Prop({required: true}) 
-    variante: string;
+  @Column()
+  imagen: string;
 
-    @Prop({required: true, default: 'webp'})
-    formato: string;
+  @Column()
+  variante: string;
 
-    @Prop({required: true})
-    ruta: string;
+  @Column({ default: 'webp' })
+  formato: string;
 
-    @Prop({required: true})
-    estado: string;
-    
-    @Prop({required: true})
-    creadoPor: string;
-    
-    @Prop({required: true})
-    modificadoPor: string;
+  @Column()
+  ruta: string;
+
+  @Column()
+  estado: string;
+
+  @Column('json', { nullable: true })
+  dimensiones: any;
+
+  @Column()
+  creadoPor: string;
+
+  @Column()
+  modificadoPor: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
-
-export const BannersSchema = SchemaFactory.createForClass(Banners);
-
-BannersSchema.index({ creadoPor: 1 });
-BannersSchema.index({ modificadoPor: 1 });
-BannersSchema.index({ createdAt: -1 });
-BannersSchema.index({ updatedAt: -1 });

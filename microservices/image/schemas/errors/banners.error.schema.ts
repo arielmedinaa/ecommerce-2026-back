@@ -1,39 +1,51 @@
-import { Prop, SchemaFactory, Schema } from "@nestjs/mongoose";
-import { Types, Document } from "mongoose";
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+} from 'typeorm';
 
-export type BannerErrorDocument = BannerError & Document;
-
-@Schema({ timestamps: true, collection: 'logs_banners' })
+@Entity('logs_banners')
 export class BannerError {
-    @Prop({ type: Types.ObjectId, ref: 'Banner', required: true, index: true })
-    bannerId: Types.ObjectId;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-    @Prop({ required: true })
-    errorCode: string;
+  @Column()
+  @Index()
+  bannerId: string;
 
-    @Prop({ required: true })
-    message: string;
+  @Column()
+  errorCode: string;
 
-    @Prop({ type: Object })
-    context: Record<string, any>;
+  @Column('text')
+  message: string;
 
-    @Prop()
-    stackTrace?: string;
+  @Column('json', { nullable: true })
+  context: Record<string, any>;
 
-    @Prop()
-    path?: string;
+  @Column('text', { nullable: true })
+  stackTrace: string;
 
-    @Prop()
-    operation?: string;
+  @Column({ nullable: true })
+  path: string;
 
-    @Prop()
-    userId?: string;
+  @Column({ nullable: true })
+  operation: string;
 
-    @Prop()
-    fileName?: string;
+  @Column({ nullable: true })
+  userId: string;
 
-    @Prop()
-    device?: string;
+  @Column({ nullable: true })
+  fileName: string;
+
+  @Column({ nullable: true })
+  device: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
-
-export const BannerErrorSchema = SchemaFactory.createForClass(BannerError);

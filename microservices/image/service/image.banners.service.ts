@@ -4,15 +4,15 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Banners, BannersDocument } from '../schemas/banners/banners.schema';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Banners } from '../schemas/banners/banners.schema';
 import { BannerValidationService } from './errors/image.spec';
 import { BannerErrorService } from './errors/banner-error.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import sharp from 'sharp';
+import * as sharp from 'sharp';
 
 @Injectable()
 export class BannerService {
@@ -26,8 +26,8 @@ export class BannerService {
   };
 
   constructor(
-    @InjectModel('Banners')
-    private readonly bannerModel: Model<BannersDocument>,
+    @InjectRepository(Banners, 'WRITE_CONNECTION')
+    private readonly bannerRepository: Repository<Banners>,
     private readonly bannerValidationService: BannerValidationService,
     private readonly bannerErrorService: BannerErrorService,
   ) {
@@ -65,11 +65,11 @@ export class BannerService {
         return validation.error;
       }
 
-      const existingBanner = await this.bannerModel.findOne({ nombre });
+      const existingBanner = await this.bannerRepository.findOne({ where: { nombre } });
       if (existingBanner) {
         const error = new Error('Ya existe un banner con ese nombre');
         await this.bannerErrorService.logValidationError(
-          existingBanner._id.toString(),
+          existingBanner.id,
           'uploadBanner',
           'nombre_duplicado',
           { nombre, variante },
@@ -92,6 +92,7 @@ export class BannerService {
         creadoPor,
       );
       const bannerData = {
+        id: bannerId,
         nombre,
         imagen: savedImages.desktop.fileName,
         variante,
@@ -103,7 +104,9 @@ export class BannerService {
         dimensiones: savedImages,
       };
 
-      const newBanner = await this.bannerModel.create(bannerData);
+      const newEntity = this.bannerRepository.create(bannerData);
+      const newBanner = await this.bannerRepository.save(newEntity);
+      
       return {
         data: newBanner,
         message: 'Banner subido exitosamente en todas las dimensiones',
@@ -198,15 +201,17 @@ export class BannerService {
         throw new BadRequestException(deviceValidation.error.message);
       }
 
-      const banner = await this.bannerModel.findOne({
-        nombre,
-        estado: 'activo',
+      const banner = await this.bannerRepository.findOne({
+        where: {
+          nombre,
+          estado: 'activo',
+        }
       });
 
       this.logger.log(`Banner encontrado: ${banner ? 'SÍ' : 'NO'}`);
       if (banner) {
         this.logger.log(
-          `ID del banner: ${banner._id}, nombre guardado: "${banner.nombre}"`,
+          `ID del banner: ${banner.id}, nombre guardado: "${banner.nombre}"`,
         );
       }
 
@@ -235,7 +240,7 @@ export class BannerService {
         );
         const error = new NotFoundException('Imagen del banner no encontrada');
         await this.bannerErrorService.logValidationError(
-          banner._id.toString(),
+          banner.id,
           'getBannerImage',
           'imagen_no_encontrada',
           { nombre, device, availableFiles: files },
@@ -274,9 +279,19 @@ export class BannerService {
     success: boolean;
   }> {
     try {
-      const banners = await this.bannerModel
-        .find({}, fields)
-        .sort({ createdAt: -1 });
+      let selectOptions = null;
+      if (fields && fields.length > 0) {
+        selectOptions = fields.reduce((acc, field) => {
+          acc[field] = true;
+          return acc;
+        }, {} as any);
+      }
+
+      const banners = await this.bannerRepository.find({
+        select: selectOptions,
+        order: { createdAt: 'DESC' },
+      });
+
       return {
         data: banners,
         message: 'Banners obtenidos exitosamente',
@@ -308,7 +323,7 @@ export class BannerService {
         return idValidation.error;
       }
 
-      const banner = await this.bannerModel.findById(id);
+      const banner = await this.bannerRepository.findOne({ where: { id } });
       if (!banner) {
         new NotFoundException('Banner no encontrado');
         await this.bannerErrorService.logValidationError(
@@ -354,7 +369,7 @@ export class BannerService {
       if (!idValidation.isValid) {
         return idValidation.error;
       }
-      const banner = await this.bannerModel.findById(id);
+      const banner = await this.bannerRepository.findOne({ where: { id } });
       if (!banner) {
         const error = new NotFoundException('Banner no encontrado');
         await this.bannerErrorService.logValidationError(
@@ -370,7 +385,7 @@ export class BannerService {
         };
       }
 
-      const baseFileName = `${banner._id}_${banner.nombre.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      const baseFileName = `${banner.id}_${banner.nombre.replace(/[^a-zA-Z0-9]/g, '_')}`;
       for (const device of Object.keys(this.dimensions)) {
         const fileName = `${baseFileName}_${device}.webp`;
         const filePath = path.join(this.bannersDir, fileName);
@@ -390,7 +405,7 @@ export class BannerService {
         }
       }
 
-      await this.bannerModel.findByIdAndDelete(id);
+      await this.bannerRepository.delete(id);
       return {
         data: null as any,
         message: 'Banner eliminado exitosamente',
@@ -422,7 +437,7 @@ export class BannerService {
         return idValidation.error;
       }
 
-      const banner = await this.bannerModel.findById(id);
+      const banner = await this.bannerRepository.findOne({ where: { id } });
 
       if (!banner) {
         const error = new NotFoundException('Banner no encontrado');
@@ -440,14 +455,9 @@ export class BannerService {
       }
 
       const newStatus = banner.estado === 'activo' ? 'inactivo' : 'activo';
-      const updatedBanner = await this.bannerModel.findByIdAndUpdate(
-        id,
-        {
-          estado: newStatus,
-          updatedAt: new Date(),
-        },
-        { new: true },
-      );
+      await this.bannerRepository.update(id, { estado: newStatus });
+      
+      const updatedBanner = await this.bannerRepository.findOne({ where: { id } });
 
       if (!updatedBanner) {
         const error = new Error('No se pudo actualizar el estado del banner');

@@ -5,30 +5,24 @@ export class HealthCheckGuard implements CanActivate {
   private readonly logger = new Logger(HealthCheckGuard.name);
   private serviceHealth = new Map<string, { status: 'UP' | 'DOWN'; lastCheck: number; failures: number }>();
   private readonly FAILURE_THRESHOLD = 5;
-  private readonly RECOVERY_TIMEOUT = 30000; // 30 seconds
+  private readonly RECOVERY_TIMEOUT = 30000;
 
   canActivate(context: ExecutionContext): boolean {
-    // Check if this is an RPC call (microservice communication)
     const isRpc = context.getType() === 'rpc';
     if (isRpc) {
-      // Skip health checks for internal microservice communication
       return true;
     }
 
     const request = context.switchToHttp().getRequest();
     if (!request) {
-      // No HTTP request context (could be WebSocket or other)
       return true;
     }
 
     const { path, method } = request;
-
-    // Skip health check for health endpoints themselves
     if (path && (path.includes('/health') || path.includes('/status'))) {
       return true;
     }
 
-    // Check if this is a critical endpoint that requires services to be healthy
     if (path && method && this.isCriticalEndpoint(path, method)) {
       return this.checkServiceHealth(path);
     }
@@ -54,7 +48,6 @@ export class HealthCheckGuard implements CanActivate {
     const health = this.serviceHealth.get(serviceName);
 
     if (!health) {
-      // First time checking this service
       this.serviceHealth.set(serviceName, {
         status: 'UP',
         lastCheck: Date.now(),
@@ -65,11 +58,8 @@ export class HealthCheckGuard implements CanActivate {
 
     const now = Date.now();
     const timeSinceLastCheck = now - health.lastCheck;
-
-    // If service is marked as DOWN, check if recovery timeout has passed
     if (health.status === 'DOWN') {
       if (timeSinceLastCheck >= this.RECOVERY_TIMEOUT) {
-        // Try to recover
         this.logger.log(`Attempting to recover service: ${serviceName}`);
         this.serviceHealth.set(serviceName, {
           status: 'UP',
@@ -96,7 +86,6 @@ export class HealthCheckGuard implements CanActivate {
     return 'unknown';
   }
 
-  // This method would be called by external monitoring or circuit breaker
   public reportServiceFailure(serviceName: string) {
     const health = this.serviceHealth.get(serviceName) || {
       status: 'UP' as const,
@@ -115,7 +104,6 @@ export class HealthCheckGuard implements CanActivate {
     this.serviceHealth.set(serviceName, health);
   }
 
-  // This method would be called when a service call succeeds
   public reportServiceSuccess(serviceName: string) {
     const health = this.serviceHealth.get(serviceName);
     if (health) {

@@ -186,9 +186,9 @@ export class BannerValidationService {
       };
     }
 
-    // Validar formato de ObjectId de MongoDB
-    const objectIdRegex = /^[0-9a-fA-F]{24}$/;
-    if (!objectIdRegex.test(id)) {
+    // Validar formato de UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
       const error = new Error('ID de banner no tiene formato válido');
       await this.bannerErrorService.logValidationError(
         id,
@@ -201,7 +201,7 @@ export class BannerValidationService {
         isValid: false,
         error: {
           success: false,
-          message: 'ID de banner no tiene formato válido',
+          message: 'ID de banner no tiene formato válido (debe ser UUID)',
           data: [],
         },
       };
