@@ -54,8 +54,9 @@ let CartContadoService = CartContadoService_1 = class CartContadoService {
         if (!validation.isValid) {
             return validation.error;
         }
+        let eventoValidation = { allowed: true };
         try {
-            const eventoValidation = await (0, rxjs_1.firstValueFrom)(this.contentService.send({ cmd: 'validarProductoParaCarrito' }, {
+            eventoValidation = await (0, rxjs_1.firstValueFrom)(this.contentService.send({ cmd: 'validarProductoParaCarrito' }, {
                 producto_codigo: producto.codigo,
                 cliente_id: clienteToken,
                 usuario: { token: clienteToken },
@@ -103,6 +104,49 @@ let CartContadoService = CartContadoService_1 = class CartContadoService {
             carritoExistente = await this.carritoRead.findOne({
                 where: { id: carritoExistente.id },
             });
+        }
+        if (eventoValidation.condiciones &&
+            eventoValidation.condiciones.length > 0) {
+            for (const condicion of eventoValidation.condiciones) {
+                if (condicion.tipo === 'MIN_CARRITO') {
+                    const montoMinimo = parseFloat(condicion.valor);
+                    if (isNaN(montoMinimo) || montoMinimo <= 0)
+                        continue;
+                    let montoActual = 0;
+                    if (carritoExistente && carritoExistente.articulos) {
+                        const contado = carritoExistente.articulos.contado || [];
+                        const credito = carritoExistente.articulos.credito || [];
+                        montoActual = [...contado, ...credito].reduce((sum, item) => sum + item.precio * (item.cantidad || 1), 0);
+                    }
+                    montoActual += producto.precio * (producto.cantidad || 1);
+                    if (montoActual < montoMinimo) {
+                        return {
+                            data: [],
+                            success: false,
+                            message: `El monto mínimo del carrito debe ser ${montoMinimo}. Monto actual: ${montoActual}.`,
+                        };
+                    }
+                }
+                else if (condicion.tipo === 'MAX_UNIDADES_PEDIDO') {
+                    const maxUnidades = parseInt(condicion.valor);
+                    if (isNaN(maxUnidades) || maxUnidades <= 0)
+                        continue;
+                    let unidadesActuales = 0;
+                    if (carritoExistente && carritoExistente.articulos) {
+                        const contado = carritoExistente.articulos.contado || [];
+                        const credito = carritoExistente.articulos.credito || [];
+                        unidadesActuales = [...contado, ...credito].reduce((sum, item) => sum + (item.cantidad || 1), 0);
+                    }
+                    unidadesActuales += producto.cantidad || 1;
+                    if (unidadesActuales > maxUnidades) {
+                        return {
+                            data: [],
+                            success: false,
+                            message: `El máximo de unidades por pedido es ${maxUnidades}. Unidades actuales: ${unidadesActuales}.`,
+                        };
+                    }
+                }
+            }
         }
         if (!carritoExistente && codigo === 0) {
             const maxCodigo = await this.carritoRead

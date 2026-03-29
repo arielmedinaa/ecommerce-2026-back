@@ -6,19 +6,12 @@ import {
   Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  Repository,
-  LessThanOrEqual,
-  MoreThanOrEqual,
-  IsNull,
-} from 'typeorm';
+import { Repository, LessThanOrEqual, MoreThanOrEqual, IsNull } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { Event } from '../schemas/event.schema';
 import { EventProduct } from '../schemas/event-product.schema';
-import {
-  ConditionType,
-} from '../schemas/event-condition.schema';
+import { ConditionType } from '../schemas/event-condition.schema';
 import { Order } from '../schemas/order.schema';
 import { OrderItem } from '../schemas/order-item.schema';
 import { CreateEventDto } from '../schemas/dto/create-event.dto';
@@ -259,7 +252,12 @@ export class EventsService {
     producto_codigo: string,
     cliente_id: string,
     usuario?: any, // Información del usuario desde el token
-  ): Promise<{ allowed: boolean; reason?: string; precioOferta?: number }> {
+  ): Promise<{
+    allowed: boolean;
+    reason?: string;
+    precioOferta?: number;
+    condiciones?: Array<{ tipo: ConditionType; valor: string }>;
+  }> {
     // 1. Encontrar todos los eventos activos donde el producto esté presente
     const now = new Date();
     const activeEvents = await this.eventRepositoryRead
@@ -343,10 +341,11 @@ export class EventsService {
       }
     }
 
-    // 6. Devolver precioOferta si aplica
+    // 6. Devolver precioOferta y condiciones que requieren validación en cart
     return {
       allowed: true,
       precioOferta: eventProduct.precioOferta,
+      condiciones: conditionsMet.condiciones,
     };
   }
 
@@ -354,17 +353,27 @@ export class EventsService {
     event: Event,
     cliente_id: string,
     usuario?: any,
-  ): Promise<{ allowed: boolean; reason?: string }> {
+  ): Promise<{
+    allowed: boolean;
+    reason?: string;
+    condiciones: Array<{ tipo: ConditionType; valor: string }>;
+  }> {
     const conditions = await this.conditionsService.findByEvent(event.id);
+    const condicionesRequierenValidacion: Array<{
+      tipo: ConditionType;
+      valor: string;
+    }> = [];
 
     for (const condition of conditions) {
       switch (condition.tipo) {
         case ConditionType.MIN_CARRITO:
-          // Condición: monto mínimo en carrito (se valida en cart service)
-          // Aquí solo pasamos la condición, la validación real es en cart
-          break;
         case ConditionType.MAX_UNIDADES_PEDIDO:
-          // Condición: máximo unidades por pedido (se valida en cart)
+        case ConditionType.METODO_PAGO_ESPECIFICO:
+          // Estas condiciones requieren validación en cart service
+          condicionesRequierenValidacion.push({
+            tipo: condition.tipo,
+            valor: condition.valor,
+          });
           break;
         case ConditionType.SOLO_NUEVOS_USUARIOS:
           // Verificar si el usuario es nuevo (sin órdenes previas)
@@ -375,11 +384,9 @@ export class EventsService {
             return {
               allowed: false,
               reason: 'Este evento es solo para nuevos usuarios.',
+              condiciones: [],
             };
           }
-          break;
-        case ConditionType.METODO_PAGO_ESPECIFICO:
-          // Condición: método de pago específico (se valida en cart)
           break;
         default:
           this.logger.warn(
@@ -387,7 +394,7 @@ export class EventsService {
           );
       }
     }
-    return { allowed: true };
+    return { allowed: true, condiciones: condicionesRequierenValidacion };
   }
 
   private async checkUserSegmentation(

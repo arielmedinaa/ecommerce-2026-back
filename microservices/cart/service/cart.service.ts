@@ -64,8 +64,9 @@ export class CartContadoService {
     }
 
     // Validación de eventos: verificar si el producto tiene límite de compra por usuario en eventos activos
+    let eventoValidation: any = { allowed: true };
     try {
-      const eventoValidation = await firstValueFrom(
+      eventoValidation = await firstValueFrom(
         this.contentService.send(
           { cmd: 'validarProductoParaCarrito' },
           {
@@ -131,6 +132,65 @@ export class CartContadoService {
       carritoExistente = await this.carritoRead.findOne({
         where: { id: carritoExistente.id },
       });
+    }
+
+    // Evaluar condiciones dinámicas del evento (si las hay)
+    if (
+      eventoValidation.condiciones &&
+      eventoValidation.condiciones.length > 0
+    ) {
+      for (const condicion of eventoValidation.condiciones) {
+        if (condicion.tipo === 'MIN_CARRITO') {
+          const montoMinimo = parseFloat(condicion.valor);
+          if (isNaN(montoMinimo) || montoMinimo <= 0) continue;
+
+          // Calcular monto total del carrito actual (sin el nuevo producto)
+          let montoActual = 0;
+          if (carritoExistente && carritoExistente.articulos) {
+            const contado = carritoExistente.articulos.contado || [];
+            const credito = carritoExistente.articulos.credito || [];
+            montoActual = [...contado, ...credito].reduce(
+              (sum, item) => sum + item.precio * (item.cantidad || 1),
+              0,
+            );
+          }
+          // Sumar precio del nuevo producto (ya con precioOferta si aplica)
+          montoActual += producto.precio * (producto.cantidad || 1);
+
+          if (montoActual < montoMinimo) {
+            return {
+              data: [],
+              success: false,
+              message: `El monto mínimo del carrito debe ser ${montoMinimo}. Monto actual: ${montoActual}.`,
+            };
+          }
+        } else if (condicion.tipo === 'MAX_UNIDADES_PEDIDO') {
+          const maxUnidades = parseInt(condicion.valor);
+          if (isNaN(maxUnidades) || maxUnidades <= 0) continue;
+
+          // Calcular total de unidades en carrito actual
+          let unidadesActuales = 0;
+          if (carritoExistente && carritoExistente.articulos) {
+            const contado = carritoExistente.articulos.contado || [];
+            const credito = carritoExistente.articulos.credito || [];
+            unidadesActuales = [...contado, ...credito].reduce(
+              (sum, item) => sum + (item.cantidad || 1),
+              0,
+            );
+          }
+          // Sumar unidades del nuevo producto
+          unidadesActuales += producto.cantidad || 1;
+
+          if (unidadesActuales > maxUnidades) {
+            return {
+              data: [],
+              success: false,
+              message: `El máximo de unidades por pedido es ${maxUnidades}. Unidades actuales: ${unidadesActuales}.`,
+            };
+          }
+        }
+        // METODO_PAGO_ESPECIFICO se validará al finalizar compra
+      }
     }
 
     if (!carritoExistente && codigo === 0) {

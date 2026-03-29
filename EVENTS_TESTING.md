@@ -226,6 +226,81 @@
 
 **Endpoint:** `PUT /content/event/condition/1/toggle`
 
+## 16. Validación de Condiciones Dinámicas
+
+Las condiciones se evalúan automáticamente al añadir producto al carrito:
+
+- **MIN_CARRITO**: El carrito debe alcanzar un monto mínimo.
+- **MAX_UNIDADES_PEDIDO**: El carrito no puede exceder un máximo de unidades.
+- **SOLO_NUEVOS_USUARIOS**: Validado en content (usuario sin órdenes previas).
+- **METODO_PAGO_ESPECIFICO**: Se validará al finalizar compra (pendiente de implementación).
+
+**Ejemplo de condición MIN_CARRITO:**
+
+```json
+// Primero crear evento con condición
+POST /content/event
+{
+  "nombre": "Evento con mínimo",
+  "fechaInicio": "2026-05-01T00:00:00.000Z",
+  "fechaFin": "2026-05-07T23:59:59.999Z",
+  "activo": true,
+  "limiteGlobalPorUsuario": 1,
+  "productos": [{ "producto_codigo": "PROD-001" }]
+}
+
+// Luego agregar condición
+POST /content/event/condition
+{
+  "evento_id": 1,
+  "tipo": "MIN_CARRITO",
+  "valor": "150.00",
+  "activo": true
+}
+```
+
+**Validación en cart**: Al intentar añadir producto, si el monto total del carrito (incluyendo el nuevo producto) es menor a 150, se rechazará.
+
+---
+
+## **Flujo Actual del Servicio de Carritos**
+
+### **Al añadir producto al carrito (`addCart`)**
+
+1. **Validación básica** (cartValidationService.validateCartPayload).
+2. **Validación de eventos** (contentService.validarProductoParaCarrito):
+   - Verifica límites de compra por usuario en eventos activos.
+   - Verifica segmentación de usuario (beneficioUsuarioEspecifico).
+   - Evalúa condiciones dinámicas (SOLO_NUEVOS_USUARIOS).
+   - Retorna condiciones que requieren validación en cart (MIN_CARRITO, MAX_UNIDADES_PEDIDO, METODO_PAGO_ESPECIFICO).
+   - Retorna precioOferta si aplica.
+3. **Aplicar precioOferta**: Si hay precioOferta, actualizar precio del producto.
+4. **Evaluar condiciones dinámicas en cart**:
+   - Calcular monto total del carrito (incluyendo nuevo producto).
+   - Verificar que cumpla con MIN_CARRITO.
+   - Verificar que no exceda MAX_UNIDADES_PEDIDO.
+5. **Añadir producto al carrito** (con precio actualizado).
+
+### **Al finalizar compra (`finishCart`)**
+
+1. Validar carrito y datos de pago.
+2. Registrar pago en payments microservice.
+3. Marcar carrito como pagado (estado = 0).
+4. **Crear orden automáticamente** (en cart microservice, tabla `ordenes`).
+5. Enviar orden a central app.
+
+### **Órdenes y límites**
+
+- Las órdenes se crean con estado = 1 (pagado).
+- Solo las órdenes con estado = 1 cuentan para límites de compra.
+- El conteo se hace por (cliente_documento, producto_codigo, evento_id).
+
+### **Payments microservice**
+
+- **No necesita cambios** para eventos.
+- Solo registra transacciones de pago.
+- La lógica de eventos y validaciones está en cart y content.
+
 ---
 
 ## Notas para Pruebas
