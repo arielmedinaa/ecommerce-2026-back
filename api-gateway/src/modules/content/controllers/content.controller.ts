@@ -123,10 +123,7 @@ export class ContentController {
     @Body() body: { userId: string },
   ) {
     const landing = await firstValueFrom(
-      this.contentClient.send(
-        { cmd: 'togglePublishLanding' },
-        { id, ...body },
-      ),
+      this.contentClient.send({ cmd: 'togglePublishLanding' }, { id, ...body }),
     );
     return landing;
   }
@@ -240,7 +237,7 @@ export class ContentController {
     );
     return stats;
   }
-  
+
   @Post('vertical')
   @SneakyThrows('ContentController', 'createVertical')
   async createVertical(@Body() body: { vertical: any; userId: string }) {
@@ -258,7 +255,7 @@ export class ContentController {
     );
     return vertical;
   }
-  
+
   @Post('vertical/listar')
   @SneakyThrows('ContentController', 'getAllVerticales')
   async getAllVerticales(@Body() filters: any) {
@@ -267,7 +264,7 @@ export class ContentController {
     );
     return verticales;
   }
-  
+
   @Post('cupon')
   @SneakyThrows('ContentController', 'crearCupon')
   async crearCupon(@Body() body: any) {
@@ -319,5 +316,151 @@ export class ContentController {
       this.contentClient.send({ cmd: 'desactivarCupon' }, { id }),
     );
     return { message: 'Cupón desactivado exitosamente', cupon: result };
+  }
+
+  // Eventos
+  @Post('event')
+  @SneakyThrows('ContentController', 'createEvent')
+  async createEvent(@Body() body: any) {
+    const event = await firstValueFrom(
+      this.contentClient.send({ cmd: 'crearEvento' }, body),
+    );
+    return event;
+  }
+
+  @Get('events')
+  @SneakyThrows('ContentController', 'listEvents')
+  async listEvents(
+    @Query('page', ParseIntPipe) page: number = 1,
+    @Query('limit', ParseIntPipe) limit: number = 10,
+    @Query('filters') filters?: string,
+  ) {
+    const parsedFilters = filters ? JSON.parse(filters) : {};
+    const events = await firstValueFrom(
+      this.contentClient.send(
+        { cmd: 'listarEventos' },
+        { page, limit, filters: parsedFilters },
+      ),
+    );
+    return events;
+  }
+
+  @Get('events/active')
+  @SneakyThrows('ContentController', 'getActiveEvents')
+  async getActiveEvents() {
+    const events = await firstValueFrom(
+      this.contentClient.send({ cmd: 'eventosActivos' }, {}),
+    );
+    return events;
+  }
+
+  @Get('event/:id')
+  @SneakyThrows('ContentController', 'getEventById')
+  async getEventById(@Param('id', ParseIntPipe) id: number) {
+    const event = await firstValueFrom(
+      this.contentClient.send({ cmd: 'obtenerEvento' }, { id }),
+    );
+    return event;
+  }
+
+  @Post('event/:id/product')
+  @SneakyThrows('ContentController', 'addProductToEvent')
+  async addProductToEvent(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { producto_codigo: string; limitePorUsuario?: number },
+  ) {
+    const result = await firstValueFrom(
+      this.contentClient.send(
+        { cmd: 'agregarProductoAEvento' },
+        { eventId: id, ...body },
+      ),
+    );
+    return result;
+  }
+
+  @Delete('event/:id/product/:producto_codigo')
+  @SneakyThrows('ContentController', 'removeProductFromEvent')
+  async removeProductFromEvent(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('producto_codigo') producto_codigo: string,
+  ) {
+    await firstValueFrom(
+      this.contentClient.send(
+        { cmd: 'removerProductoDeEvento' },
+        { eventId: id, producto_codigo },
+      ),
+    );
+    return { message: 'Producto removido del evento exitosamente' };
+  }
+
+  @Get('event/validate')
+  @SneakyThrows('ContentController', 'validateProductForCart')
+  async validateProductForCart(
+    @Query('producto_codigo') producto_codigo: string,
+    @Query('cliente_id') cliente_id: string,
+    @Query('usuario') usuario?: string,
+  ) {
+    const parsedUsuario = usuario ? JSON.parse(usuario) : undefined;
+    const result = await firstValueFrom(
+      this.contentClient.send(
+        { cmd: 'validarProductoParaCarrito' },
+        { producto_codigo, cliente_id, usuario: parsedUsuario },
+      ),
+    );
+    return result;
+  }
+
+  @Get('events/tree')
+  @SneakyThrows('ContentController', 'getEventHierarchy')
+  async getEventHierarchy() {
+    const result = await firstValueFrom(
+      this.contentClient.send({ cmd: 'obtenerJerarquiaEventos' }, {}),
+    );
+    return result;
+  }
+
+  // Condiciones de eventos
+  @Post('event/condition')
+  @SneakyThrows('ContentController', 'createCondition')
+  async createCondition(@Body() body: any) {
+    const result = await firstValueFrom(
+      this.contentClient.send({ cmd: 'crearCondicionEvento' }, body),
+    );
+    return result;
+  }
+
+  @Get('event/conditions')
+  @SneakyThrows('ContentController', 'listConditions')
+  async listConditions(
+    @Query('page', ParseIntPipe) page: number = 1,
+    @Query('limit', ParseIntPipe) limit: number = 10,
+    @Query('filters') filters?: string,
+  ) {
+    const parsedFilters = filters ? JSON.parse(filters) : {};
+    const result = await firstValueFrom(
+      this.contentClient.send(
+        { cmd: 'listarCondiciones' },
+        { page, limit, filters: parsedFilters },
+      ),
+    );
+    return result;
+  }
+
+  @Delete('event/condition/:id')
+  @SneakyThrows('ContentController', 'deleteCondition')
+  async deleteCondition(@Param('id', ParseIntPipe) id: number) {
+    const result = await firstValueFrom(
+      this.contentClient.send({ cmd: 'eliminarCondicion' }, { id }),
+    );
+    return result;
+  }
+
+  @Put('event/condition/:id/toggle')
+  @SneakyThrows('ContentController', 'toggleCondition')
+  async toggleCondition(@Param('id', ParseIntPipe) id: number) {
+    const result = await firstValueFrom(
+      this.contentClient.send({ cmd: 'toggleCondicion' }, { id }),
+    );
+    return result;
   }
 }

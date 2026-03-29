@@ -85,12 +85,29 @@ export class AuthController {
   }
 
   @MessagePattern({ cmd: 'ultimo_inicio_sesion_usuario' })
-  async ultimoInicioSesionUsuario(@Payload() payload: { token: string; email?: string }) {
+  async ultimoInicioSesionUsuario(
+    @Payload() payload: { token: string; email?: string },
+  ) {
     try {
-      await this.authService.ultimoInicioSesionUsuario(payload.token, payload.email);
+      await this.authService.ultimoInicioSesionUsuario(
+        payload.token,
+        payload.email,
+      );
       return { success: true };
     } catch (error) {
       this.logger.error('Error in ultimo_inicio_sesion_usuario:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'obtener_etiquetas_usuario' })
+  async obtenerEtiquetasUsuario(
+    @Payload() payload: { usuario_id: number | string },
+  ) {
+    try {
+      return await this.authService.getUsuarioEtiquetas(payload.usuario_id);
+    } catch (error) {
+      this.logger.error('Error in obtener_etiquetas_usuario:', error);
       throw error;
     }
   }

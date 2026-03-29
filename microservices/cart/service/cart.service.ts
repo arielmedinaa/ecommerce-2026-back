@@ -1,5 +1,7 @@
 import { Cart } from '@cart/schemas/cart.schemas';
 import { Transaccion } from '@cart/schemas/transaccion.schemas';
+import { Order } from '@cart/schemas/order.schemas';
+import { OrderItem } from '@cart/schemas/order-item.schemas';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -30,9 +32,14 @@ export class CartContadoService {
     private readonly carritoRead: Repository<Cart>,
     @InjectRepository(Transaccion, 'READ_CONNECTION')
     private readonly transaccionesRead: Repository<Transaccion>,
+    @InjectRepository(Order, 'WRITE_CONNECTION')
+    private readonly orderWrite: Repository<Order>,
+    @InjectRepository(OrderItem, 'WRITE_CONNECTION')
+    private readonly orderItemWrite: Repository<OrderItem>,
     @Inject('PRODUCTS_SERVICE')
     private readonly productsService: ClientProxy,
     @Inject('PAYMENTS_SERVICE') private readonly paymentsService: ClientProxy,
+    @Inject('CONTENT_SERVICE') private readonly contentService: ClientProxy,
     private readonly cartValidationService: CartValidationService,
     private readonly cartErrorService: CartErrorService,
     private readonly resilientService: ResilientService,
@@ -54,6 +61,43 @@ export class CartContadoService {
 
     if (!validation.isValid) {
       return validation.error;
+    }
+
+    // Validación de eventos: verificar si el producto tiene límite de compra por usuario en eventos activos
+    try {
+      const eventoValidation = await firstValueFrom(
+        this.contentService.send(
+          { cmd: 'validarProductoParaCarrito' },
+          {
+            producto_codigo: producto.codigo,
+            cliente_id: clienteToken,
+            usuario: { token: clienteToken }, // Enviar token para que content decodifique
+          },
+        ),
+      );
+      if (!eventoValidation.allowed) {
+        return {
+          data: [],
+          success: false,
+          message:
+            eventoValidation.reason ||
+            'Producto no puede ser añadido al carrito debido a restricciones de evento.',
+        };
+      }
+      // Si hay precioOferta, actualizar el precio del producto
+      if (eventoValidation.precioOferta && eventoValidation.precioOferta > 0) {
+        producto.precio = eventoValidation.precioOferta;
+        // Si el producto tiene credito, actualizar también el precio en credito
+        if (producto.credito) {
+          producto.credito.precio = eventoValidation.precioOferta;
+        }
+      }
+    } catch (error) {
+      this.logger.warn(
+        'Error al validar evento, permitiendo añadir producto',
+        error,
+      );
+      // Si falla la comunicación, permitimos la adición (o podríamos rechazar, dependiendo de la política)
     }
 
     let filtro: any = {
@@ -421,7 +465,11 @@ export class CartContadoService {
         .orderBy('cart.codigo', order as 'ASC' | 'DESC')
         .getMany();
       if (!resultado || resultado.length === 0) {
-        return { data: [], success: false, message: 'No se encontraron carritos' };
+        return {
+          data: [],
+          success: false,
+          message: 'No se encontraron carritos',
+        };
       }
     } catch (error) {
       this.logger.error('Error al obtener carrito faltante:', error);
@@ -567,6 +615,58 @@ export class CartContadoService {
         },
         envio: process?.envio || {},
       });
+
+      // Crear orden
+      const orderItems: Partial<OrderItem>[] = [];
+      const articulos = carrito.articulos || {};
+      const contado = articulos.contado || [];
+      const credito = articulos.credito || [];
+      const allArticulos = [...contado, ...credito];
+
+      for (const item of allArticulos) {
+        // Obtener evento activo para este producto
+        let eventoId: number | null = null;
+        try {
+          const eventoResponse = await firstValueFrom(
+            this.contentService.send(
+              { cmd: 'obtenerEventoActivoParaProducto' },
+              { producto_codigo: item.codigo },
+            ),
+          );
+          if (eventoResponse && eventoResponse.id) {
+            eventoId = eventoResponse.id;
+          }
+        } catch (error) {
+          // Si no hay evento, ignorar
+        }
+
+        orderItems.push(
+          this.orderItemWrite.create({
+            producto_codigo: item.codigo,
+            producto_nombre: item.nombre,
+            cantidad: item.cantidad,
+            precio_unitario: item.precio,
+            subtotal: item.cantidad * item.precio,
+            evento_id: eventoId,
+          }),
+        );
+      }
+
+      const order = this.orderWrite.create({
+        codigo: `ORD-${codigo}-${Date.now()}`,
+        carrito_codigo: carrito.codigo,
+        cliente_documento: clienteToken,
+        total: montoTotal,
+        datos_envio: process?.envio || {},
+        datos_pago: process,
+        estado: 1,
+      });
+
+      const savedOrder = await this.orderWrite.save(order);
+      for (const item of orderItems) {
+        item.orden_id = savedOrder.id;
+      }
+      await this.orderItemWrite.save(orderItems);
 
       setImmediate(async () => {
         try {

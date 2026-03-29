@@ -4,6 +4,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Cart } from '../schemas/cart.schemas';
 import { Llave } from '../schemas/llave.schemas';
 import { Transaccion } from '../schemas/transaccion.schemas';
+import { Order } from '../schemas/order.schemas';
+import { OrderItem } from '../schemas/order-item.schemas';
+import { CartError } from '../schemas/errors/cart-error.entity';
 import { MariaDbConnectionService } from './mariadb-connection.service';
 
 @Module({
@@ -28,9 +31,9 @@ export class MariaDbModule {
         username: configService.get<string>('DATABASE_USER'),
         password: configService.get<string>('DATABASE_PASSWORD'),
         database: configService.get<string>('DATABASE_NAME'),
-        entities: [Cart, Llave, Transaccion],
-        synchronize: false,
-        logging: true,
+        entities: [Cart, Llave, Transaccion, Order, OrderItem, CartError],
+        synchronize: true,
+        logging: false,
         timezone: '-03:00',
         charset: 'utf8mb4',
       }),
@@ -49,9 +52,9 @@ export class MariaDbModule {
         username: configService.get<string>('DATABASE_USER_REPLIC'),
         password: configService.get<string>('DATABASE_PASSWORD_REPLIC'),
         database: configService.get<string>('DATABASE_NAME_REPLIC'),
-        entities: [Cart, Llave, Transaccion],
-        synchronize: false,
-        logging: true,
+        entities: [Cart, Llave, Transaccion, Order, OrderItem, CartError],
+        synchronize: true,
+        logging: false,
         timezone: '-03:00',
         charset: 'utf8mb4',
       }),
@@ -60,10 +63,16 @@ export class MariaDbModule {
   }
 
   static forFeature(): DynamicModule {
-    return TypeOrmModule.forFeature([Cart, Llave, Transaccion], 'WRITE_CONNECTION');
+    return TypeOrmModule.forFeature(
+      [Cart, Llave, Transaccion, Order, OrderItem, CartError],
+      'WRITE_CONNECTION',
+    );
   }
 
   static forFeatureRead(): DynamicModule {
-    return TypeOrmModule.forFeature([Cart, Llave, Transaccion], 'READ_CONNECTION');
+    return TypeOrmModule.forFeature(
+      [Cart, Llave, Transaccion, Order, OrderItem, CartError],
+      'READ_CONNECTION',
+    );
   }
 }

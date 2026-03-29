@@ -16,7 +16,7 @@ import { MariaDbConnectionService } from './mariadb-connection.service';
         password: configService.get<string>('DATABASE_PASSWORD'),
         database: configService.get<string>('DATABASE_NAME'),
         entities: [User],
-        synchronize: false, // Temporal para desarrollo
+        synchronize: true, // Temporal para desarrollo
         logging: false,
       }),
       inject: [ConfigService],

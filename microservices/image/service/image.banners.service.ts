@@ -67,7 +67,7 @@ export class BannerService {
 
       const existingBanner = await this.bannerRepository.findOne({ where: { nombre } });
       if (existingBanner) {
-        const error = new Error('Ya existe un banner con ese nombre');
+        this.logger.error('YA EXISTE UN BANNER CON ESE NOMBRE');
         await this.bannerErrorService.logValidationError(
           existingBanner.id,
           'uploadBanner',
@@ -77,7 +77,7 @@ export class BannerService {
         );
         return {
           data: null as any,
-          message: 'Ya existe un banner con ese nombre',
+          message: 'YA EXISTE UN BANNER CON ESE NOMBRE',
           success: false,
         };
       }
@@ -109,7 +109,7 @@ export class BannerService {
       
       return {
         data: newBanner,
-        message: 'Banner subido exitosamente en todas las dimensiones',
+        message: 'BANNER SUBIDO EXITOSAMENTE',
         success: true,
       };
     } catch (error) {
@@ -172,14 +172,12 @@ export class BannerService {
         }
       }
 
-      // Eliminar archivo temporal
       if (fs.existsSync(tempPath)) {
         fs.unlinkSync(tempPath);
       }
 
       return savedImages;
     } catch (error) {
-      // Limpiar archivos temporales en caso de error
       if (fs.existsSync(tempPath)) {
         fs.unlinkSync(tempPath);
       }

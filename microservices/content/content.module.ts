@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { VerticalesModule } from './verticales/verticales.module';
 import { MariaDbModule } from './config/mariadb.module';
 import { CuponesModule } from './cupones/cupones.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -15,12 +16,9 @@ import { CuponesModule } from './cupones/cupones.module';
     LandingsModule,
     VerticalesModule,
     CuponesModule,
-    MariaDbModule
+    EventsModule,
+    MariaDbModule,
   ],
-  exports: [
-    HomeModule,
-    LandingsModule,
-    VerticalesModule,
-  ],
+  exports: [HomeModule, LandingsModule, VerticalesModule, EventsModule],
 })
 export class ContentModule {}

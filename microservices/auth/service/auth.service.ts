@@ -34,7 +34,9 @@ export class AuthService {
     return guestUser;
   }
 
-  async createBasicUser(email: string): Promise<{data: User; message: string; success: boolean; token: string}> {
+  async createBasicUser(
+    email: string,
+  ): Promise<{ data: User; message: string; success: boolean; token: string }> {
     const user = this.userRepository.create({
       email,
       nombre: email.split('@')[0],
@@ -46,9 +48,9 @@ export class AuthService {
 
     await this.userRepository.save(user);
     this.logger.log(`Created new basic user: ${email}`);
-    
+
     const token = this.generateUserToken(user);
-    
+
     return {
       data: user,
       message: 'USUARIO CREADO EXITOSAMENTE',
@@ -80,7 +82,7 @@ export class AuthService {
       name: 'Usuario Invitado',
       provider: 'guest',
     };
-    
+
     return this.jwtService.sign(payload, { expiresIn: '7d' });
   }
 
@@ -91,7 +93,7 @@ export class AuthService {
       name: user.nombre,
       provider: user.proveedor,
     };
-    
+
     return this.jwtService.sign(payload, { expiresIn: '24h' });
   }
 
@@ -197,7 +199,10 @@ export class AuthService {
     }
   }
 
-  async ultimoInicioSesionUsuario(token: string, email?: string): Promise<void> {
+  async ultimoInicioSesionUsuario(
+    token: string,
+    email?: string,
+  ): Promise<void> {
     if (!email) {
       await this.userRepository.update(`guest_${token}`, {
         ultimoInicioSesion: new Date(),
@@ -207,5 +212,15 @@ export class AuthService {
         ultimoInicioSesion: new Date(),
       });
     }
+  }
+
+  async getUsuarioEtiquetas(
+    usuario_id: number | string,
+  ): Promise<{ etiquetas: string[] }> {
+    const user = await this.userRepository.findOne({
+      where: { id: Number(usuario_id) },
+      select: ['etiquetas'],
+    });
+    return { etiquetas: user?.etiquetas || [] };
   }
 }

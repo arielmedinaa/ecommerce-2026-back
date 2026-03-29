@@ -1,14 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { CartError, CartErrorDocument } from '../../schemas/errors/cart.error.schema';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CartError } from '../../schemas/errors/cart-error.entity';
 import moment from 'moment-timezone';
 
 @Injectable()
 export class CartErrorService {
   constructor(
-    @InjectModel(CartError.name)
-    private readonly cartErrorModel: Model<CartErrorDocument>,
+    @InjectRepository(CartError, 'WRITE_CONNECTION')
+    private readonly cartErrorRepository: Repository<CartError>,
+    @InjectRepository(CartError, 'READ_CONNECTION')
+    private readonly cartErrorRepositoryRead: Repository<CartError>,
   ) {}
 
   async logError(
@@ -18,22 +20,24 @@ export class CartErrorService {
     context?: Record<string, any>,
     stackTrace?: string,
     path?: string,
-  ): Promise<CartErrorDocument | null> {
+  ): Promise<CartError | null> {
     try {
-      const errorLog = new this.cartErrorModel({
+      const errorLog = this.cartErrorRepository.create({
         cartId,
         errorCode,
         message,
         context: {
           ...context,
-          timestamp: moment().tz('America/Asuncion').format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
+          timestamp: moment()
+            .tz('America/Asuncion')
+            .format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
           service: 'cart-microservice',
         },
         stackTrace,
         path,
       });
 
-      return await errorLog.save();
+      return await this.cartErrorRepository.save(errorLog);
     } catch (logError) {
       console.error('Error al guardar log de error:', logError);
       return null;
@@ -45,10 +49,10 @@ export class CartErrorService {
     cartId?: string,
     operation?: string,
     additionalContext?: Record<string, any>,
-  ): Promise<CartErrorDocument | null> {
+  ): Promise<CartError | null> {
     const errorCode = error.name || 'UNKNOWN_ERROR';
     const message = error.message || 'Error desconocido';
-    
+
     return this.logError(
       cartId || 'unknown',
       errorCode,
@@ -68,26 +72,24 @@ export class CartErrorService {
     );
   }
 
-  async getErrorLogs(cartId?: string, limit = 100): Promise<CartErrorDocument[]> {
-    const filter = cartId ? { cartId } : {};
-    return this.cartErrorModel
-      .find(filter)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .exec();
+  async getErrorLogs(cartId?: string, limit = 100): Promise<CartError[]> {
+    const where = cartId ? { cartId } : {};
+    return await this.cartErrorRepositoryRead.find({
+      where,
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
   }
 
   async getErrorStats(): Promise<any> {
-    const stats = await this.cartErrorModel.aggregate([
-      {
-        $group: {
-          _id: '$errorCode',
-          count: { $sum: 1 },
-          lastOccurrence: { $max: '$createdAt' },
-        },
-      },
-      { $sort: { count: -1 } },
-    ]);
+    const stats = await this.cartErrorRepositoryRead
+      .createQueryBuilder('error')
+      .select('error.errorCode', 'errorCode')
+      .addSelect('COUNT(*)', 'count')
+      .addSelect('MAX(error.createdAt)', 'lastOccurrence')
+      .groupBy('error.errorCode')
+      .orderBy('count', 'DESC')
+      .getRawMany();
 
     return stats;
   }

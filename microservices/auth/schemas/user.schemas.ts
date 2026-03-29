@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 @Entity('usuarios')
 export class User {
@@ -34,6 +40,9 @@ export class User {
 
   @Column({ type: 'datetime', nullable: true })
   fechaExpiracion?: Date;
+
+  @Column({ type: 'simple-array', nullable: true })
+  etiquetas?: string[];
 
   @CreateDateColumn()
   fechaCreacion: Date;

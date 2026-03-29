@@ -6,15 +6,20 @@ import { Landing } from '@content/landings/schemas/landings.schemas';
 import { Formato } from '@content/landings/schemas/formatos.schema';
 import { LandingError } from '@content/landings/schemas/errors/landings.error.schema';
 import { Cupon } from '@content/cupones/schemas/cupon.schema';
+import { Event } from '@content/events/schemas/event.schema';
+import { EventProduct } from '@content/events/schemas/event-product.schema';
+import { Order } from '@content/events/schemas/order.schema';
+import { OrderItem } from '@content/events/schemas/order-item.schema';
+import { EventCondition } from '@content/events/schemas/event-condition.schema';
 
 @Module({
-    imports: [
-        MariaDbModule.forWrite(),
-        MariaDbModule.forRead(),
-        MariaDbModule.forFeature(),
-        MariaDbModule.forFeatureRead(),
-    ],
-    exports: [TypeOrmModule]
+  imports: [
+    MariaDbModule.forWrite(),
+    MariaDbModule.forRead(),
+    MariaDbModule.forFeature(),
+    MariaDbModule.forFeatureRead(),
+  ],
+  exports: [TypeOrmModule],
 })
 export class MariaDbModule {
   static forWrite(): DynamicModule {
@@ -28,7 +33,18 @@ export class MariaDbModule {
         username: configService.get<string>('DATABASE_USER'),
         password: configService.get<string>('DATABASE_PASSWORD'),
         database: configService.get<string>('DATABASE_NAME'),
-        entities: [Vertical, Landing, Formato, LandingError, Cupon],
+        entities: [
+          Vertical,
+          Landing,
+          Formato,
+          LandingError,
+          Cupon,
+          Event,
+          EventProduct,
+          Order,
+          OrderItem,
+          EventCondition,
+        ],
         synchronize: true,
         logging: false,
         timezone: '-03:00',
@@ -49,7 +65,18 @@ export class MariaDbModule {
         username: configService.get<string>('DATABASE_USER_REPLIC'),
         password: configService.get<string>('DATABASE_PASSWORD_REPLIC'),
         database: configService.get<string>('DATABASE_NAME_REPLIC'),
-        entities: [Vertical, Landing, Formato, LandingError, Cupon],
+        entities: [
+          Vertical,
+          Landing,
+          Formato,
+          LandingError,
+          Cupon,
+          Event,
+          EventProduct,
+          Order,
+          OrderItem,
+          EventCondition,
+        ],
         synchronize: true,
         logging: false,
         timezone: '-03:00',
@@ -60,10 +87,38 @@ export class MariaDbModule {
   }
 
   static forFeature(): DynamicModule {
-    return TypeOrmModule.forFeature([Vertical, Landing, Formato, LandingError, Cupon], 'WRITE_CONNECTION');
+    return TypeOrmModule.forFeature(
+      [
+        Vertical,
+        Landing,
+        Formato,
+        LandingError,
+        Cupon,
+        Event,
+        EventProduct,
+        Order,
+        OrderItem,
+        EventCondition,
+      ],
+      'WRITE_CONNECTION',
+    );
   }
 
   static forFeatureRead(): DynamicModule {
-    return TypeOrmModule.forFeature([Vertical, Landing, Formato, LandingError, Cupon], 'READ_CONNECTION');
+    return TypeOrmModule.forFeature(
+      [
+        Vertical,
+        Landing,
+        Formato,
+        LandingError,
+        Cupon,
+        Event,
+        EventProduct,
+        Order,
+        OrderItem,
+        EventCondition,
+      ],
+      'READ_CONNECTION',
+    );
   }
 }

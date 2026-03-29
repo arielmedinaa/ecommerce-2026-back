@@ -369,7 +369,7 @@ export class ProductsService {
         contains: 'jota',
         mode: 'insensitive' as const,
       },
-      estado: 1,
+      activo: 0,
       web: 1,
       dias_ultimo_movimiento: { lte: 30 },
     };
