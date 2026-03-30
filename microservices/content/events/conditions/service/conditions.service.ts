@@ -107,4 +107,8 @@ export class ConditionsService {
     condition.activo = !condition.activo;
     return await this.conditionRepository.save(condition);
   }
+
+  async deleteByEvent(evento_id: number): Promise<void> {
+    await this.conditionRepository.delete({ evento_id });
+  }
 }

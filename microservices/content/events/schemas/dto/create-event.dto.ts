@@ -59,6 +59,10 @@ export class CreateEventDto {
   idEventoPadre?: number;
 
   @IsOptional()
+  @IsNumber()
+  idPromo?: number;
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => EventProductDto)

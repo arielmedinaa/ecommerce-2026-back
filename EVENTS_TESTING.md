@@ -127,7 +127,13 @@
 
 ## 5. Probar Validación de Producto en Carrito
 
-**Endpoint:** `GET /content/event/validate?producto_codigo=PROD-001&cliente_id=user123`
+**Endpoint:** `GET /content/event/validate?producto_codigo=PROD-001`
+
+**Headers requeridos:**
+
+```
+Authorization: Bearer <JWT_TOKEN>
+```
 
 **Respuesta esperada (cuando hay límite):**
 
@@ -137,6 +143,17 @@
   "reason": "Límite de compras alcanzado para este producto en el evento HotSale 2026."
 }
 ```
+
+**Respuesta esperada (cuando hay precioOferta):**
+
+```json
+{
+  "allowed": true,
+  "precioOferta": 99.99
+}
+```
+
+**Nota:** El usuario se obtiene automáticamente del token JWT (campo `sub`).
 
 **Respuesta esperada (cuando hay precioOferta):**
 
@@ -216,7 +233,15 @@
 
 ## 13. Probar Segmentación de Usuarios
 
-**Endpoint:** `GET /content/event/validate?producto_codigo=VIP-001&cliente_id=user123&usuario={"id":"user123","etiquetas":["VIP_GOLD"]}`
+**Endpoint:** `GET /content/event/validate?producto_codigo=VIP-001`
+
+**Headers requeridos:**
+
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+**Nota:** El microservicio auth debe tener el usuario con etiquetas configuradas en la base de datos.
 
 ## 14. Eliminar Condición
 
@@ -224,9 +249,15 @@
 
 ## 15. Activar/Desactivar Condición
 
-**Endpoint:** `PUT /content/event/condition/1/toggle`
+**Endpoint:** `PUT /content/event/condition/:id/toggle`
 
-## 16. Validación de Condiciones Dinámicas
+## 16. Eliminar Evento (con eliminación en cascada)
+
+**Endpoint:** `DELETE /content/event/:id`
+
+**Nota:** Al eliminar un evento padre, todos sus eventos hijos se eliminarán automáticamente gracias a la foreign key con `ON DELETE CASCADE`.
+
+## 17. Validación de Condiciones Dinámicas
 
 Las condiciones se evalúan automáticamente al añadir producto al carrito:
 

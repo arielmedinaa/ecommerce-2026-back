@@ -18,7 +18,7 @@ export class Event {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ length: 100 })
+  @Column({ length: 100, unique: true })
   nombre: string;
 
   @Column({ type: 'text', nullable: true })
@@ -60,11 +60,11 @@ export class Event {
   @Column({ nullable: true })
   idEventoPadre?: number;
 
-  @ManyToOne(() => Event, (event) => event.subEventos)
+  @ManyToOne(() => Event, (event) => event.subEventos, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'idEventoPadre' })
   eventoPadre?: Event;
 
-  @OneToMany(() => Event, (event) => event.eventoPadre)
+  @OneToMany(() => Event, (event) => event.eventoPadre, { onDelete: 'CASCADE' })
   subEventos?: Event[];
 
   @Column({ default: 0, nullable: true, type: 'int' })

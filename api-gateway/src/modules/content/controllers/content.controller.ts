@@ -10,9 +10,12 @@ import {
   Body,
   Query,
   ParseIntPipe,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 
 @Controller('content')
 export class ContentController {
@@ -394,17 +397,19 @@ export class ContentController {
   }
 
   @Get('event/validate')
+  @UseGuards(JwtAuthGuard)
   @SneakyThrows('ContentController', 'validateProductForCart')
   async validateProductForCart(
     @Query('producto_codigo') producto_codigo: string,
-    @Query('cliente_id') cliente_id: string,
-    @Query('usuario') usuario?: string,
+    @Req() req: any,
   ) {
-    const parsedUsuario = usuario ? JSON.parse(usuario) : undefined;
+    const usuario = req.user;
+    const cliente_id = usuario.sub;
+
     const result = await firstValueFrom(
       this.contentClient.send(
         { cmd: 'validarProductoParaCarrito' },
-        { producto_codigo, cliente_id, usuario: parsedUsuario },
+        { producto_codigo, cliente_id, usuario },
       ),
     );
     return result;
@@ -460,6 +465,15 @@ export class ContentController {
   async toggleCondition(@Param('id', ParseIntPipe) id: number) {
     const result = await firstValueFrom(
       this.contentClient.send({ cmd: 'toggleCondicion' }, { id }),
+    );
+    return result;
+  }
+
+  @Delete('event/:id')
+  @SneakyThrows('ContentController', 'deleteEvent')
+  async deleteEvent(@Param('id', ParseIntPipe) id: number) {
+    const result = await firstValueFrom(
+      this.contentClient.send({ cmd: 'eliminarEvento' }, { id }),
     );
     return result;
   }

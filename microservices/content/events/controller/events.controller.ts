@@ -68,4 +68,11 @@ export class EventsController {
   async getEventHierarchy() {
     return await this.eventsService.findEventHierarchy();
   }
+
+  @MessagePattern({ cmd: 'eliminarEvento' })
+  async deleteEvent(@Payload() payload: any) {
+    const { id } = payload;
+    await this.eventsService.deleteEvent(id);
+    return { message: 'Evento eliminado exitosamente' };
+  }
 }

@@ -63,7 +63,6 @@ export class CartContadoService {
       return validation.error;
     }
 
-    // Validación de eventos: verificar si el producto tiene límite de compra por usuario en eventos activos
     let eventoValidation: any = { allowed: true };
     try {
       eventoValidation = await firstValueFrom(
@@ -85,7 +84,6 @@ export class CartContadoService {
             'Producto no puede ser añadido al carrito debido a restricciones de evento.',
         };
       }
-      // Si hay precioOferta, actualizar el precio del producto
       if (eventoValidation.precioOferta && eventoValidation.precioOferta > 0) {
         producto.precio = eventoValidation.precioOferta;
         // Si el producto tiene credito, actualizar también el precio en credito

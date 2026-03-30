@@ -424,4 +424,33 @@ export class EventsService {
     });
     return rootEvents;
   }
+
+  async deleteEvent(id: number): Promise<void> {
+    // Cargar el evento con sus relaciones para eliminación en cascada
+    const event = await this.eventRepositoryRead.findOne({
+      where: { id },
+      relations: ['subEventos', 'eventProducts', 'conditions'],
+    });
+    if (!event) {
+      throw new NotFoundException(`Evento con ID ${id} no encontrado`);
+    }
+
+    // Si tiene subeventos, eliminarlos primero (aunque CASCADE debería encargarse)
+    if (event.subEventos && event.subEventos.length > 0) {
+      for (const subEvent of event.subEventos) {
+        await this.deleteEvent(subEvent.id);
+      }
+    }
+
+    // Eliminar relacionesManyToMany (eventProducts y conditions) ya que no tienen CASCADE
+    if (event.eventProducts && event.eventProducts.length > 0) {
+      await this.eventProductRepository.delete({ evento_id: id });
+    }
+    if (event.conditions && event.conditions.length > 0) {
+      await this.conditionsService.deleteByEvent(id);
+    }
+
+    // Finalmente eliminar el evento
+    await this.eventRepository.delete(id);
+  }
 }
