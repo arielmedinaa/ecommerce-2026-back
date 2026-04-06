@@ -139,21 +139,25 @@ Authorization: Bearer <JWT_TOKEN>
 
 ```json
 {
-  "allowed": false,
-  "reason": "Límite de compras alcanzado para este producto en el evento HotSale 2026."
+  "allowed": true,
+  "precioOferta": 45600,
+  "limite": 1,
+  "eventoId": 3,
+  "eventoNombre": "VIP Exclusive Sale",
+  "condiciones": []
 }
 ```
 
-**Respuesta esperada (cuando hay precioOferta):**
+**Respuesta esperada (cuando se excede límite en carrito):**
 
 ```json
 {
-  "allowed": true,
-  "precioOferta": 99.99
+  "allowed": false,
+  "reason": "Límite de compra alcanzado para este producto. Máximo permitido: 1 unidades. Ya tienes 1 en tu carrito."
 }
 ```
 
-**Nota:** El usuario se obtiene automáticamente del token JWT (campo `sub`).
+**Nota:** El límite se aplica al momento de añadir al carrito (cantidad en carrito + nueva cantidad). No se espera a finalizar la compra.
 
 **Respuesta esperada (cuando hay precioOferta):**
 

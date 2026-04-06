@@ -13,10 +13,10 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async createGuestUser(deviceInfo?: any): Promise<User> {
+  async createGuestUser(deviceInfo?: any, email?: string): Promise<{ data: User; guestToken: string }> {
     const guestToken = this.generateGuestToken();
     this.logger.log(`Generated guest token: ${guestToken}`);
-    const guestEmail = `guest_${guestToken}@temp.ecommerce`;
+    const guestEmail = email || `guest_${guestToken}@temp.ecommerce`;
 
     const guestUser = this.userRepository.create({
       email: guestEmail,
@@ -27,11 +27,12 @@ export class AuthService {
       infoDispositivo: deviceInfo || {},
       ultimoInicioSesion: new Date(),
       fechaExpiracion: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      etiquetas: ['NUEVO_USUARIO'], // Agregar etiqueta automáticamente
     });
 
     await this.userRepository.save(guestUser);
     this.logger.log(`Created new guest user: ${guestToken}`);
-    return guestUser;
+    return { data: guestUser, guestToken };
   }
 
   async createBasicUser(
@@ -44,13 +45,11 @@ export class AuthService {
       idProveedor: email,
       esInvitado: false,
       ultimoInicioSesion: new Date(),
+      etiquetas: ['NUEVO_USUARIO'], // Agregar etiqueta automáticamente
     });
 
     await this.userRepository.save(user);
-    this.logger.log(`Created new basic user: ${email}`);
-
     const token = this.generateUserToken(user);
-
     return {
       data: user,
       message: 'USUARIO CREADO EXITOSAMENTE',
@@ -75,6 +74,35 @@ export class AuthService {
     return user;
   }
 
+  async validateBasicUser(
+    email: string,
+    deviceInfo: any,
+  ): Promise<{ data: User | null; message: string; success: boolean, token?: string }> {
+    const user = await this.userRepository.findOne({
+      where: {
+        email
+      },
+    });
+
+    if (!user) {
+      const guestUser = await this.createGuestUser(deviceInfo, email);
+      return {
+        data: guestUser.data,
+        message: 'USUARIO CREADO EXITOSAMENTE',
+        success: true,
+        token: guestUser.guestToken,
+      };
+    }
+
+    const newToken = this.generateUserToken(user);
+    return {
+      data: user,
+      message: 'USUARIO ENCONTRADO',
+      success: true,
+      token: newToken,
+    };
+  }
+
   private generateGuestToken(): string {
     const payload = {
       sub: 'guest',
@@ -92,6 +120,7 @@ export class AuthService {
       email: user.email,
       name: user.nombre,
       provider: user.proveedor,
+      etiquetas: user.etiquetas || [],
     };
 
     return this.jwtService.sign(payload, { expiresIn: '24h' });
@@ -221,6 +250,9 @@ export class AuthService {
       where: { id: Number(usuario_id) },
       select: ['etiquetas'],
     });
-    return { etiquetas: user?.etiquetas || [] };
+    const etiquetas = user?.etiquetas || [];
+    this.logger.log(`Etiquetas para usuario ${usuario_id}: ${JSON.stringify(etiquetas)}`);
+    
+    return { etiquetas };
   }
 }

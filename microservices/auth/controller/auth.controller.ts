@@ -1,26 +1,23 @@
 import { Controller, Logger } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AuthService } from '../service/auth.service';
-import { GuestService } from '../service/guest.service';
 
 @Controller()
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
-  constructor(
-    private readonly authService: AuthService,
-    private readonly guestService: GuestService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   @MessagePattern({ cmd: 'create_guest_session' })
   async createGuestSession(
     @Payload() payload: { ipAddress: string; userAgent: string },
   ) {
+    const deviceInfo = {
+      ipAddress: payload.ipAddress,
+      userAgent: payload.userAgent,
+    };
     try {
-      return await this.guestService.createGuestToken(
-        payload.ipAddress,
-        payload.userAgent,
-      );
+      return await this.authService.createGuestUser(deviceInfo);
     } catch (error) {
       this.logger.error('Error in create_guest_session:', error);
       throw error;
@@ -44,6 +41,16 @@ export class AuthController {
       return await this.authService.login(user);
     } catch (error) {
       this.logger.error('Error in validate_google_user:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'validate_basic_user' })
+  async validateBasicUser(@Payload() payload: { email: string; deviceInfo: any }) {
+    try {
+      return await this.authService.validateBasicUser(payload.email, payload.deviceInfo);
+    } catch (error) {
+      this.logger.error('Error in validate_basic_user:', error);
       throw error;
     }
   }

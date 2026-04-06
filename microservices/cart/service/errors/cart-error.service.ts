@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CartError } from '../../schemas/errors/cart-error.entity';
-import moment from 'moment-timezone';
+import * as moment from 'moment-timezone';
 
 @Injectable()
 export class CartErrorService {

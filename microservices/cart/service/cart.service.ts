@@ -2,14 +2,16 @@ import { Cart } from '@cart/schemas/cart.schemas';
 import { Transaccion } from '@cart/schemas/transaccion.schemas';
 import { Order } from '@cart/schemas/order.schemas';
 import { OrderItem } from '@cart/schemas/order-item.schemas';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
+import { JwtService } from '@nestjs/jwt';
 import {
   NEW_CART_INITIAL_STATE,
   NEW_SOLICITUD_INITIAL_STATE,
 } from '@cart/constants/cart.constants';
-import { ClientProxy } from '@nestjs/microservices';
 import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
 import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
 import { CartValidationService } from './cart.service.spec';
@@ -17,7 +19,6 @@ import { CartErrorService } from './errors/cart-error.service';
 import * as https from 'https';
 import * as mysql from 'mysql2/promise';
 import { ESTADO_SOLICITUD_MAP } from '@cart/constants/cart.constants';
-import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class CartContadoService {
@@ -44,6 +45,7 @@ export class CartContadoService {
     private readonly cartErrorService: CartErrorService,
     private readonly resilientService: ResilientService,
     private readonly cacheService: CachePersistenteService,
+    private readonly jwtService: JwtService,
   ) {}
 
   async addCart(
@@ -51,7 +53,18 @@ export class CartContadoService {
     cuenta: string,
     codigo?: number,
     producto?: any,
+    usuario_id?: number,
   ): Promise<{ data: Cart[]; success: boolean; message: string }> {
+    // Extraer usuario_id del token si no se proporciona
+    if (!usuario_id && clienteToken) {
+      try {
+        const decoded = this.jwtService.verify(clienteToken);
+        usuario_id = parseInt(decoded.sub);
+      } catch (error) {
+        this.logger.warn('Error al decodificar token JWT:', error);
+      }
+    }
+
     const validation = await this.cartValidationService.validateCartPayload(
       clienteToken,
       cuenta,
@@ -70,8 +83,12 @@ export class CartContadoService {
           { cmd: 'validarProductoParaCarrito' },
           {
             producto_codigo: producto.codigo,
-            cliente_id: clienteToken,
-            usuario: { token: clienteToken }, // Enviar token para que content decodifique
+            cliente_id: usuario_id?.toString() || clienteToken,
+            usuario: {
+              token: clienteToken,
+              id: usuario_id,
+              sub: usuario_id?.toString(),
+            },
           },
         ),
       );
@@ -130,6 +147,43 @@ export class CartContadoService {
       carritoExistente = await this.carritoRead.findOne({
         where: { id: carritoExistente.id },
       });
+    }
+
+    // Verificar límite de compra por producto (si hay límite en evento)
+    if (eventoValidation.limite && eventoValidation.limite > 0) {
+      let cantidadActualEnCarrito = 0;
+      if (carritoExistente && carritoExistente.articulos) {
+        const contado = carritoExistente.articulos.contado || [];
+        const credito = carritoExistente.articulos.credito || [];
+        const allArticulos = [...contado, ...credito];
+
+        // Buscar el mismo producto (mismo código, mismo tipo de venta)
+        const productosExistentes = allArticulos.filter((item: any) => {
+          if (articuloTipo === 'credito') {
+            return (
+              String(item.codigo) === String(producto.codigo) && item.credito
+            );
+          } else {
+            return (
+              String(item.codigo) === String(producto.codigo) && !item.credito
+            );
+          }
+        });
+
+        cantidadActualEnCarrito = productosExistentes.reduce(
+          (sum, item) => sum + (item.cantidad || 1),
+          0,
+        );
+      }
+
+      const cantidadNueva = producto.cantidad || 1;
+      if (cantidadActualEnCarrito + cantidadNueva > eventoValidation.limite) {
+        return {
+          data: [],
+          success: false,
+          message: `Límite de compra alcanzado para este producto. Máximo permitido: ${eventoValidation.limite} unidades. Ya tienes ${cantidadActualEnCarrito} en tu carrito.`,
+        };
+      }
     }
 
     // Evaluar condiciones dinámicas del evento (si las hay)

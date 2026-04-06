@@ -11,7 +11,7 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ unique: true })
+  @Column({ unique: true, length: 500 })
   email: string;
 
   @Column({ nullable: true })
@@ -23,7 +23,7 @@ export class User {
   @Column()
   proveedor: string;
 
-  @Column()
+  @Column({ unique: true, length: 500 })
   idProveedor: string;
 
   @Column({ default: true })
@@ -41,7 +41,7 @@ export class User {
   @Column({ type: 'datetime', nullable: true })
   fechaExpiracion?: Date;
 
-  @Column({ type: 'simple-array', nullable: true })
+  @Column({ type: 'simple-array', nullable: true, default: 'NUEVO_USUARIO' })
   etiquetas?: string[];
 
   @CreateDateColumn()
@@ -49,4 +49,7 @@ export class User {
 
   @UpdateDateColumn()
   fechaActualizacion: Date;
+
+  @Column({ default: 'NUEVO_USUARIO' })
+  beneficioUsuario: string;
 }

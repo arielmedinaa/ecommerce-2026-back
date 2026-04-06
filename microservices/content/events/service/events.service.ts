@@ -251,14 +251,16 @@ export class EventsService {
   async validateProductAddToCart(
     producto_codigo: string,
     cliente_id: string,
-    usuario?: any, // Información del usuario desde el token
+    usuario?: any,
   ): Promise<{
     allowed: boolean;
     reason?: string;
     precioOferta?: number;
     condiciones?: Array<{ tipo: ConditionType; valor: string }>;
+    limite?: number | null;
+    eventoId?: number;
+    eventoNombre?: string;
   }> {
-    // 1. Encontrar todos los eventos activos donde el producto esté presente
     const now = new Date();
     const activeEvents = await this.eventRepositoryRead
       .createQueryBuilder('evento')
@@ -268,12 +270,8 @@ export class EventsService {
         'ep.producto_codigo = :producto_codigo',
         { producto_codigo },
       )
-      .leftJoinAndSelect(
-        'evento.conditions',
-        'condition',
-        'condition.activo = true',
-      )
-      .where('evento.activo = true')
+
+      .where('evento.activo = 1')
       .andWhere('evento.fechaInicio <= :now', { now })
       .andWhere('evento.fechaFin >= :now', { now })
       .orderBy('evento.prioridad', 'DESC')
@@ -286,13 +284,13 @@ export class EventsService {
     // 2. Resolver jerarquía y conflictos (el evento de mayor prioridad ya está primero)
     const selectedEvent = activeEvents[0];
     const eventProduct = selectedEvent.eventProducts?.find(
-      (ep) => ep.producto_codigo === producto_codigo,
+      (ep) => ep.producto_codigo === producto_codigo.toString(),
     );
+
     if (!eventProduct) {
       return { allowed: true };
     }
 
-    // 3. Verificar segmentación de usuario
     if (selectedEvent.beneficioUsuarioEspecifico && usuario) {
       const hasBenefit = await this.checkUserSegmentation(
         usuario,
@@ -306,7 +304,6 @@ export class EventsService {
       }
     }
 
-    // 4. Evaluar condiciones dinámicas
     const conditionsMet = await this.evaluateConditions(
       selectedEvent,
       cliente_id,
@@ -316,36 +313,15 @@ export class EventsService {
       return conditionsMet;
     }
 
-    // 5. Verificar límites (independientes por evento)
     const limite =
       eventProduct.limitePorUsuario ?? selectedEvent.limiteGlobalPorUsuario;
-    if (limite) {
-      // Contar órdenes pagadas (estado = 1) para este producto en este evento
-      const orderCount = await this.orderItemRepositoryRead
-        .createQueryBuilder('orderItem')
-        .innerJoin('orderItem.orden', 'order', 'order.estado = 1')
-        .where('orderItem.producto_codigo = :producto_codigo', {
-          producto_codigo,
-        })
-        .andWhere('order.evento_id = :eventoId', { eventoId: selectedEvent.id })
-        .andWhere('order.cliente_documento = :clienteId', {
-          clienteId: cliente_id,
-        })
-        .getCount();
-
-      if (orderCount >= limite) {
-        return {
-          allowed: false,
-          reason: `Límite de compras alcanzado para este producto en el evento ${selectedEvent.nombre}.`,
-        };
-      }
-    }
-
-    // 6. Devolver precioOferta y condiciones que requieren validación en cart
     return {
       allowed: true,
       precioOferta: eventProduct.precioOferta,
       condiciones: conditionsMet.condiciones,
+      limite: limite || null,
+      eventoId: selectedEvent.id,
+      eventoNombre: selectedEvent.nombre,
     };
   }
 

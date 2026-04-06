@@ -116,6 +116,22 @@ export class AuthController {
     }
   }
 
+  @Post('validateBasicUser')
+  async validateBasicUser(@Body() body: { email: string }, @Req() req: Request) {
+    const deviceInfo = req.headers['user-agent'];
+    const payload = { ...body, deviceInfo };
+    try {
+      const result = await firstValueFrom(
+        this.authClient.send({ cmd: 'validate_basic_user' }, payload)
+      );
+
+      return result;
+    } catch (error) {
+      console.error('Error in validateBasicUser:', error);
+      throw new Error('Error al validar usuario básico: ' + error.message);
+    }
+  }
+
   @Post('ultimo-inicio-sesion')
   async ultimoInicioSesion(@Body() body: { token: string; email?: string }) {
     try {

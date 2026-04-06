@@ -14,13 +14,14 @@ export class CartController {
 
   @MessagePattern({ cmd: 'add_to_cart' })
   async addToCart(@Payload() payload: any) {
-    const { token, email, codigo, body } = payload;
+    const { token, email, codigo, body, usuario_id } = payload;
     try {
       const result = await this.cartService.addCart(
         token,
         email,
         codigo ? Number(codigo) : 0,
         body,
+        usuario_id,
       );
       return result;
     } catch (error) {

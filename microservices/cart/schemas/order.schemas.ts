@@ -20,7 +20,7 @@ export class Order {
   @Column()
   carrito_codigo: number; // Referencia al carrito (código único)
 
-  @Column()
+  @Column({length: 700})
   cliente_documento: string; // Documento del cliente (o identificador único)
 
   @Column({ type: 'decimal', precision: 12, scale: 2 })
