@@ -9,6 +9,7 @@ export const DEFAULT_CART: Partial<Cart> = {
     documento: '',
     correo: '',
     telefono: '',
+    id_usuario: 0
   },
   tiempo: moment().tz('America/Asuncion').format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
   transaccion: [],
@@ -52,7 +53,8 @@ export const DEFAULT_SOLICITUD: Partial<Cart> = {
     documento: '',
     correo: '',
     telefono: '',
-    tipodocumento: ''
+    tipodocumento: '',
+    id_usuario: 0
   },
   tiempo: moment().tz('America/Asuncion').format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
   envio: {
@@ -90,23 +92,25 @@ export const DEFAULT_SOLICITUD: Partial<Cart> = {
   transaccion: []
 }
 
-export const NEW_CART_INITIAL_STATE = (codigo: number, clienteToken: string, cuenta: string): Partial<Cart> => ({
+export const NEW_CART_INITIAL_STATE = (codigo: number, clienteToken: string, cuenta: string, id_usuario?: number): Partial<Cart> => ({
   ...DEFAULT_CART,
   codigo,
   cliente: {
     ...DEFAULT_CART.cliente!,
     equipo: clienteToken,
     correo: cuenta === 'undefined' ? '' : cuenta,
+    id_usuario: id_usuario || 0,
   },
 });
 
-export const NEW_SOLICITUD_INITIAL_STATE = (codigo: number, clienteToken: string, cuenta: string): Partial<Cart> => ({
+export const NEW_SOLICITUD_INITIAL_STATE = (codigo: number, clienteToken: string, cuenta: string, id_usuario?: number): Partial<Cart> => ({
   ...DEFAULT_SOLICITUD,
   codigo,
   cliente: {
     ...DEFAULT_SOLICITUD.cliente!,
     equipo: clienteToken,
     correo: cuenta === 'undefined' ? '' : cuenta,
+    id_usuario: id_usuario || 0,
   },
 });
 

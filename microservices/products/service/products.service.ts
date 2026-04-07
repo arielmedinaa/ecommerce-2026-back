@@ -67,7 +67,6 @@ export class ProductsService {
 
     const limit = Number(filters.limit) || 0;
     const offset = Number(filters.offset) || 0;
-
     const result = await this.productReadRepository.query(
       'CALL proc_obtener_listado_articulos_ecommerce(?, ?)',
       [limit, offset]
@@ -81,9 +80,8 @@ export class ProductsService {
       nombre_marca: item.nombre_marca.trim(),
       nombre_proveedor: item.nombre_proveedor.trim(),
       codigo_de_barra: item.codigo_de_barra.trim(),
-      nota: item.nota.trim(),
+      descripcion: item.nota.trim(),
     }));
-    console.log("dta", dataWithTrimmedNames)
     const data = dataWithTrimmedNames || [];
     const total = data.length; 
 

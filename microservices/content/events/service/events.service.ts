@@ -214,15 +214,16 @@ export class EventsService {
     producto_codigo: string,
     limitePorUsuario?: number,
     precioOferta?: number,
-  ): Promise<EventProduct> {
-    const event = await this.findById(eventId);
+  ): Promise<{ data: any; message: string; success: boolean }> {
     const existing = await this.eventProductRepositoryRead.findOne({
       where: { evento_id: eventId, producto_codigo },
     });
     if (existing) {
-      throw new BadRequestException(
-        `El producto ${producto_codigo} ya está asignado al evento ${eventId}`,
-      );
+      return {
+        data: [],
+        message: `El producto ${producto_codigo} ya está asignado al evento ${eventId}`,
+        success: false,
+      };
     }
     const eventProduct = this.eventProductRepository.create({
       evento_id: eventId,
@@ -230,7 +231,11 @@ export class EventsService {
       limitePorUsuario,
       precioOferta,
     });
-    return await this.eventProductRepository.save(eventProduct);
+    return {
+      data: await this.eventProductRepository.save(eventProduct),
+      message: 'PRODUCTO AGREGADO AL EVENTO',
+      success: true,
+    };
   }
 
   async removeProductFromEvent(

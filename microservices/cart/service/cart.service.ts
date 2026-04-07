@@ -55,15 +55,8 @@ export class CartContadoService {
     producto?: any,
     usuario_id?: number,
   ): Promise<{ data: Cart[]; success: boolean; message: string }> {
-    // Extraer usuario_id del token si no se proporciona
-    if (!usuario_id && clienteToken) {
-      try {
-        const decoded = this.jwtService.verify(clienteToken);
-        usuario_id = parseInt(decoded.sub);
-      } catch (error) {
-        this.logger.warn('Error al decodificar token JWT:', error);
-      }
-    }
+    const decoded = this.jwtService.verify(clienteToken);
+    usuario_id = parseInt(decoded.sub);
 
     const validation = await this.cartValidationService.validateCartPayload(
       clienteToken,
@@ -113,7 +106,6 @@ export class CartContadoService {
         'Error al validar evento, permitiendo añadir producto',
         error,
       );
-      // Si falla la comunicación, permitimos la adición (o podríamos rechazar, dependiendo de la política)
     }
 
     let filtro: any = {
@@ -133,9 +125,12 @@ export class CartContadoService {
     const articuloTipo = producto.credito ? 'credito' : 'contado';
     let carritoExistente = await this.carritoRead
       .createQueryBuilder('cart')
-      .where("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.equipo')) = :equipo", {
-        equipo: clienteToken,
-      })
+      .where(
+        "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id_usuario",
+        {
+          id_usuario: usuario_id,
+        },
+      )
       .andWhere(
         codigo === 0 ? 'cart.estado = :estado' : 'cart.codigo = :codigo',
         codigo === 0 ? { estado: '1' } : { codigo },
@@ -252,7 +247,12 @@ export class CartContadoService {
         .getRawOne();
       const nuevoCodigo = (maxCodigo?.max || 0) + 1;
       const nuevoCarrito = this.carritoWrite.create({
-        ...NEW_CART_INITIAL_STATE(nuevoCodigo, clienteToken, cuenta),
+        ...NEW_CART_INITIAL_STATE(
+          nuevoCodigo,
+          clienteToken,
+          cuenta,
+          usuario_id,
+        ),
         articulos: {
           [articuloTipo]: [producto],
           [articuloTipo === 'credito' ? 'contado' : 'credito']: [],
@@ -382,6 +382,7 @@ export class CartContadoService {
     const cacheKey = `cart_${clienteToken}_${cuenta}_${codigo}`;
     const now = Date.now();
     const cached = this.cartCache.get(cacheKey);
+    const decoded = this.jwtService.verify(clienteToken);
 
     if (cached && now - cached.timestamp < this.cacheTTL) {
       return {
@@ -394,8 +395,8 @@ export class CartContadoService {
     const resultado = await this.carritoRead
       .createQueryBuilder('cart')
       .where(
-        "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.equipo')) = :equipo OR JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.correo')) = :correo",
-        { equipo: clienteToken, correo: cuenta },
+        "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id_usuario OR JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.correo')) = :correo",
+        { id_usuario: decoded?.sub, correo: cuenta },
       )
       .andWhere(
         codigo === 0 ? 'cart.estado = :estado' : 'cart.codigo = :codigo',
@@ -507,8 +508,8 @@ export class CartContadoService {
   ): Promise<{ data: Cart[]; success: boolean; message: string }> {
     const resultado = await this.carritoRead
       .createQueryBuilder('cart')
-      .where("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.equipo')) = :equipo", {
-        equipo: clienteToken,
+      .where("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id_usuario", {
+        id_usuario: this.jwtService.decode(clienteToken)?.sub,
       })
       .orderBy(`cart.${sort}`, order === 'desc' ? 'DESC' : 'ASC')
       .limit(limit)
@@ -519,7 +520,7 @@ export class CartContadoService {
       return {
         data: [],
         success: false,
-        message: 'No se encontraron carritos',
+        message: 'NO SE ENCONTRARON CARRITOS DE ESTE USUARIO',
       };
     }
 
@@ -636,8 +637,8 @@ export class CartContadoService {
     const carrito = await this.carritoRead
       .createQueryBuilder('cart')
       .where(
-        "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.equipo')) = :equipo AND cart.codigo = :codigo AND cart.estado != :estado",
-        { equipo: clienteToken, codigo, estado: '0' },
+        "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id_usuario AND cart.codigo = :codigo AND cart.estado != :estado",
+        { id_usuario: this.jwtService.decode(clienteToken)?.sub, codigo, estado: '0' },
       )
       .getOne();
     if (!carrito) {
@@ -1102,6 +1103,7 @@ export class CartContadoService {
     try {
       const dbName = process.env.ECONT_DB_DATABASE;
       if (!dbName) {
+        this.logger.error('ECONT_DB_DATABASE environment variable is not set');
         throw new Error('ECONT_DB_DATABASE environment variable is not set');
       }
       connection = await mysql.createConnection({
