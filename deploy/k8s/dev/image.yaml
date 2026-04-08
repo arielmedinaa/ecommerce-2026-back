@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: image-service
+  labels:
+    app: image-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: image-service
+  template:
+    metadata:
+      labels:
+        app: image-service
+    spec:
+      containers:
+      - name: image-service
+        image: image-service-dev:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 4093
+        envFrom:
+        - configMapRef:
+            name: ecommerce-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: image-service
+spec:
+  selector:
+    app: image-service
+  ports:
+    # Segun docker-compose esta usa PORT=4093 e IMAGE_PORT=3107.
+    - protocol: TCP
+      port: 3107
+      targetPort: 4093
+  type: ClusterIP

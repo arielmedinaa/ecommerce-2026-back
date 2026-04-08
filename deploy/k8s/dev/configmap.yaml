@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ecommerce-config
+  namespace: default
+data:
+  NODE_ENV: "development"
+  IS_DOCKER: "true"
+  RUN_MODE: "all"
+  
+  # API Gateway
+  PORT: "3100"
+  CORS_ORIGIN: "http://localhost:5173"
+  
+  # Microservices Ports
+  AUTH_PORT: "3101"
+  CART_PORT: "3102"
+  CONTENT_PORT: "3103"
+  PAYMENTS_PORT: "3105"
+  PRODUCTS_PORT: "3106"
+  IMAGE_PORT: "3107"
+
+  # Internal Dns URLs (Kubernetes Service Names)
+  AUTH_SERVICE_URL: "auth-service"
+  CART_SERVICE_URL: "cart-service"
+  CONTENT_SERVICE_URL: "content-service"
+  PAYMENTS_SERVICE_URL: "payments-service"
+  PRODUCTS_SERVICE_URL: "products-service"
+  IMAGE_SERVICE_URL: "image-service"

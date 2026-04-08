@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments-service
+  namespace: ecommerce-prod
+  labels:
+    app: payments-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payments-service
+  template:
+    metadata:
+      labels:
+        app: payments-service
+    spec:
+      containers:
+      - name: payments-service
+        image: your-account-id.dkr.ecr.us-east-1.amazonaws.com/payments-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3105
+        envFrom:
+        - configMapRef:
+            name: ecommerce-config
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payments-service
+  namespace: ecommerce-prod
+spec:
+  selector:
+    app: payments-service
+  ports:
+    - protocol: TCP
+      port: 3105
+      targetPort: 3105
+  type: ClusterIP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payments-service-hpa
+  namespace: ecommerce-prod
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payments-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70

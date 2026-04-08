@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: content-service
+  labels:
+    app: content-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: content-service
+  template:
+    metadata:
+      labels:
+        app: content-service
+    spec:
+      containers:
+      - name: content-service
+        image: content-service-dev:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3103
+        envFrom:
+        - configMapRef:
+            name: ecommerce-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: content-service
+spec:
+  selector:
+    app: content-service
+  ports:
+    - protocol: TCP
+      port: 3103
+      targetPort: 3103
+  type: ClusterIP
