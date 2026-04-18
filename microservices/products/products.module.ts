@@ -7,6 +7,7 @@ import { OfertasService } from './service/ofertas.service';
 import { OfertasValidationService } from './service/errors/ofertas.spec';
 import { PromosValidationService } from './service/errors/promos.spec';
 import { MariaDbModule } from './config/mariadb.module';
+import { ProductsUtils } from './utils/utils-products';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { MariaDbModule } from './config/mariadb.module';
     OfertasService,
     OfertasValidationService,
     PromosValidationService,
+    ProductsUtils,
   ],
   exports: [ProductsService, PromosService, OfertasService],
 })

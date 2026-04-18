@@ -6,6 +6,8 @@ import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
 import { CreateComboDto } from '@products/schemas/dto/create-combo.dto';
 import { Product } from '../schemas/product.schemas';
 import { Combo } from '../schemas/combo.schemas';
+
+import { ProductsUtils } from '@products/utils/utils-products';
 //import { Promo } from '../schemas/promo.schemas';
 
 @Injectable()
@@ -22,6 +24,7 @@ export class ProductsService {
     @InjectRepository(Combo, 'READ_CONNECTION')
     private readonly comboReadRepository: Repository<Combo>,
     private readonly promosService: PromosService,
+    private readonly productsUtils: ProductsUtils,
   ) {}
 
   private productosCache = new Map<
@@ -31,6 +34,10 @@ export class ProductsService {
   private productoPorCodigoCache = new Map<
     string,
     { data: any; timestamp: number }
+  >();
+  private productosJotaCache = new Map<
+    string,
+    { data: any[]; total: number; timestamp: number }
   >();
   private readonly CACHE_TTL = 5 * 60 * 1000;
   private readonly MAX_CACHE_ENTRIES = 100;
@@ -46,12 +53,14 @@ export class ProductsService {
       precioMax: filters.precioMax,
       search: filters.search,
       nombre: filters.nombre,
+      marca: filters.marca,
     });
   }
 
   invalidateCache(): void {
     this.productosCache.clear();
     this.productoPorCodigoCache.clear();
+    this.productosJotaCache.clear();
   }
 
   private async getCachedPrismaProductos(
@@ -68,8 +77,8 @@ export class ProductsService {
     const limit = Number(filters.limit) || 0;
     const offset = Number(filters.offset) || 0;
     const result = await this.productReadRepository.query(
-      'CALL proc_obtener_listado_articulos_ecommerce(?, ?)',
-      [limit, offset]
+      'CALL proc_obtener_listado_articulos_ecommerce(?, ?, ?, NULL)',
+      [limit, offset, filters.marca || null]
     );
 
     const dataWithTrimmedNames = result[0]?.map((item: any) => ({
@@ -82,8 +91,10 @@ export class ProductsService {
       codigo_de_barra: item.codigo_de_barra.trim(),
       descripcion: item.nota.trim(),
     }));
+    
     const data = dataWithTrimmedNames || [];
-    const total = data.length; 
+    const dataConCuotas = await this.productsUtils.calculoCreditoProductos(data);
+    const total = dataConCuotas.length; 
 
     if (this.productosCache.size >= this.MAX_CACHE_ENTRIES) {
       const oldestKey = this.productosCache.keys().next().value;
@@ -91,12 +102,12 @@ export class ProductsService {
     }
 
     this.productosCache.set(cacheKey, {
-      data: data as any[],
+      data: dataConCuotas as any[],
       total,
       timestamp: now,
     });
 
-    return { data: data as any[], total };
+    return { data: dataConCuotas as any[], total };
   }
 
   async findAll(filters: any = {}): Promise<{ data: any[]; total: number }> {
@@ -201,7 +212,6 @@ export class ProductsService {
       dias_ultimo_movimiento: { lte: 30 },
     };
 
-    // Simplified category filter for MariaDB
     if (categoryId) {
       where.categorias = {
         contains: categoryId,
@@ -214,32 +224,6 @@ export class ProductsService {
         order: { codigo_articulo: 'asc' },
         skip: Number(offset),
         take: Number(limit),
-      }),
-      this.productReadRepository.count({ where }),
-    ]);
-    return { data, total };
-  }
-
-  async getPrismaProductsJota() {
-    const where: any = {
-      nombre: {
-        contains: 'jota',
-        mode: 'insensitive' as const,
-      },
-      estado: 1,
-      web: 1,
-      dias_ultimo_movimiento: { lte: 30 },
-    };
-
-    const [data, total] = await Promise.all([
-      this.productReadRepository.find({
-        where,
-        select: {
-          nombre: true,
-          codigo: true,
-        },
-        order: { codigo_articulo: 'asc' },
-        take: 10,
       }),
       this.productReadRepository.count({ where }),
     ]);
@@ -361,30 +345,51 @@ export class ProductsService {
     return { data: productos, total };
   }
 
-  async getProductsJota() {
-    const where: any = {
-      nombre: {
-        contains: 'jota',
-        mode: 'insensitive' as const,
-      },
-      activo: 0,
-      web: 1,
-      dias_ultimo_movimiento: { lte: 30 },
-    };
+  async getProductsJota(filters: any = {}): Promise<{ data: any[]; total: number }> {
+    const cacheKey = this.getCacheKey({ ...filters, type: 'jota' });
+    const now = Date.now();
+    const cached = this.productosJotaCache.get(cacheKey);
 
-    const [data, total] = await Promise.all([
-      this.productReadRepository.find({
-        where,
-        select: {
-          nombre: true,
-          codigo: true,
-        },
-        order: { codigo_articulo: 'asc' },
-        take: 10,
-      }),
-      this.productReadRepository.count({ where }),
-    ]);
-    return { data, total };
+    if (cached && now - cached.timestamp <= this.CACHE_TTL) {
+      return { data: cached.data, total: cached.total };
+    }
+
+    const limit = Number(filters.limit) || 0;
+    const offset = Number(filters.offset) || 0;
+    
+    // Usar procedure específico para JOTA con marca 257
+    const result = await this.productReadRepository.query(
+      'CALL proc_obtener_listado_articulos_ecommerce(?, ?, 257, NULL)',
+      [limit, offset]
+    );
+
+    const dataWithTrimmedNames = result[0]?.map((item: any) => ({
+      ...item,
+      codigo_articulo: item.codigo_articulo.trim(),
+      nombre_articulo: item.nombre_articulo.trim(),
+      nombre_subcategoria: item.nombre_subcategoria.trim(),
+      nombre_marca: item.nombre_marca.trim(),
+      nombre_proveedor: item.nombre_proveedor.trim(),
+      codigo_de_barra: item.codigo_de_barra.trim(),
+      descripcion: item.nota.trim(),
+    }));
+    
+    const data = dataWithTrimmedNames || [];
+    const dataConCuotas = await this.productsUtils.calculoCreditoProductos(data);
+    const total = dataConCuotas.length;
+
+    if (this.productosJotaCache.size >= this.MAX_CACHE_ENTRIES) {
+      const oldestKey = this.productosJotaCache.keys().next().value;
+      this.productosJotaCache.delete(oldestKey);
+    }
+
+    this.productosJotaCache.set(cacheKey, {
+      data: dataConCuotas as any[],
+      total,
+      timestamp: now,
+    });
+
+    return { data: dataConCuotas as any[], total };
   }
 
   async getCategories(): Promise<{ categorias: string[] }> {

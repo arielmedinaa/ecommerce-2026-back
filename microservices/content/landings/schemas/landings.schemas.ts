@@ -11,7 +11,7 @@ export class Landing {
   @Column({ length: 255, unique: true })
   slug: string;
 
-  @Column('longtext')
+  @Column('text')
   content: string;
 
   @Column({ length: 255 })

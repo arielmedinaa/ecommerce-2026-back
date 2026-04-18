@@ -74,13 +74,20 @@ export class HomeService {
         this.resilientService.sendWithResilience(
           this.productsClient,
           { cmd: 'get_products_jota' },
-          {},
+          {
+            limit,
+            offset,
+            marca: "257"
+          },
           resilientOptions,
         ) as Promise<any>,
         this.resilientService.sendWithResilience(
           this.productsClient,
           { cmd: 'get_ofertas' },
-          {},
+          {
+            limit,
+            offset,
+          },
           resilientOptions,
         ) as Promise<any>,
         this.resilientService.sendWithResilience(
@@ -89,15 +96,6 @@ export class HomeService {
           {
             limit,
             offset,
-            categoria: filter.category,
-            fields: [
-              'nombre',
-              'precio',
-              'venta',
-              'ruta',
-              'imagenes',
-              'descuento',
-            ],
           },
           resilientOptions,
         ) as Promise<any>,

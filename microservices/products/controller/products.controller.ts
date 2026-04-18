@@ -69,8 +69,8 @@ export class ProductsController {
   }
 
   @MessagePattern({ cmd: 'get_products_jota' })
-  async getProductsJota() {
-    return await this.productsService.getProductsJota();
+  async getProductsJota(@Body() filters: { offset: number; limit: number }) {
+    return await this.productsService.getProductsJota(filters);
   }
 
   @MessagePattern({ cmd: 'create_oferta' })

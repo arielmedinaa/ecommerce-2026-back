@@ -13,7 +13,7 @@ import { Event } from '../schemas/event.schema';
 import { EventProduct } from '../schemas/event-product.schema';
 import { ConditionType } from '../schemas/event-condition.schema';
 import { Order } from '../schemas/order.schema';
-import { OrderItem } from '../schemas/order-item.schema';
+//import { OrderItem } from '../schemas/order-item.schema';
 import { CreateEventDto } from '../schemas/dto/create-event.dto';
 import { ConditionsService } from '../conditions/service/conditions.service';
 
@@ -37,8 +37,8 @@ export class EventsService {
     @InjectRepository(Order, 'READ_CONNECTION')
     private readonly orderRepositoryRead: Repository<Order>,
 
-    @InjectRepository(OrderItem, 'READ_CONNECTION')
-    private readonly orderItemRepositoryRead: Repository<OrderItem>,
+    // @InjectRepository(OrderItem, 'READ_CONNECTION')
+    // private readonly orderItemRepositoryRead: Repository<OrderItem>,
 
     private readonly conditionsService: ConditionsService,
 
