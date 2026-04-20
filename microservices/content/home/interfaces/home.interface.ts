@@ -10,10 +10,11 @@ export interface Banner {
 }
 
 export interface HomeData {
+  verticales: any[];
   banners: Banner[];
   productos: any[];
   jota: any[];
-  ofertasExpress: any[];
+  ofertas: any[];
 }
 
 export type HomeResponse = ResponseData<HomeData>;

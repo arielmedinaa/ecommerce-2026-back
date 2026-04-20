@@ -26,29 +26,14 @@ export class Formato {
     @Column('simple-array', { nullable: true })
     tags: string[];
 
-    @Column('json', { nullable: true })
-    preview?: {
-        thumbnail?: string;
-        screenshot?: string;
-        demoUrl?: string;
-    };
+    @Column('text', { nullable: true })
+    preview?: string;
 
-    @Column('json', { nullable: true })
-    config?: {
-        customizableSections?: string[];
-        requiredProps?: string[];
-        defaultStyles?: Record<string, any>;
-        dependencies?: string[];
-    };
+    @Column('text', { nullable: true })
+    config?: string;
 
-    @Column('json', { nullable: true })
-    variables?: {
-        name: string;
-        type: string;
-        description: string;
-        required: boolean;
-        defaultValue?: any;
-    }[];
+    @Column('text', { nullable: true })
+    variables?: string;
 
     @Column({ default: true })
     isActive: boolean;
@@ -71,8 +56,8 @@ export class Formato {
     @Column('text', { nullable: true })
     documentation?: string;
 
-    @Column('json', { nullable: true })
-    metadata?: Record<string, any>;
+    @Column('text', { nullable: true })
+    metadata?: string;
 
     @CreateDateColumn()
     createdAt: Date;

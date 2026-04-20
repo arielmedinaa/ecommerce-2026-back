@@ -16,6 +16,10 @@ import { ProductsUtils } from './utils/utils-products';
     MariaDbModule.forRead(),
     MariaDbModule.forFeature(),
     MariaDbModule.forFeatureRead(),
+    MariaDbModule.forOfertasWrite(),
+    MariaDbModule.forOfertasRead(),
+    MariaDbModule.forOfertasFeature(),
+    MariaDbModule.forOfertasFeatureRead(),
   ],
   controllers: [ProductsController],
   providers: [

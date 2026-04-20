@@ -10,7 +10,7 @@ import { ErrorLoggingInterceptor } from './interceptors/error-logging.intercepto
 import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
 import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
 import { MariaDbModule } from './config/mariadb.module';
-
+import { UtilsCart } from './utils/cart-utils';
 @Module({
   imports: [
     JwtModule.register({
@@ -26,6 +26,7 @@ import { MariaDbModule } from './config/mariadb.module';
       'PAYMENTS_SERVICE',
       'CONTENT_SERVICE',
     ]),
+    UtilsCart
   ],
   controllers: [CartController],
   providers: [

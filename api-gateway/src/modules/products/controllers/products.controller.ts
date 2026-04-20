@@ -146,6 +146,13 @@ export class ProductsController {
       this.productsClient.send({ cmd: 'create_oferta' }, ofertaData)
     )
   }
+
+  @Post('/getOfertas')
+  async getOfertas(@Body() filters: { limit: 10; offset: 0 }) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_ofertas' }, filters)
+    )
+  }
   
   @UseGuards(JwtAuthGuard)
   @Post('/createPromo')

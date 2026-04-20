@@ -28,7 +28,7 @@ export class VerticalValidation {
   async validateFilters(
     filters: any = {}
   ): Promise<{ isValid: boolean; error: string | null }> {
-
+    console.log("Filters", filters)
     if (!filters) {
       this.logger.error('Error al validar los filtros', {
         filters,
@@ -43,12 +43,12 @@ export class VerticalValidation {
       return { isValid: false, error: 'Limite de filtros es requerido' };
     };
 
-    if (!filters.offset) {
-      this.logger.error('Error al validar el offset de los filtros', {
-        filters,
-      });
-      return { isValid: false, error: 'Offset de filtros es requerido' };
-    };
+    // if (!filters.offset) {
+    //   this.logger.error('Error al validar el offset de los filtros', {
+    //     filters,
+    //   });
+    //   return { isValid: false, error: 'Offset de filtros es requerido' };
+    // };
     
     return { isValid: true, error: null };
   }

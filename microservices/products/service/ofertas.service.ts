@@ -3,17 +3,24 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OfertasValidationService } from './errors/ofertas.spec';
 import { Oferta } from '../schemas/oferta.schemas';
+import { ProductoOferta } from '../schemas/producto-oferta.schemas';
+import { ProductsUtils } from '../utils/utils-products';
 
 @Injectable()
 export class OfertasService {
   private readonly logger = new Logger(OfertasService.name);
 
   constructor(
-    @InjectRepository(Oferta, 'WRITE_CONNECTION')
+    @InjectRepository(Oferta, 'OFERTAS_CONNECTION')
     private readonly ofertaWriteRepository: Repository<Oferta>,
-    @InjectRepository(Oferta, 'READ_CONNECTION')
+    @InjectRepository(Oferta, 'OFERTAS_CONNECTION_READ')
     private readonly ofertaReadRepository: Repository<Oferta>,
+    @InjectRepository(ProductoOferta, 'OFERTAS_CONNECTION')
+    private readonly productoOfertaWriteRepository: Repository<ProductoOferta>,
+    @InjectRepository(ProductoOferta, 'OFERTAS_CONNECTION_READ')
+    private readonly productoOfertaReadRepository: Repository<ProductoOferta>,
     private readonly ofertasValidationService: OfertasValidationService,
+    private readonly productsUtils: ProductsUtils,
   ) { }
 
   async createOrUpdateOferta(
@@ -30,17 +37,40 @@ export class OfertasService {
     }
 
     try {
-      const existingOferta = await this.ofertaReadRepository.findOne({
-        where: { activo: true },
-        relations: ['productos'],
-      });
+      if (codigo) {
+        const existingOferta = await this.ofertaReadRepository.findOne({
+          where: { id: codigo },
+          relations: ['productos'],
+        });
 
-      if (existingOferta) {
-        existingOferta.tiempoActivo = createData.tiempoActivo;
-        existingOferta.activo =
-          createData.activo !== undefined ? createData.activo : existingOferta.activo;
-        existingOferta.productos = createData.productos;
+        if (!existingOferta) {
+          return {
+            data: [],
+            message: 'OFERTA NO ENCONTRADA',
+            success: false,
+          };
+        }
 
+        existingOferta.titulo = createData.titulo || existingOferta.titulo;
+        existingOferta.descripcion = createData.descripcion || existingOferta.descripcion;
+        existingOferta.tiempoActivo = createData.tiempoActivo || existingOferta.tiempoActivo;
+        existingOferta.activo = createData.activo !== undefined ? createData.activo : existingOferta.activo;
+        existingOferta.updatedBy = createData.updatedBy;
+
+        await this.productoOfertaWriteRepository.remove(existingOferta.productos);
+        const productosConCuotas = await this.productsUtils.calculoCreditoProductosOferta(createData.productos);
+        const nuevosProductos = productosConCuotas.map((producto: any) => {
+          return this.productoOfertaWriteRepository.create({
+            oferta: existingOferta,
+            codigo_articulo: producto.codigo_articulo,
+            nombre_articulo: producto.nombre_articulo,
+            precioContado: producto.precioContado,
+            precioCredito: producto.precioCredito,
+            cuotas: producto.cuotas,
+          });
+        });
+
+        existingOferta.productos = await this.productoOfertaWriteRepository.save(nuevosProductos);
         const updatedOferta = await this.ofertaWriteRepository.save(existingOferta);
 
         return {
@@ -50,11 +80,27 @@ export class OfertasService {
         };
       } else {
         const newOferta = this.ofertaWriteRepository.create({
-          ...createData,
+          titulo: createData.titulo,
+          descripcion: createData.descripcion,
+          tiempoActivo: createData.tiempoActivo,
+          createdBy: createData.createdBy,
           activo: createData.activo !== undefined ? createData.activo : true,
         });
 
         const savedOferta = await this.ofertaWriteRepository.save(newOferta);
+        const productosConCuotas = await this.productsUtils.calculoCreditoProductosOferta(createData.productos);
+        const nuevosProductos = productosConCuotas.map((producto: any) => {
+          return this.productoOfertaWriteRepository.create({
+            oferta: savedOferta,
+            codigo_articulo: producto.codigo_articulo,
+            nombre_articulo: producto.nombre_articulo,
+            precioContado: producto.precioContado,
+            precioCredito: producto.precioCredito,
+            cuotas: producto.cuotas,
+          });
+        });
+
+        savedOferta.productos = await this.productoOfertaWriteRepository.save(nuevosProductos);
 
         return {
           data: savedOferta,
@@ -96,7 +142,7 @@ export class OfertasService {
     }
   }
 
-  async getAllOfertas(): Promise<{
+  async getAllOfertas(filters: {limit: number; offset: number}): Promise<{
     data: any[];
     message: string;
     success: boolean;
@@ -105,10 +151,21 @@ export class OfertasService {
       const ofertas = await this.ofertaReadRepository.find({
         relations: ['productos'],
         order: { createdAt: 'DESC' },
+        take: filters.limit,
+        skip: filters.offset,
       });
 
+      const ofertasConCuotas = await Promise.all(ofertas.map(async (oferta) => {
+        const productosConCuotas = await this.productsUtils.calculoCreditoProductosOferta(oferta.productos);
+        
+        return {
+          ...oferta,
+          productos: productosConCuotas
+        };
+      }));
+
       return {
-        data: ofertas,
+        data: ofertasConCuotas,
         message: 'Ofertas obtenidas exitosamente',
         success: true,
       };

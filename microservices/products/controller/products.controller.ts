@@ -1,10 +1,10 @@
 import { Body, Controller, Logger } from '@nestjs/common';
-import { MessagePattern } from '@nestjs/microservices';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
 import { ProductsService } from '@products/service/products.service';
 import { Product } from '@products/schemas/product.schema';
-import { CreateComboDto } from '@products/schemas/dto/create-combo.dto';
-import { Combos } from '@products/schemas/combos.schema';
+// import { CreateComboDto } from '@products/schemas/dto/create-combo.dto';
+// import { Combos } from '@products/schemas/combos.schema';
 import { OfertasService } from '@products/service/ofertas.service';
 import { PromosService } from '@products/service/promos.service';
 
@@ -79,8 +79,8 @@ export class ProductsController {
   }
   
   @MessagePattern({ cmd: 'get_ofertas' })
-  async getOfertas() {
-    return await this.ofertasService.getAllOfertas();
+  async getOfertas(@Payload() filters: { limit: number; offset: number }) {
+    return await this.ofertasService.getAllOfertas(filters);
   }
   
   @MessagePattern({ cmd: 'create_promo' })

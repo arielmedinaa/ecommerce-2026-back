@@ -20,20 +20,8 @@ export class OfertasValidationService {
       };
     }
 
-    if (createData.productos.length > 12) {
-      this.logger.error('La oferta no puede tener más de 12 productos');
-      return {
-        isValid: false,
-        error: {
-          success: false,
-          message: 'La oferta no puede tener más de 12 productos',
-          data: [],
-        },
-      };
-    }
-
     for (const producto of createData.productos) {
-      if (!producto.nombre || producto.nombre.trim() === '') {
+      if (!producto.nombre_articulo || producto.nombre_articulo.trim() === '') {
         this.logger.error('Todos los productos deben tener nombre');
         return {
           isValid: false,
@@ -45,7 +33,7 @@ export class OfertasValidationService {
         };
       }
 
-      if (!producto.codigo || producto.codigo.trim() === '') {
+      if (!producto.codigo_articulo || producto.codigo_articulo.trim() === '') {
         this.logger.error('Todos los productos deben tener código');
         return {
           isValid: false,

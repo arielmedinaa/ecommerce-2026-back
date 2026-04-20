@@ -2,6 +2,7 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { FilterHomeDto } from '@content/home/dto/filter.home';
 import { HomeData } from '@content/home/interfaces/home.interface';
+import { VerticalesService } from '@content/verticales/service/verticales.service';
 import { ResponseData } from '@shared/common/response/response.data';
 import {
   ResilientService,
@@ -20,12 +21,12 @@ export class HomeService {
   private readonly logger = new Logger(HomeService.name);
 
   private fieldsImage = ['nombre', 'imagen', 'variante', 'estado'];
-
   constructor(
     private readonly resilientService: ResilientService,
     private readonly fallbackDataService: FallbackDataService,
     @Inject('PRODUCTS_SERVICE') private readonly productsClient: ClientProxy,
     @Inject('IMAGE_SERVICE') private readonly imageClient: ClientProxy,
+    private readonly verticalesService: VerticalesService,
   ) {}
 
   private homeDataCache: Map<
@@ -64,6 +65,7 @@ export class HomeService {
         },
       };
 
+      const verticales = await this.verticalesService.findAll({page: 1, limit: 5});
       const banners = await this.resilientService.sendWithResilience(
         this.imageClient,
         { cmd: 'get_all_banners' },
@@ -105,10 +107,11 @@ export class HomeService {
       this.fallbackDataService.saveSuccessfulResponse(jota, 'jota');
       const response = new ResponseData<HomeData>();
       response.data = {
+        verticales: verticales.data || [],
         banners: banners.data || [],
         productos: productos.data || [],
         jota: jota || [],
-        ofertasExpress: ofertas.data || [],
+        ofertas: ofertas.data || [],
       };
       response.status = 200;
       response.register = productos.total || 0;
@@ -121,10 +124,11 @@ export class HomeService {
       const fallbackJota = this.fallbackDataService.getFallbackJota();
       const response = new ResponseData<HomeData>();
       response.data = {
+        verticales: [],
         banners: [],
         productos: fallbackProducts,
         jota: fallbackJota,
-        ofertasExpress: [],
+        ofertas: [],
       };
       response.status = 200;
       response.register = fallbackProducts.length;

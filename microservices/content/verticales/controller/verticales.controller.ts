@@ -14,8 +14,7 @@ export class VerticalController {
 
     @MessagePattern({ cmd: 'getAllVerticales' })
     async getAllVerticales(@Payload() payload: any) {
-        const { filters } = payload;
-        return this.verticalesService.findAll(filters);
+        return this.verticalesService.findAll(payload);
     }
 
     @MessagePattern({ cmd: 'getVerticalById' })

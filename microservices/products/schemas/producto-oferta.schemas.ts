@@ -7,10 +7,10 @@ export class ProductoOferta {
   id: number;
 
   @Column()
-  nombre: string;
+  codigo_articulo: string;
 
   @Column()
-  codigo: string;
+  nombre_articulo: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   tiempoActivo: number;
@@ -39,4 +39,10 @@ export class ProductoOferta {
   @ManyToOne(() => Oferta, oferta => oferta.productos, { nullable: true })
   @JoinColumn({ name: 'ofertaId' })
   oferta: Oferta;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

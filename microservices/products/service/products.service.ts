@@ -349,15 +349,12 @@ export class ProductsService {
     const cacheKey = this.getCacheKey({ ...filters, type: 'jota' });
     const now = Date.now();
     const cached = this.productosJotaCache.get(cacheKey);
-
     if (cached && now - cached.timestamp <= this.CACHE_TTL) {
       return { data: cached.data, total: cached.total };
     }
 
     const limit = Number(filters.limit) || 0;
     const offset = Number(filters.offset) || 0;
-    
-    // Usar procedure específico para JOTA con marca 257
     const result = await this.productReadRepository.query(
       'CALL proc_obtener_listado_articulos_ecommerce(?, ?, 257, NULL)',
       [limit, offset]

@@ -4,6 +4,7 @@ import { HomeService } from './service/home.service';
 import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
 import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
 import { FallbackDataService } from '@shared/common/services/fallback-data.service';
+import { VerticalesModule } from '../verticales/verticales.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { FallbackDataService } from '@shared/common/services/fallback-data.servi
       'PRODUCTS_SERVICE',
       'IMAGE_SERVICE',
     ]),
+    VerticalesModule,
   ],
   controllers: [HomeController],
   providers: [
