@@ -33,15 +33,18 @@ export class Event {
   @Column({ default: true })
   activo: boolean;
 
-  // Límite global de compras por usuario para productos en este evento (null = sin límite global)
+  @Column({ length: 50, nullable: true })
+  codigo?: string;
+
+  @Column({ type: 'int', nullable: true })
+  idCupon?: number;
+
   @Column({ type: 'int', nullable: true })
   limiteGlobalPorUsuario: number;
 
-  // Beneficio específico para usuarios (Identificacion por token)
   @Column({ type: 'text', nullable: true })
   beneficioUsuarioEspecifico?: string;
 
-  // Prioridad para resolver conflictos (mayor número = mayor prioridad)
   @Column({ type: 'int', default: 0 })
   prioridad: number;
 

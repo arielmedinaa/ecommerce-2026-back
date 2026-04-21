@@ -63,6 +63,10 @@ export class CreateEventDto {
   idPromo?: number;
 
   @IsOptional()
+  @IsNumber()
+  idCupon?: number;
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => EventProductDto)

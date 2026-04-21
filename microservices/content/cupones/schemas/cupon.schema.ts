@@ -48,6 +48,9 @@ export class Cupon {
   limiteUsos: number;
 
   @Column({ default: 0 })
+  limiteUsuario: number;
+
+  @Column({ default: 0 })
   usosActuales: number;
 
   @Column({ default: true })

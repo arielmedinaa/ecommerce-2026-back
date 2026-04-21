@@ -1,8 +1,11 @@
 import { User } from '@auth/schemas/user.schemas';
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
+import { UserCouponService } from './user-coupon.service';
+import { ClientProxy } from '@nestjs/microservices';
+import { ResilientService, ResilientOptions } from '@shared/common/decorators/resilient-client.decorator';
 
 @Injectable()
 export class AuthService {
@@ -11,9 +14,15 @@ export class AuthService {
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
+    private readonly userCouponService: UserCouponService,
+    private readonly resilientService: ResilientService,
+    @Inject('CONTENT_SERVICE') private readonly contentClient: ClientProxy,
   ) {}
 
-  async createGuestUser(deviceInfo?: any, email?: string): Promise<{ data: User; guestToken: string }> {
+  async createGuestUser(
+    deviceInfo?: any,
+    email?: string,
+  ): Promise<{ data: User; guestToken: string }> {
     const guestToken = this.generateGuestToken();
     this.logger.log(`Generated guest token: ${guestToken}`);
     const guestEmail = email || `guest_${guestToken}@temp.ecommerce`;
@@ -49,7 +58,7 @@ export class AuthService {
     });
 
     await this.userRepository.save(user);
-    const token = this.generateUserToken(user);
+    const token = await this.generateUserToken(user);
     return {
       data: user,
       message: 'USUARIO CREADO EXITOSAMENTE',
@@ -77,10 +86,15 @@ export class AuthService {
   async validateBasicUser(
     email: string,
     deviceInfo: any,
-  ): Promise<{ data: User | null; message: string; success: boolean, token?: string }> {
+  ): Promise<{
+    data: User | null;
+    message: string;
+    success: boolean;
+    token?: string;
+  }> {
     const user = await this.userRepository.findOne({
       where: {
-        email
+        email,
       },
     });
 
@@ -94,7 +108,7 @@ export class AuthService {
       };
     }
 
-    const newToken = this.generateUserToken(user);
+    const newToken = await this.generateUserToken(user);
     return {
       data: user,
       message: 'USUARIO ENCONTRADO',
@@ -114,13 +128,17 @@ export class AuthService {
     return this.jwtService.sign(payload, { expiresIn: '7d' });
   }
 
-  private generateUserToken(user: User): string {
+  private async generateUserToken(user: User): Promise<string> {
+    const userCoupons = await this.userCouponService.getCouponsForToken(
+      user.id,
+    );
     const payload = {
       sub: user.id.toString(),
       email: user.email,
       name: user.nombre,
       provider: user.proveedor,
       etiquetas: user.etiquetas || [],
+      cupones: userCoupons,
     };
 
     return this.jwtService.sign(payload, { expiresIn: '24h' });
@@ -141,14 +159,13 @@ export class AuthService {
         proveedor: 'google',
         idProveedor,
         ultimoInicioSesion: new Date(),
+        etiquetas: ['GOOGLE_USER'],
       });
-      await this.userRepository.save(user);
-      this.logger.log(`Created new Google user: ${email}`);
     } else {
       user.ultimoInicioSesion = new Date();
-      await this.userRepository.save(user);
     }
 
+    await this.userRepository.save(user);
     return user;
   }
 
@@ -251,8 +268,102 @@ export class AuthService {
       select: ['etiquetas'],
     });
     const etiquetas = user?.etiquetas || [];
-    this.logger.log(`Etiquetas para usuario ${usuario_id}: ${JSON.stringify(etiquetas)}`);
-    
+    this.logger.log(
+      `Etiquetas para usuario ${usuario_id}: ${JSON.stringify(etiquetas)}`,
+    );
+
     return { etiquetas };
+  }
+
+  async getUserByDocument(
+    documento: number,
+  ): Promise<{ data: User | null; success: boolean; message: string }> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: documento },
+      });
+
+      if (!user) {
+        return {
+          data: null,
+          success: false,
+          message: 'Usuario no encontrado',
+        };
+      }
+
+      return {
+        data: user,
+        success: true,
+        message: 'Usuario encontrado',
+      };
+    } catch (error) {
+      this.logger.error('Error al obtener usuario por documento:', error);
+      return {
+        data: null,
+        success: false,
+        message: 'Error al buscar usuario',
+      };
+    }
+  }
+
+  async createUserCoupon(couponData: {
+    userId: number;
+    idCupon: number;
+    descripcion: string;
+    eventId?: string;
+  }): Promise<{ success: boolean; message: string; data?: any }> {
+    try {
+      const resilientOptions: ResilientOptions = {
+        retries: 3,
+        delay: 1000,
+        fallback: async () => {
+          this.logger.warn('Using fallback for cupon limit - defaulting to 1');
+          return 1;
+        },
+        circuitBreaker: {
+          failureThreshold: 3,
+          resetTimeout: 30000,
+        },
+      };
+
+      const limitePorUsuarioCupon = await this.resilientService.sendWithResilience(
+        this.contentClient,
+        { cmd: 'listarCuponId' },
+        { idCupon: couponData.idCupon },
+        resilientOptions,
+      ) as number;
+
+      const cantidadCuponesUsuario =
+        await this.userCouponService.getUserCouponsCount(
+          couponData.userId,
+          couponData.idCupon,
+        );
+      if (cantidadCuponesUsuario >= limitePorUsuarioCupon) {
+        return {
+          success: false,
+          message: 'Usuario ya tiene un cupón de este tipo'.toUpperCase(),
+        };
+      }
+      const coupon = await this.userCouponService.createCouponForUser(
+        couponData.userId,
+        {
+          idCupon: couponData.idCupon,
+          descripcion: couponData.descripcion,
+          eventId: couponData.eventId,
+        },
+      );
+
+      return {
+        success: true,
+        message: 'Cupón creado exitosamente'.toUpperCase(),
+        data: coupon,
+      };
+    } catch (error) {
+      this.logger.error('Error al crear cupón de usuario:', error);
+      return {
+        success: false,
+        message: 'Error al crear cupón',
+      };
+    }
   }
 }

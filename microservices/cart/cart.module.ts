@@ -11,6 +11,7 @@ import { ResilientService } from '@shared/common/decorators/resilient-client.dec
 import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
 import { MariaDbModule } from './config/mariadb.module';
 import { UtilsCart } from './utils/cart-utils';
+
 @Module({
   imports: [
     JwtModule.register({
@@ -25,8 +26,8 @@ import { UtilsCart } from './utils/cart-utils';
       'PRODUCTS_SERVICE',
       'PAYMENTS_SERVICE',
       'CONTENT_SERVICE',
+      'AUTH_SERVICE',
     ]),
-    UtilsCart
   ],
   controllers: [CartController],
   providers: [
@@ -35,7 +36,7 @@ import { UtilsCart } from './utils/cart-utils';
     CartValidationService,
     ResilientService,
     CachePersistenteService,
-    //ObtenerClaveService,
+    UtilsCart,
     {
       provide: APP_INTERCEPTOR,
       useClass: ErrorLoggingInterceptor,

@@ -26,8 +26,14 @@ export class CuponesController {
 
   @MessagePattern({ cmd: 'registrarUsoCupon' })
   async registrarUsoCupon(@Payload() payload: any) {
-    const { codigo } = payload;
-    return await this.cuponesService.registrarUsoCupon(codigo);
+    const { idCupon } = payload;
+    return await this.cuponesService.registrarUsoCupon(idCupon);
+  }
+
+  @MessagePattern({ cmd: 'listarCuponId' })
+  async obtenerCuponId(@Payload() payload: any){
+    const { idCupon } = payload;
+    return await this.cuponesService.obtenerPorId(idCupon);
   }
 
   @MessagePattern({ cmd: 'desactivarCupon' })

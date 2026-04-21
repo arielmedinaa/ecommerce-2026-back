@@ -118,4 +118,24 @@ export class AuthController {
       throw error;
     }
   }
+
+  @MessagePattern({ cmd: 'getUserByDocument' })
+  async getUserByDocument(@Payload() payload: { documento: number }) {
+    try {
+      return await this.authService.getUserByDocument(payload.documento);
+    } catch (error) {
+      this.logger.error('Error in getUserByDocument:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'createUserCoupon' })
+  async createUserCoupon(@Payload() payload: any) {
+    try {
+      return await this.authService.createUserCoupon(payload);
+    } catch (error) {
+      this.logger.error('Error in createUserCoupon:', error);
+      throw error;
+    }
+  }
 }

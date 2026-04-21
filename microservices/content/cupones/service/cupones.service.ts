@@ -80,6 +80,14 @@ export class CuponesService {
     return cupon;
   }
 
+  async obtenerPorId(id: number): Promise<number>{
+    const cupon = await this.cuponRepositoryRead.findOne({ where: { id } });
+    if (!cupon) {
+      throw new NotFoundException(`Cupón con id ${id} no encontrado`);
+    }
+    return cupon.limiteUsuario;
+  }
+
   async validarCuponBase(
     codigo: string,
     montoCarrito: number,

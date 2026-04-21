@@ -41,6 +41,10 @@ export class CreateCuponDto {
   @Min(0)
   limiteUsos: number;
 
+  @IsNumber()
+  @Min(0)
+  limiteUsuario: number;
+
   @IsBoolean()
   activo: boolean;
 }

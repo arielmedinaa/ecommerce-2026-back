@@ -17,9 +17,6 @@ import { ResilientService } from '@shared/common/decorators/resilient-client.dec
 import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
 import { CartValidationService } from './cart.service.spec';
 import { CartErrorService } from './errors/cart-error.service';
-import * as https from 'https';
-import * as mysql from 'mysql2/promise';
-import { ESTADO_SOLICITUD_MAP } from '@cart/constants/cart.constants';
 
 @Injectable()
 export class CartContadoService {
@@ -36,12 +33,15 @@ export class CartContadoService {
     private readonly transaccionesRead: Repository<Transaccion>,
     @InjectRepository(Order, 'WRITE_CONNECTION')
     private readonly orderWrite: Repository<Order>,
+    @InjectRepository(Order, 'READ_CONNECTION')
+    private readonly orderRead: Repository<Order>,
     @InjectRepository(OrderItem, 'WRITE_CONNECTION')
     private readonly orderItemWrite: Repository<OrderItem>,
     @Inject('PRODUCTS_SERVICE')
     private readonly productsService: ClientProxy,
     @Inject('PAYMENTS_SERVICE') private readonly paymentsService: ClientProxy,
     @Inject('CONTENT_SERVICE') private readonly contentService: ClientProxy,
+    @Inject('AUTH_SERVICE') private readonly authService: ClientProxy,
     private readonly cartValidationService: CartValidationService,
     private readonly cartErrorService: CartErrorService,
     private readonly resilientService: ResilientService,
@@ -742,7 +742,6 @@ export class CartContadoService {
       const allArticulos = [...contado, ...credito];
 
       for (const item of allArticulos) {
-        // Obtener evento activo para este producto
         let eventoId: number | null = null;
         try {
           const eventoResponse = await firstValueFrom(
@@ -799,6 +798,15 @@ export class CartContadoService {
             'Error al enviar solicitudes a Central App (segundo plano):',
             centralAppError,
           );
+        }
+      });
+
+      // Validar beneficios por cupones (compras diarias)
+      setImmediate(async () => {
+        try {
+          await this.validateDailyPurchaseBenefits(usuario_id);
+        } catch (benefitError) {
+          console.error('Error al validar beneficios diarios:', benefitError);
         }
       });
 
@@ -1039,6 +1047,90 @@ export class CartContadoService {
         success: false,
         message: `ERROR AL INSERTAR EN CENTRAL APP: ${error.message}`,
       };
+    }
+  }
+
+  async countDailyFinishedCarts(clienteDocumento: number): Promise<number> {
+    try {
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
+      const orderCount = await this.orderRead
+        .createQueryBuilder('order')
+        .where('order.cliente_documento = :clienteDocumento', { clienteDocumento })
+        .andWhere('order.estado = 1')
+        .andWhere('order.fecha_creacion BETWEEN :start AND :end', {
+          start: todayStart,
+          end: todayEnd,
+        })
+        .getCount();
+
+      //this.logger.log(`Carritos finalizados del día para cliente ${clienteDocumento}: ${orderCount}`);
+      return orderCount;
+    } catch (error) {
+      this.logger.error('Error al contar carritos finalizados del día:', error);
+      return 0;
+    }
+  }
+
+  async validateDailyPurchaseBenefits(clienteDocumento: number): Promise<void> {
+    try {
+      const dailyPurchases = await this.countDailyFinishedCarts(clienteDocumento);
+      const benefitEventsResponse = await firstValueFrom(
+        this.contentService.send(
+          { cmd: 'getBenefitEvents' },
+          { 
+            minPurchases: dailyPurchases,
+            active: true 
+          },
+        ),
+      );
+
+      //this.logger.debug('Response Beneficios', benefitEventsResponse.data)
+      if (!benefitEventsResponse || !benefitEventsResponse.data) {
+        return;
+      }
+
+      const benefitEvents = benefitEventsResponse.data;
+      for (const event of benefitEvents) {
+        if (event.codigo && event.codigo.startsWith('B-')) {
+          await this.generateCouponForUser(clienteDocumento, event);
+        }
+      }
+    } catch (error) {
+      this.logger.error('Error en validateDailyPurchaseBenefits:', error);
+    }
+  }
+
+  async generateCouponForUser(clienteDocumento: number, event: any): Promise<void> {
+    try {
+      const userResponse = await firstValueFrom(
+        this.authService.send(
+          { cmd: 'getUserByDocument' },
+          { documento: clienteDocumento },
+        ),
+      );
+
+      if (!userResponse || !userResponse.data) {
+        return;
+      }
+
+      const couponData = {
+        userId: userResponse.data.id,
+        idCupon: event.idCupon,
+        descripcion: `Cupón por beneficio: ${event.nombre}`,
+        eventId: event.codigo,
+      };
+
+      await firstValueFrom(
+        this.authService.send(
+          { cmd: 'createUserCoupon' },
+          couponData,
+        ),
+      );
+
+    } catch (error) {
+      this.logger.error('Error al generar cupón:', error);
     }
   }
 }

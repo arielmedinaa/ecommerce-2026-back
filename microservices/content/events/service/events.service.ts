@@ -50,15 +50,12 @@ export class EventsService {
   ): Promise<{ data: Event; message: string; success: boolean }> {
     try {
       const { productos, ...eventData } = createEventDto;
-
-      // Validar fechas
       if (new Date(eventData.fechaInicio) >= new Date(eventData.fechaFin)) {
         throw new BadRequestException(
           'La fecha de inicio debe ser anterior a la fecha de fin.',
         );
       }
 
-      // Validar jerarquía si tiene evento padre
       if (eventData.idEventoPadre) {
         const parentEvent = await this.eventRepositoryRead.findOne({
           where: { id: eventData.idEventoPadre },
@@ -66,7 +63,6 @@ export class EventsService {
         if (!parentEvent) {
           throw new BadRequestException('El evento padre no existe.');
         }
-        // Validar que las fechas del hijo estén dentro del padre
         if (
           new Date(eventData.fechaInicio) < new Date(parentEvent.fechaInicio) ||
           new Date(eventData.fechaFin) > new Date(parentEvent.fechaFin)
@@ -92,7 +88,6 @@ export class EventsService {
         await this.eventProductRepository.save(eventProducts);
       }
 
-      // Recargar el evento con sus productos, condiciones y subeventos
       const eventWithRelations = await this.eventRepositoryRead.findOne({
         where: { id: savedEvent.id },
         relations: ['eventProducts', 'conditions', 'subEventos'],
@@ -433,5 +428,29 @@ export class EventsService {
 
     // Finalmente eliminar el evento
     await this.eventRepository.delete(id);
+  }
+
+  async getBenefitEvents(params: { minPurchases?: number; active?: boolean }): Promise<{ data: Event[] }> {
+    try {
+      const now = new Date();
+      const query = this.eventRepositoryRead.createQueryBuilder('event')
+        .where('event.activo = :active', { active: params.active ?? true })
+        .andWhere('event.codigo IS NOT NULL')
+        .andWhere('event.codigo LIKE :prefix', { prefix: 'B-%' })
+        .andWhere('event.fechaInicio <= :now', { now })
+        .andWhere('event.fechaFin >= :now', { now });
+
+      if (params.minPurchases !== undefined) {
+        query.andWhere('event.limiteGlobalPorUsuario <= :minPurchases OR event.limiteGlobalPorUsuario IS NULL', {
+          minPurchases: params.minPurchases
+        });
+      }
+
+      const events = await query.orderBy('event.prioridad', 'DESC').getMany();
+      return { data: events };
+    } catch (error) {
+      this.logger.error('Error al obtener eventos de beneficios:', error);
+      return { data: [] };
+    }
   }
 }

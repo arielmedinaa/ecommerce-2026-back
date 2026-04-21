@@ -29,6 +29,12 @@ export class EventsController {
     return await this.eventsService.findActiveEvents();
   }
 
+  @MessagePattern({ cmd: 'getBenefitEvents' })
+  async getBenefitEvents(@Payload() payload: any) {
+    const { minPurchases, active } = payload;
+    return await this.eventsService.getBenefitEvents({ minPurchases, active });
+  }
+
   @MessagePattern({ cmd: 'agregarProductoAEvento' })
   async addProductToEvent(@Payload() payload: any) {
     const { eventId, producto_codigo, limitePorUsuario } = payload;
