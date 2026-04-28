@@ -73,6 +73,12 @@ export class CartController {
     return this.cartService.getMissingCart(limit, skip, sort, order);
   }
 
+  @MessagePattern({ cmd: 'get_missing_cart_by_product' })
+  async getMissingCartByProduct(@Payload() payload: any) {
+    const {limit, skip, sort, order, codigo } = payload;
+    return this.cartService.getMissingCartByProduct({limit, skip, sort, order, codigo });
+  }
+
   @MessagePattern({ cmd: 'finish_cart' })
   async finishCart(@Payload() payload: any) {
     const { token, cuenta, codigo, process } = payload;

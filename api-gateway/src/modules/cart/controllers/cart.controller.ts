@@ -101,6 +101,29 @@ export class CartController {
       })
     )
   }
+
+  @Post('getMissingCartByProduct')
+  @UsePipes(new ValidationPipe())
+  @SneakyThrows('CartService', 'getMissingCartByProduct')
+  async getMissingCartByProduct(@Body() body: {
+    limit: number;
+    skip: number;
+    sort: string;
+    order: string;
+    codigo: number;
+  }){
+    return await firstValueFrom(
+      this.cartClient.send({
+        cmd: 'get_missing_cart_by_product'
+      }, { 
+        limit: body.limit, 
+        skip: body.skip, 
+        sort: body.sort, 
+        order: body.order,
+        codigo: body.codigo
+      })
+    )
+  }
   
   @Post('finishCart')
   @UsePipes(new ValidationPipe())

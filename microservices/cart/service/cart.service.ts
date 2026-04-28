@@ -607,6 +607,70 @@ export class CartContadoService {
     };
   }
 
+  async getMissingCartByProduct(filters: any): Promise<{data: Cart[], message: string, total: number, success: boolean}> {
+    try {
+      const limit = Number(filters.limit) || 10;
+      const offset = Number(filters.offset) || 0;
+      if (!filters.codigo) {
+        return {
+          data: [],
+          total: 0,
+          message: 'El código del producto es requerido',
+          success: false,
+        };
+      }
+      
+      const query = this.carritoRead
+        .createQueryBuilder('cart')
+        .where('cart.estado = :estado', { estado: 1 })
+        .andWhere('(cart.finished IS NULL OR cart.finished = \'\')')
+        .andWhere('(cart.proceso IS NULL OR cart.proceso = \'\')')
+        .andWhere("JSON_CONTAINS(cart.articulos, :codigo, '$.contado[*].codigo')", { 
+          codigo: `"${filters.codigo}"` 
+        })
+        .orderBy('cart.createdAt', 'DESC')
+        .limit(limit)
+        .offset(offset);
+
+      const [carritos, total] = await query.getManyAndCount();
+      if (total === 0) {
+        const queryLike = this.carritoRead
+          .createQueryBuilder('cart')
+          .where('cart.estado = :estado', { estado: 1 })
+          .andWhere('(cart.finished IS NULL OR cart.finished = \'\')')
+          .andWhere('(cart.proceso IS NULL OR cart.proceso = \'\')')
+          .andWhere("cart.articulos LIKE :codigo", { 
+            codigo: `%"codigo":${filters.codigo}%` 
+          })
+          .orderBy('cart.createdAt', 'DESC')
+          .limit(limit)
+          .offset(offset);
+
+        const [carritosLike, totalLike] = await queryLike.getManyAndCount();
+        return {
+          data: carritosLike,
+          total: totalLike,
+          message: `Se encontraron ${totalLike} carritos abandonados para el producto ${filters.codigo}`.toUpperCase(),
+          success: true,
+        };
+      }
+      return {
+        data: carritos,
+        total,
+        message: `Se encontraron ${total} carritos abandonados para el producto ${filters.codigo}`.toUpperCase(),
+        success: true,
+      };
+    } catch (error) {
+      this.logger.error('Error al obtener carritos abandonados por producto:', error);
+      return {
+        data: [],
+        total: 0,
+        message: 'Error al obtener carritos abandonados por producto',
+        success: false,
+      };
+    }
+  }
+
   async finishCart(
     clienteToken: string,
     cuenta?: string,
