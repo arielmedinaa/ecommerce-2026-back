@@ -6,6 +6,7 @@ import { Landing } from '@content/landings/schemas/landings.schemas';
 import { Formato } from '@content/landings/schemas/formatos.schema';
 import { LandingError } from '@content/landings/schemas/errors/landings.error.schema';
 import { Cupon } from '@content/cupones/schemas/cupon.schema';
+import { CuponesPorProducto } from '@content/cupones/schemas/cupon-productos.schema';
 import { Event } from '@content/events/schemas/event.schema';
 import { EventProduct } from '@content/events/schemas/event-product.schema';
 import { Order } from '@content/events/schemas/order.schema';
@@ -39,6 +40,7 @@ export class MariaDbModule {
           Formato,
           LandingError,
           Cupon,
+          CuponesPorProducto,
           Event,
           EventProduct,
           Order,
@@ -46,7 +48,7 @@ export class MariaDbModule {
           EventCondition,
         ],
         synchronize: process.env.SYNCRONICE === 'true',
-        logging: false,
+        logging: true,
         timezone: '-03:00',
         charset: 'utf8mb4',
       }),
@@ -71,6 +73,7 @@ export class MariaDbModule {
           Formato,
           LandingError,
           Cupon,
+          CuponesPorProducto,
           Event,
           EventProduct,
           Order,
@@ -78,7 +81,7 @@ export class MariaDbModule {
           EventCondition,
         ],
         synchronize: process.env.SYNCRONICE === 'true',
-        logging: false,
+        logging: true,
         timezone: '-03:00',
         charset: 'utf8mb4',
       }),
@@ -94,6 +97,7 @@ export class MariaDbModule {
         Formato,
         LandingError,
         Cupon,
+        CuponesPorProducto,
         Event,
         EventProduct,
         Order,
@@ -112,6 +116,7 @@ export class MariaDbModule {
         Formato,
         LandingError,
         Cupon,
+        CuponesPorProducto,
         Event,
         EventProduct,
         Order,

@@ -1,3 +1,4 @@
+import { text } from 'stream/consumers';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -34,6 +35,9 @@ export class User {
 
   @Column({ default: false })
   esInvitado: boolean;
+
+  @Column({default: 'administrador'})
+  perfil: string;
 
   @Column({ type: 'json', nullable: true })
   infoDispositivo?: any;

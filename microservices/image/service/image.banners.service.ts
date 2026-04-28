@@ -33,8 +33,7 @@ export class BannerService {
   ) {
     this.bannersDir =
       process.env.DIR_IMAGE ||
-      '~/Documents/projects/newEcommerce2026/imagesEcommerce/banners';
-    this.bannersDir = this.bannersDir.replace('~', require('os').homedir());
+      '/home/appuser/Documents/projects/newEcommerce2026/imagesEcommerce/banners';
     this.ensureDirectoryExists();
   }
 

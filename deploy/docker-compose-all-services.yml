@@ -112,6 +112,7 @@ services:
       - ../:/usr/src/app
       - /usr/src/app/node_modules
       - /usr/src/app/microservices/products/node_modules
+      - ../imagesEcommerce:/home/appuser/Documents/projects/newEcommerce2026/imagesEcommerce
     command: yarn start:dev:products
     networks:
       - app-network

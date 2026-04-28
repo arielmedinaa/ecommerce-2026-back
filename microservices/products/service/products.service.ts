@@ -6,6 +6,8 @@ import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
 import { CreateComboDto } from '@products/schemas/dto/create-combo.dto';
 import { Product } from '../schemas/product.schemas';
 import { Combo } from '../schemas/combo.schemas';
+import { ProductsImage } from '../schemas/products-image.schema';
+import { ProductsImagesService } from './products-images.service';
 
 import { ProductsUtils } from '@products/utils/utils-products';
 //import { Promo } from '../schemas/promo.schemas';
@@ -23,8 +25,11 @@ export class ProductsService {
     private readonly comboWriteRepository: Repository<Combo>,
     @InjectRepository(Combo, 'READ_CONNECTION')
     private readonly comboReadRepository: Repository<Combo>,
+    @InjectRepository(ProductsImage, 'READ_ECOMMERCE_PRODUCTS_CONNECTION')
+    private readonly productsImagesReadRepository: Repository<ProductsImage>,
     private readonly promosService: PromosService,
     private readonly productsUtils: ProductsUtils,
+    private readonly productsImagesService: ProductsImagesService,
   ) {}
 
   private productosCache = new Map<
@@ -69,7 +74,6 @@ export class ProductsService {
     const cacheKey = this.getCacheKey(filters);
     const now = Date.now();
     const cached = this.productosCache.get(cacheKey);
-
     if (cached && now - cached.timestamp <= this.CACHE_TTL) {
       return { data: cached.data, total: cached.total };
     }
@@ -81,7 +85,26 @@ export class ProductsService {
       [limit, offset, filters.marca || null]
     );
 
-    const dataWithTrimmedNames = result[0]?.map((item: any) => ({
+    const productos = result[0] || [];
+    const codigosProductos = productos.map((item: any) => item.codigo_articulo.trim());
+    const imagenesMap = new Map();
+    if (codigosProductos.length > 0) {
+      const imagenes = await this.productsImagesReadRepository
+        .createQueryBuilder('img')
+        .where('img.producto_codigo IN (:...codigos)', { codigos: codigosProductos })
+        .andWhere('img.activo = :activo', { activo: true })
+        .orderBy('img.orden', 'ASC')
+        .getMany();
+      
+      imagenes.forEach(img => {
+        if (!imagenesMap.has(img.producto_codigo)) {
+          imagenesMap.set(img.producto_codigo, []);
+        }
+        imagenesMap.get(img.producto_codigo).push(img.url_imagen);
+      });
+    }
+    
+    const dataWithTrimmedNames = productos.map((item: any) => ({
       ...item,
       codigo_articulo: item.codigo_articulo.trim(),
       nombre_articulo: item.nombre_articulo.trim(),
@@ -90,17 +113,18 @@ export class ProductsService {
       nombre_proveedor: item.nombre_proveedor.trim(),
       codigo_de_barra: item.codigo_de_barra.trim(),
       descripcion: item.nota.trim(),
+      imagenes: imagenesMap.get(item.codigo_articulo.trim()) || [],
     }));
     
     const data = dataWithTrimmedNames || [];
     const dataConCuotas = await this.productsUtils.calculoCreditoProductos(data);
-    const total = dataConCuotas.length; 
+    const total = result[1]?.[0]?.total_registros || dataConCuotas.length;
 
     if (this.productosCache.size >= this.MAX_CACHE_ENTRIES) {
       const oldestKey = this.productosCache.keys().next().value;
       this.productosCache.delete(oldestKey);
     }
-
+    
     this.productosCache.set(cacheKey, {
       data: dataConCuotas as any[],
       total,
@@ -111,28 +135,32 @@ export class ProductsService {
   }
 
   async findAll(filters: any = {}): Promise<{ data: any[]; total: number }> {
-    return this.getCachedPrismaProductos(filters);
-  }
+    if (filters.search) {
+      const searchParams = this.productsUtils.processIntelligentSearch(filters.search);
+      const updatedFilters = {
+        ...filters,
+        nombre: searchParams.nombre || filters.nombre,
+        marca: searchParams.marca || filters.marca,
+        search: undefined
+      };
 
-  async findOne(codigo_articulo: string): Promise<any> {
-    const product = await this.productReadRepository.findOne({
-      where: { codigo_articulo },
-    });
-
-    if (!product) {
-      throw new NotFoundException(
-        `PrismaProducto con codigo_articulo ${codigo_articulo} no encontrado`,
-      );
+      const result = await this.getCachedPrismaProductos(updatedFilters);
+      if (searchParams.nombre || searchParams.marca || searchParams.categoria) {
+        const filteredData = this.productsUtils.filterProductsBySearch(
+          result.data, 
+          searchParams
+        );
+        
+        return {
+          data: filteredData,
+          total: filteredData.length
+        };
+      }
+      
+      return result;
     }
-    return product;
-  }
-
-  async findByCode(codigo: string): Promise<any | null> {
-    return this.productReadRepository.findOne({
-      where: {
-        codigo,
-      },
-    });
+    
+    return this.getCachedPrismaProductos(filters);
   }
 
   async create(createPrismaProductDto: CreateProductDto): Promise<any> {
@@ -179,55 +207,6 @@ export class ProductsService {
     } catch (error) {
       throw new NotFoundException(`PrismaProducto con ID ${id} no encontrado`);
     }
-  }
-
-  async searchPrismaProducts(
-    filters: any = {},
-  ): Promise<{ data: any[]; total: number }> {
-    const where: any = {
-      nombre: {
-        contains: filters.search,
-        mode: 'insensitive' as const,
-      },
-    };
-
-    const total = await this.productReadRepository.count({ where });
-    const productos = await this.productReadRepository.find({
-      where,
-      order: { codigo_articulo: 'asc' },
-      take: total === 1 ? 1 : 4,
-    });
-
-    return { data: productos, total };
-  }
-
-  async getPrismaProductsByCategory(
-    categoryId: string,
-    limit: number = 10,
-    offset: number = 0,
-  ) {
-    const where: any = {
-      estado: 1,
-      web: 1,
-      dias_ultimo_movimiento: { lte: 30 },
-    };
-
-    if (categoryId) {
-      where.categorias = {
-        contains: categoryId,
-      };
-    }
-
-    const [data, total] = await Promise.all([
-      this.productReadRepository.find({
-        where,
-        order: { codigo_articulo: 'asc' },
-        skip: Number(offset),
-        take: Number(limit),
-      }),
-      this.productReadRepository.count({ where }),
-    ]);
-    return { data, total };
   }
 
   async findManyByIds(ids: string[], fields?: string, filters: any = {}) {
@@ -322,29 +301,6 @@ export class ProductsService {
     return this.comboReadRepository.findOne({ where });
   }
 
-  async searchProducts(
-    filters: any = {},
-  ): Promise<{ data: any[]; total: number }> {
-    const where: any = {
-      nombre: {
-        contains: filters.search,
-        mode: 'insensitive' as const,
-      },
-      estado: 1,
-      web: 1,
-      dias_ultimo_movimiento: { lte: 30 },
-    };
-
-    const total = await this.productReadRepository.count({ where });
-    const productos = await this.productReadRepository.find({
-      where,
-      order: { codigo_articulo: 'asc' },
-      take: total === 1 ? 1 : 4,
-    });
-
-    return { data: productos, total };
-  }
-
   async getProductsJota(filters: any = {}): Promise<{ data: any[]; total: number }> {
     const cacheKey = this.getCacheKey({ ...filters, type: 'jota' });
     const now = Date.now();
@@ -352,7 +308,6 @@ export class ProductsService {
     if (cached && now - cached.timestamp <= this.CACHE_TTL) {
       return { data: cached.data, total: cached.total };
     }
-
     const limit = Number(filters.limit) || 0;
     const offset = Number(filters.offset) || 0;
     const result = await this.productReadRepository.query(
@@ -360,7 +315,26 @@ export class ProductsService {
       [limit, offset]
     );
 
-    const dataWithTrimmedNames = result[0]?.map((item: any) => ({
+    const productos = result[0] || [];
+    const codigosProductos = productos.map((item: any) => item.codigo_articulo.trim());
+    const imagenesMap = new Map();
+    if (codigosProductos.length > 0) {
+      const imagenes = await this.productsImagesReadRepository
+        .createQueryBuilder('img')
+        .where('img.producto_codigo IN (:...codigos)', { codigos: codigosProductos })
+        .andWhere('img.activo = :activo', { activo: true })
+        .orderBy('img.orden', 'ASC')
+        .getMany();
+      
+      imagenes.forEach(img => {
+        if (!imagenesMap.has(img.producto_codigo)) {
+          imagenesMap.set(img.producto_codigo, []);
+        }
+        imagenesMap.get(img.producto_codigo).push(img.url_imagen);
+      });
+    }
+    
+    const dataWithTrimmedNames = productos.map((item: any) => ({
       ...item,
       codigo_articulo: item.codigo_articulo.trim(),
       nombre_articulo: item.nombre_articulo.trim(),
@@ -369,11 +343,12 @@ export class ProductsService {
       nombre_proveedor: item.nombre_proveedor.trim(),
       codigo_de_barra: item.codigo_de_barra.trim(),
       descripcion: item.nota.trim(),
+      imagenes: imagenesMap.get(item.codigo_articulo.trim()) || [],
     }));
     
     const data = dataWithTrimmedNames || [];
     const dataConCuotas = await this.productsUtils.calculoCreditoProductos(data);
-    const total = dataConCuotas.length;
+    const total = result[1]?.[0]?.total_registros || dataConCuotas.length;
 
     if (this.productosJotaCache.size >= this.MAX_CACHE_ENTRIES) {
       const oldestKey = this.productosJotaCache.keys().next().value;
@@ -387,29 +362,5 @@ export class ProductsService {
     });
 
     return { data: dataConCuotas as any[], total };
-  }
-
-  async getCategories(): Promise<{ categorias: string[] }> {
-    try {
-      const products = await this.productReadRepository.find({
-        where: {},
-        select: {
-          nombre: true,
-        },
-      });
-
-      const allCategories = new Set<string>();
-      products.forEach((product) => {
-        if (product.nombre) {
-          allCategories.add(product.nombre);
-        }
-      });
-
-      const categorias = Array.from(allCategories).sort().slice(0, 20);
-      return { categorias };
-    } catch (error) {
-      this.logger.error('Error al obtener categorías:', error);
-      return { categorias: [] };
-    }
   }
 }

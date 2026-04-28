@@ -2,6 +2,7 @@ import { Body, Controller, Logger } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
 import { ProductsService } from '@products/service/products.service';
+import { ProductsImagesService } from '@products/service/products-images.service';
 import { Product } from '@products/schemas/product.schema';
 // import { CreateComboDto } from '@products/schemas/dto/create-combo.dto';
 // import { Combos } from '@products/schemas/combos.schema';
@@ -11,7 +12,12 @@ import { PromosService } from '@products/service/promos.service';
 @Controller()
 export class ProductsController {
   private readonly logger = new Logger(ProductsController.name);
-  constructor(private readonly productsService: ProductsService, private readonly ofertasService: OfertasService, private readonly promosService: PromosService) {}
+  constructor(
+    private readonly productsService: ProductsService, 
+    private readonly ofertasService: OfertasService, 
+    private readonly promosService: PromosService,
+    private readonly productsImagesService: ProductsImagesService
+  ) {}
 
   @MessagePattern({ cmd: 'createProducts' })
   public createProduct (createProductDto: CreateProductDto): Promise<Product> {
@@ -43,30 +49,10 @@ export class ProductsController {
   //   }
   // }
 
-  @MessagePattern({ cmd: 'search_products' })
-  async searchProducts(filters: any = {}) {
-    try {
-      return await this.productsService.searchProducts(filters);
-    } catch (error) {
-      this.logger.error('Error in searchProducts:', error);
-      throw error;
-    }
-  }
-
   // @MessagePattern({ cmd: 'search_combo_by_codigo' })
   // async searchComboByCodigo(codigo: string) {
   //   return await this.productsService.findComboByCodigo(codigo);
   // }
-
-  @MessagePattern({ cmd: 'get_categories' })
-  async getCategories() {
-    try {
-      return await this.productsService.getCategories();
-    } catch (error) {
-      this.logger.error('Error in get_categories:', error);
-      throw error;
-    }
-  }
 
   @MessagePattern({ cmd: 'get_products_jota' })
   async getProductsJota(@Body() filters: { offset: number; limit: number }) {
@@ -85,6 +71,96 @@ export class ProductsController {
   
   @MessagePattern({ cmd: 'create_promo' })
   async createPromo(promoData: any) {
-    return await this.promosService.createPromo(promoData);
+    return this.promosService.createPromo(promoData);
+  }
+
+  // Message Patterns para imágenes de productos
+  @MessagePattern({ cmd: 'upload_product_image' })
+  async uploadProductImage(@Payload() payload: { 
+    productoCodigo: string; 
+    files?: any; 
+    orden?: number; 
+    principal?: boolean; 
+    userId?: string 
+  }) {
+    try {
+      return await this.productsImagesService.uploadProductImage(
+        payload.productoCodigo,
+        payload.files,
+        payload.orden,
+        payload.principal,
+        payload.userId
+      );
+    } catch (error) {
+      this.logger.error('Error in upload_product_image:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'get_product_images' })
+  async getProductImages(@Payload() productoCodigo: string) {
+    try {
+      return await this.productsImagesService.getImagesByProduct(productoCodigo);
+    } catch (error) {
+      this.logger.error('Error in get_product_images:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'update_product_image' })
+  async updateProductImage(@Payload() payload: { 
+    id: number; 
+    updates: any; 
+    userId?: string 
+  }) {
+    try {
+      return await this.productsImagesService.updateImage(
+        payload.id,
+        payload.updates,
+        payload.userId
+      );
+    } catch (error) {
+      this.logger.error('Error in update_product_image:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'delete_product_image' })
+  async deleteProductImage(@Payload() id: number) {
+    try {
+      await this.productsImagesService.deleteImage(id);
+      return { message: 'Imagen eliminada exitosamente' };
+    } catch (error) {
+      this.logger.error('Error in delete_product_image:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'delete_all_product_images' })
+  async deleteAllProductImages(@Payload() productoCodigo: string) {
+    try {
+      await this.productsImagesService.deleteAllProductImages(productoCodigo);
+      return { message: 'Todas las imágenes eliminadas exitosamente' };
+    } catch (error) {
+      this.logger.error('Error in delete_all_product_images:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'reorder_product_images' })
+  async reorderProductImages(@Payload() payload: { 
+    productoCodigo: string; 
+    imageOrders: { id: number; orden: number }[] 
+  }) {
+    try {
+      await this.productsImagesService.reorderImages(
+        payload.productoCodigo,
+        payload.imageOrders
+      );
+      return { message: 'Imágenes reordenadas exitosamente' };
+    } catch (error) {
+      this.logger.error('Error in reorder_product_images:', error);
+      throw error;
+    }
   }
 }

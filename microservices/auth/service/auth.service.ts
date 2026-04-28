@@ -139,6 +139,7 @@ export class AuthService {
       provider: user.proveedor,
       etiquetas: user.etiquetas || [],
       cupones: userCoupons,
+      perfil: user.perfil || "administrador"
     };
 
     return this.jwtService.sign(payload, { expiresIn: '24h' });

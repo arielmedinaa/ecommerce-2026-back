@@ -277,6 +277,16 @@ export class ContentController {
     return cupon;
   }
 
+  @Post('cuponPorProducto')
+  //@UseGuards(JwtAuthGuard)
+  @SneakyThrows('ContentController', 'crearCuponPorProducto')
+  async crearCuponPorProducto(@Body() body: any) {
+    const cupon = await firstValueFrom(
+      this.contentClient.send({ cmd: 'crearCuponPorProducto' }, body),
+    );
+    return cupon;
+  }
+
   @Get('cupones')
   @SneakyThrows('ContentController', 'listarCupones')
   async listarCupones(
@@ -290,6 +300,15 @@ export class ContentController {
         { cmd: 'listarCupones' },
         { page, limit, filters: parsedFilters },
       ),
+    );
+    return cupones;
+  }
+
+  @Get('cuponesPorProducto')
+  @SneakyThrows('ContentController', 'obtenerCuponesPorProducto')
+  async obtenerCuponesPorProducto(@Query('productId') productId: string) {
+    const cupones = await firstValueFrom(
+      this.contentClient.send({ cmd: 'obtenerCuponesPorProducto' }, { productId }),
     );
     return cupones;
   }

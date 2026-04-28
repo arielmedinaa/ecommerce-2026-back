@@ -8,6 +8,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cupon } from '../schemas/cupon.schema';
 import { CreateCuponDto } from '../schemas/dto/create-cupon.dto';
+import { CuponesPorProducto } from '../schemas/cupon-productos.schema';
+import { CuponPorProductoDTO } from '../schemas/dto/cupon-productos.dto';
 
 @Injectable()
 export class CuponesService {
@@ -19,6 +21,12 @@ export class CuponesService {
 
     @InjectRepository(Cupon, 'READ_CONNECTION')
     private readonly cuponRepositoryRead: Repository<Cupon>,
+
+    @InjectRepository(CuponesPorProducto, 'WRITE_CONNECTION')
+    private readonly cuponPorProductoRepository: Repository<CuponesPorProducto>,
+
+    @InjectRepository(CuponesPorProducto, 'READ_CONNECTION')
+    private readonly cuponPorProductoRepositoryRead: Repository<CuponesPorProducto>,
   ) {}
 
   async crearCupon(
@@ -159,5 +167,80 @@ export class CuponesService {
 
     cupon.activo = false;
     return await this.cuponRepository.save(cupon);
+  }
+  
+  async obtenerCuponesPorProducto(productId: number): Promise<{data: Cupon[]; message: string; success: boolean}> {
+    const cuponesPorProducto = await this.cuponPorProductoRepositoryRead.find({
+      where: { 
+        productoId: productId,
+        activo: true 
+      },
+      relations: ['cupon'],
+    });
+
+    console.log("CUPONES POR PRODCUTO", cuponesPorProducto)
+
+    const cuponesValidos = cuponesPorProducto
+      .map(c => c.cupon)
+      .filter(cupon => {
+        return cupon.activo && 
+               cupon.fechaInicio && 
+               cupon.fechaFin &&
+               cupon.usosActuales
+      });
+
+    return {
+      data: cuponesValidos,
+      message: 'Cupones obtenidos exitosamente',
+      success: true,
+    };
+  }
+
+  async crearCuponPorProducto(data: CuponPorProductoDTO): Promise<{data: any; message: string; success: boolean}> {
+    try {
+      const cuponExistente = await this.cuponRepository.findOne({
+        where: { id: data.cuponId }
+      });
+      
+      if (!cuponExistente) {
+        return {
+          data: [],
+          message: 'CUPON NO ENCONTRADO',
+          success: false,
+        }
+      }
+
+      const relacionExistente = await this.cuponPorProductoRepositoryRead.findOne({
+        where: { 
+          cuponId: data.cuponId,
+          productoId: data.productoId 
+        }
+      });
+
+      if (relacionExistente) {
+        return {
+          data: relacionExistente,
+          message: `ESTE CUPÓN YA ESTÁ ASIGNADO A ESTE PRODUCTO. ID de relación: ${relacionExistente.id}, Cupón ID: ${relacionExistente.cuponId}, Producto ID: ${relacionExistente.productoId}`,
+          success: false,
+        }
+      }
+
+      const cuponPorProducto = this.cuponPorProductoRepository.create(data);
+      const saved = await this.cuponPorProductoRepository.save(cuponPorProducto);
+      
+      return {
+        data: {
+          id: saved.id,
+          cuponId: saved.cuponId,
+          productoId: saved.productoId,
+          cupon: cuponExistente
+        },
+        message: 'CUPÓN ASIGNADO AL PRODUCTO EXITOSAMENTE',
+        success: true,
+      };
+    } catch (error) {
+      this.logger.error('ERROR AL INTENTAR ASIGNAR UN CUPÓN A UN PRODUCTO', error);
+      throw new BadRequestException('Error al intentar asignar un cupón a un producto');
+    }
   }
 }

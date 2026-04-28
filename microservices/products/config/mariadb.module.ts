@@ -6,6 +6,7 @@ import { Combo } from '../schemas/combo.schemas';
 import { Promo } from '../schemas/promo.schemas';
 import { Oferta } from '../schemas/oferta.schemas';
 import { ProductoOferta } from '../schemas/producto-oferta.schemas';
+import { ProductsImage } from '../schemas/products-image.schema';
 
 @Module({
   imports: [],
@@ -23,7 +24,45 @@ export class MariaDbModule {
         username: configService.get<string>('ECONT_DB_USER'),
         password: configService.get<string>('ECONT_DB_PASSWORD'),
         database: configService.get<string>('ECONT_DB_DATABASE'),
-        entities: [Product, Combo, Promo, Oferta, ProductoOferta],
+        entities: [Product, Combo, Promo, Oferta, ProductoOferta, ProductsImage],
+        synchronize: process.env.SYNCRONICE === 'true',
+        logging: false,
+      }),
+      inject: [ConfigService],
+    });
+  }
+
+  static forWriteEcommerceProducts(): DynamicModule {
+    return TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      name: 'WRITE_ECOMMERCE_PRODUCTS_CONNECTION',
+      useFactory: (configService: ConfigService) => ({
+        type: 'mysql',
+        host: configService.get<string>('DATABASE_HOST'),
+        port: configService.get<number>('DATABASE_PORT', 3306),
+        username: configService.get<string>('DATABASE_USER'),
+        password: configService.get<string>('DATABASE_PASSWORD'),
+        database: configService.get<string>('DATABASE_NAME'),
+        entities: [ProductsImage],
+        synchronize: process.env.SYNCRONICE === 'true',
+        logging: false,
+      }),
+      inject: [ConfigService],
+    });
+  }
+
+  static forReadEcommerceProducts(): DynamicModule {
+    return TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      name: 'READ_ECOMMERCE_PRODUCTS_CONNECTION',
+      useFactory: (configService: ConfigService) => ({
+        type: 'mysql',
+        host: configService.get<string>('DATABASE_HOST'),
+        port: configService.get<number>('DATABASE_PORT', 3306),
+        username: configService.get<string>('DATABASE_USER'),
+        password: configService.get<string>('DATABASE_PASSWORD'),
+        database: configService.get<string>('DATABASE_NAME'),
+        entities: [ProductsImage],
         synchronize: process.env.SYNCRONICE === 'true',
         logging: false,
       }),
@@ -42,7 +81,7 @@ export class MariaDbModule {
         username: configService.get<string>('ECONT_DB_USER'),
         password: configService.get<string>('ECONT_DB_PASSWORD'),
         database: configService.get<string>('ECONT_DB_DATABASE'),
-        entities: [Product, Combo, Promo, Oferta, ProductoOferta],
+        entities: [Product, Combo, Promo, Oferta, ProductoOferta, ProductsImage],
         synchronize: process.env.SYNCRONICE === 'true',
         logging: false,
       }),
@@ -89,7 +128,15 @@ export class MariaDbModule {
   }
 
   static forFeature(): DynamicModule {
-    return TypeOrmModule.forFeature([Product, Combo, Promo], 'WRITE_CONNECTION');
+    return TypeOrmModule.forFeature([Product, Combo, Promo, ProductsImage], 'WRITE_CONNECTION');
+  }
+  
+  static forEcommerceProductsFeature(): DynamicModule {
+    return TypeOrmModule.forFeature([ProductsImage], 'WRITE_ECOMMERCE_PRODUCTS_CONNECTION');
+  }
+  
+  static forEcommerceProductsFeatureRead(): DynamicModule {
+    return TypeOrmModule.forFeature([ProductsImage], 'READ_ECOMMERCE_PRODUCTS_CONNECTION');
   }
   
   static forOfertasFeature(): DynamicModule {
@@ -101,6 +148,6 @@ export class MariaDbModule {
   }
 
   static forFeatureRead(): DynamicModule {
-    return TypeOrmModule.forFeature([Product, Combo, Promo], 'READ_CONNECTION');
+    return TypeOrmModule.forFeature([Product, Combo, Promo, ProductsImage], 'READ_CONNECTION');
   }
 }
