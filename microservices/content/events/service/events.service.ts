@@ -281,7 +281,6 @@ export class EventsService {
       return { allowed: true };
     }
 
-    // 2. Resolver jerarquía y conflictos (el evento de mayor prioridad ya está primero)
     const selectedEvent = activeEvents[0];
     const eventProduct = selectedEvent.eventProducts?.find(
       (ep) => ep.producto_codigo === producto_codigo.toString(),
@@ -290,13 +289,18 @@ export class EventsService {
     if (!eventProduct) {
       return { allowed: true };
     }
+    console.log("SELECTED EVENT", selectedEvent)
 
+    const esEventoBeneficio = selectedEvent.codigo && selectedEvent.codigo.startsWith('B-');
     if (selectedEvent.beneficioUsuarioEspecifico && usuario) {
       const hasBenefit = await this.checkUserSegmentation(
         usuario,
         selectedEvent.beneficioUsuarioEspecifico,
       );
       if (!hasBenefit) {
+        if (esEventoBeneficio) {
+          return { allowed: true };
+        }
         return {
           allowed: false,
           reason: `Este evento es exclusivo para usuarios con beneficio: ${selectedEvent.beneficioUsuarioEspecifico}.`,
@@ -310,6 +314,9 @@ export class EventsService {
       usuario,
     );
     if (!conditionsMet.allowed) {
+      if (esEventoBeneficio) {
+        return { allowed: true };
+      }
       return conditionsMet;
     }
 
@@ -345,18 +352,25 @@ export class EventsService {
         case ConditionType.MIN_CARRITO:
         case ConditionType.MAX_UNIDADES_PEDIDO:
         case ConditionType.METODO_PAGO_ESPECIFICO:
-          // Estas condiciones requieren validación en cart service
           condicionesRequierenValidacion.push({
             tipo: condition.tipo,
             valor: condition.valor,
           });
           break;
         case ConditionType.SOLO_NUEVOS_USUARIOS:
-          // Verificar si el usuario es nuevo (sin órdenes previas)
-          const orderCount = await this.orderRepositoryRead.count({
-            where: { cliente_documento: cliente_id, estado: 1 },
-          });
-          if (orderCount > 0) {
+          let esNuevoUsuario = false;
+          if (usuario && usuario.etiquetas) {
+            esNuevoUsuario = usuario.etiquetas.includes('NUEVO_USUARIO');
+          }
+          
+          if (!esNuevoUsuario) {
+            const orderCount = await this.orderRepositoryRead.count({
+              where: { cliente_documento: cliente_id, estado: 1 },
+            });
+            esNuevoUsuario = orderCount === 0;
+          }
+          
+          if (!esNuevoUsuario) {
             return {
               allowed: false,
               reason: 'Este evento es solo para nuevos usuarios.',

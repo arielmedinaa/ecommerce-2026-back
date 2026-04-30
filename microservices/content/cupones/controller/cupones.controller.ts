@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { CuponesService } from '../service/cupones.service';
-import { CuponPorProductoDTO } from '../schemas/dto/cupon-productos.dto';
+import { AsignarCuponesProductosDTO } from '../schemas/dto/asignar-cupones-productos.dto';
 
 @Controller()
 export class CuponesController {
@@ -50,7 +50,12 @@ export class CuponesController {
   }
 
   @MessagePattern({ cmd: 'crearCuponPorProducto' })
-  async crearCuponPorProducto(@Payload() payload: CuponPorProductoDTO) {
-    return await this.cuponesService.crearCuponPorProducto(payload);
+  async crearCuponPorProducto(@Payload() payload: AsignarCuponesProductosDTO) {
+    return await this.cuponesService.asignarCuponPorProducto(payload);
+  }
+  
+  @MessagePattern({ cmd: 'desasignarCuponPorProducto' })
+  async desasignarCuponPorProducto(@Payload() payload: AsignarCuponesProductosDTO) {
+    return await this.cuponesService.desasignarCuponPorProducto(payload);
   }
 }

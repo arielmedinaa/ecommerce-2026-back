@@ -313,6 +313,15 @@ export class ContentController {
     return cupones;
   }
 
+  @Post('cuponPorProducto/desasignar')
+  @SneakyThrows('ContentController', 'desasignarCuponPorProducto')
+  async desasignarCuponPorProducto(@Body() body: any) {
+    const cupon = await firstValueFrom(
+      this.contentClient.send({ cmd: 'desasignarCuponPorProducto' }, body),
+    );
+    return cupon;
+  }
+
   @Post('cupon/validar')
   @SneakyThrows('ContentController', 'validarCupon')
   async validarCupon(@Body() body: { codigo: string; montoCarrito: number }) {

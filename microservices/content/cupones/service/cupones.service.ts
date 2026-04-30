@@ -7,9 +7,9 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cupon } from '../schemas/cupon.schema';
-import { CreateCuponDto } from '../schemas/dto/create-cupon.dto';
 import { CuponesPorProducto } from '../schemas/cupon-productos.schema';
-import { CuponPorProductoDTO } from '../schemas/dto/cupon-productos.dto';
+import { CreateCuponDto } from '../schemas/dto/create-cupon.dto';
+import { AsignarCuponesProductosDTO } from '../schemas/dto/asignar-cupones-productos.dto';
 
 @Injectable()
 export class CuponesService {
@@ -169,7 +169,7 @@ export class CuponesService {
     return await this.cuponRepository.save(cupon);
   }
   
-  async obtenerCuponesPorProducto(productId: number): Promise<{data: Cupon[]; message: string; success: boolean}> {
+  async obtenerCuponesPorProducto(productId: number): Promise<{data: CuponesPorProducto[]; message: string; success: boolean}> {
     const cuponesPorProducto = await this.cuponPorProductoRepositoryRead.find({
       where: { 
         productoId: productId,
@@ -178,69 +178,116 @@ export class CuponesService {
       relations: ['cupon'],
     });
 
-    console.log("CUPONES POR PRODCUTO", cuponesPorProducto)
-
-    const cuponesValidos = cuponesPorProducto
-      .map(c => c.cupon)
-      .filter(cupon => {
-        return cupon.activo && 
-               cupon.fechaInicio && 
-               cupon.fechaFin &&
-               cupon.usosActuales
-      });
-
     return {
-      data: cuponesValidos,
+      data: cuponesPorProducto,
       message: 'Cupones obtenidos exitosamente',
       success: true,
     };
   }
 
-  async crearCuponPorProducto(data: CuponPorProductoDTO): Promise<{data: any; message: string; success: boolean}> {
+  async asignarCuponPorProducto(data: AsignarCuponesProductosDTO): Promise<{data: any; message: string; success: boolean}> {
     try {
-      const cuponExistente = await this.cuponRepository.findOne({
-        where: { id: data.cuponId }
-      });
-      
-      if (!cuponExistente) {
+      if (!data.productos || data.productos.length === 0) {
         return {
           data: [],
-          message: 'CUPON NO ENCONTRADO',
+          message: 'NO SE PROPORCIONARON PRODUCTOS PARA ASIGNAR',
           success: false,
-        }
+        };
       }
 
-      const relacionExistente = await this.cuponPorProductoRepositoryRead.findOne({
-        where: { 
-          cuponId: data.cuponId,
-          productoId: data.productoId 
+      const combinacionesUnicas = new Set<string>();
+      const duplicadosEncontrados: Array<{cuponId: number, productoId: number}> = [];
+      data.productos.forEach(producto => {
+        const combinacion = `${producto.cuponId}-${producto.productoId}`;
+        if (combinacionesUnicas.has(combinacion)) {
+          duplicadosEncontrados.push({
+            cuponId: producto.cuponId,
+            productoId: producto.productoId
+          });
+        } else {
+          combinacionesUnicas.add(combinacion);
         }
       });
 
-      if (relacionExistente) {
+      if (duplicadosEncontrados.length > 0) {
+        const mensajesErrores = duplicadosEncontrados.map(dup => 
+          `Cupón ID ${dup.cuponId} - Producto ID ${dup.productoId}`
+        );
         return {
-          data: relacionExistente,
-          message: `ESTE CUPÓN YA ESTÁ ASIGNADO A ESTE PRODUCTO. ID de relación: ${relacionExistente.id}, Cupón ID: ${relacionExistente.cuponId}, Producto ID: ${relacionExistente.productoId}`,
+          data: duplicadosEncontrados,
+          message: `COMBINACIONES DUPLICADAS ENCONTRADAS: ${mensajesErrores.join(', ')}`,
           success: false,
-        }
+        };
       }
 
-      const cuponPorProducto = this.cuponPorProductoRepository.create(data);
-      const saved = await this.cuponPorProductoRepository.save(cuponPorProducto);
-      
+      const relacionesExistentes = await this.cuponPorProductoRepositoryRead.find({
+        where: data.productos.map(p => ({
+          cuponId: p.cuponId,
+          productoId: p.productoId
+        }))
+      });
+
+      if (relacionesExistentes.length > 0) {
+        const mensajesRelaciones = relacionesExistentes.map(rel => 
+          `Cupón ID ${rel.cuponId} - Producto ID ${rel.productoId}`
+        );
+        return {
+          data: relacionesExistentes,
+          message: `ALGUNAS RELACIONES YA EXISTEN: ${mensajesRelaciones.join(', ')}`,
+          success: false,
+        };
+      }
+
+      const entidadesParaGuardar = data.productos.map(producto => {
+        const entidad = new CuponesPorProducto();
+        entidad.cuponId = producto.cuponId;
+        entidad.codigoCupon = producto.codigoCupon;
+        entidad.productoId = producto.productoId;
+        entidad.codigoProducto = producto.codigoProducto;
+        entidad.limiteUsos = producto.limiteUsos ?? 0;
+        entidad.activo = producto.activo ?? true;
+        return entidad;
+      });
+
+      const relacionesGuardadas = await this.cuponPorProductoRepository.save(entidadesParaGuardar);
+
       return {
-        data: {
-          id: saved.id,
-          cuponId: saved.cuponId,
-          productoId: saved.productoId,
-          cupon: cuponExistente
-        },
-        message: 'CUPÓN ASIGNADO AL PRODUCTO EXITOSAMENTE',
+        data: relacionesGuardadas,
+        message: `${relacionesGuardadas.length} PRODUCTOS ASIGNADOS EXITOSAMENTE A LOS CUPONES`,
         success: true,
       };
     } catch (error) {
-      this.logger.error('ERROR AL INTENTAR ASIGNAR UN CUPÓN A UN PRODUCTO', error);
-      throw new BadRequestException('Error al intentar asignar un cupón a un producto');
+      this.logger.error('ERROR AL INTENTAR ASIGNAR CUPÓN(ES) A PRODUCTO(S)', error);
+      throw new BadRequestException('Error al intentar asignar cupón(es) a producto(s)');
+    }
+  }
+
+  async desasignarCuponPorProducto(data: AsignarCuponesProductosDTO) {
+    try {
+      const relacionesExistentes = await this.cuponPorProductoRepository.find({
+        where: data.productos.map(p => ({
+          cuponId: p.cuponId,
+          productoId: p.productoId
+        }))
+      });
+
+      if (relacionesExistentes.length === 0) {
+        return {
+          data: [],
+          message: 'NO HAY RELACIONES PARA ELIMINAR',
+          success: false,
+        };
+      }
+
+      const relacionesEliminadas = await this.cuponPorProductoRepository.remove(relacionesExistentes);
+      return {
+        data: relacionesEliminadas,
+        message: `${relacionesEliminadas.length} RELACIONES DESASIGNADAS EXITOSAMENTE`,
+        success: true,
+      };
+    } catch (error) {
+      this.logger.error('ERROR AL INTENTAR DESASIGNAR CUPÓN(ES) DE PRODUCTO(S)', error);
+      throw new BadRequestException('Error al intentar desasignar cupón(es) de producto(s)');
     }
   }
 }

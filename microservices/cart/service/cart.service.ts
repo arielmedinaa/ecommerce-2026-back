@@ -48,7 +48,7 @@ export class CartContadoService {
     private readonly cacheService: CachePersistenteService,
     private readonly jwtService: JwtService,
 
-    private readonly utilsCart: UtilsCart
+    private readonly utilsCart: UtilsCart,
   ) {}
 
   async addCart(
@@ -511,9 +511,12 @@ export class CartContadoService {
   ): Promise<{ data: Cart[]; success: boolean; message: string }> {
     const resultado = await this.carritoRead
       .createQueryBuilder('cart')
-      .where("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id_usuario", {
-        id_usuario: this.jwtService.decode(clienteToken)?.sub,
-      })
+      .where(
+        "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id_usuario",
+        {
+          id_usuario: this.jwtService.decode(clienteToken)?.sub,
+        },
+      )
       .orderBy(`cart.${sort}`, order === 'desc' ? 'DESC' : 'ASC')
       .limit(limit)
       .skip(skip)
@@ -529,7 +532,9 @@ export class CartContadoService {
 
     const carritosConEstado = await Promise.all(
       resultado.map(async (carrito) => {
-        const estadoEcont = await this.utilsCart.getEstadoSolicitudEcont(carrito.codigo);
+        const estadoEcont = await this.utilsCart.getEstadoSolicitudEcont(
+          carrito.codigo,
+        );
         return {
           ...carrito,
           estadoSolicitud: estadoEcont,
@@ -607,7 +612,14 @@ export class CartContadoService {
     };
   }
 
-  async getMissingCartByProduct(filters: any): Promise<{data: Cart[], message: string, total: number, success: boolean}> {
+  async getMissingCartByProduct(
+    filters: any,
+  ): Promise<{
+    data: Cart[];
+    message: string;
+    total: number;
+    success: boolean;
+  }> {
     try {
       const limit = Number(filters.limit) || 10;
       const offset = Number(filters.offset) || 0;
@@ -619,15 +631,18 @@ export class CartContadoService {
           success: false,
         };
       }
-      
+
       const query = this.carritoRead
         .createQueryBuilder('cart')
         .where('cart.estado = :estado', { estado: 1 })
-        .andWhere('(cart.finished IS NULL OR cart.finished = \'\')')
-        .andWhere('(cart.proceso IS NULL OR cart.proceso = \'\')')
-        .andWhere("JSON_CONTAINS(cart.articulos, :codigo, '$.contado[*].codigo')", { 
-          codigo: `"${filters.codigo}"` 
-        })
+        .andWhere("(cart.finished IS NULL OR cart.finished = '')")
+        .andWhere("(cart.proceso IS NULL OR cart.proceso = '')")
+        .andWhere(
+          "JSON_CONTAINS(cart.articulos, :codigo, '$.contado[*].codigo')",
+          {
+            codigo: `"${filters.codigo}"`,
+          },
+        )
         .orderBy('cart.createdAt', 'DESC')
         .limit(limit)
         .offset(offset);
@@ -637,10 +652,10 @@ export class CartContadoService {
         const queryLike = this.carritoRead
           .createQueryBuilder('cart')
           .where('cart.estado = :estado', { estado: 1 })
-          .andWhere('(cart.finished IS NULL OR cart.finished = \'\')')
-          .andWhere('(cart.proceso IS NULL OR cart.proceso = \'\')')
-          .andWhere("cart.articulos LIKE :codigo", { 
-            codigo: `%"codigo":${filters.codigo}%` 
+          .andWhere("(cart.finished IS NULL OR cart.finished = '')")
+          .andWhere("(cart.proceso IS NULL OR cart.proceso = '')")
+          .andWhere('cart.articulos LIKE :codigo', {
+            codigo: `%"codigo":${filters.codigo}%`,
           })
           .orderBy('cart.createdAt', 'DESC')
           .limit(limit)
@@ -650,18 +665,23 @@ export class CartContadoService {
         return {
           data: carritosLike,
           total: totalLike,
-          message: `Se encontraron ${totalLike} carritos abandonados para el producto ${filters.codigo}`.toUpperCase(),
+          message:
+            `Se encontraron ${totalLike} carritos abandonados para el producto ${filters.codigo}`.toUpperCase(),
           success: true,
         };
       }
       return {
         data: carritos,
         total,
-        message: `Se encontraron ${total} carritos abandonados para el producto ${filters.codigo}`.toUpperCase(),
+        message:
+          `Se encontraron ${total} carritos abandonados para el producto ${filters.codigo}`.toUpperCase(),
         success: true,
       };
     } catch (error) {
-      this.logger.error('Error al obtener carritos abandonados por producto:', error);
+      this.logger.error(
+        'Error al obtener carritos abandonados por producto:',
+        error,
+      );
       return {
         data: [],
         total: 0,
@@ -669,6 +689,65 @@ export class CartContadoService {
         success: false,
       };
     }
+  }
+
+  async getCartWithoutToken(
+    filters: any,
+  ): Promise<{
+    data: any;
+    message: string;
+    success: boolean;
+    totalCarritos: number;
+    totalCarritosFinalizados: number;
+    totalAbandonados: number;
+  }> {
+    const carritos = await this.carritoRead.find({
+      where: {
+        createdAt: filters.desde,
+        updatedAt: filters.hasta,
+      },
+      order: {
+        createdAt: 'DESC',
+      },
+      take: filters.limit,
+      skip: filters.offset,
+    });
+
+    const carritosFinalizados = await this.carritoRead.find({
+      where: {
+        estado: '0',
+        finished: '1',
+      },
+      order: {
+        createdAt: 'DESC',
+      },
+      take: filters.limit,
+      skip: filters.offset,
+    });
+
+    const carritosAbandonados = await this.carritoRead.find({
+      where: {
+        estado: '1',
+        finished: '',
+        proceso: '',
+      },
+      order: {
+        createdAt: 'DESC',
+      },
+      take: filters.limit,
+      skip: filters.offset,
+    });
+    return {
+      data: {
+        carritos,
+        carritosAbandonados: carritosAbandonados,
+      },
+      message: 'Carrito obtenido exitosamente',
+      success: true,
+      totalCarritos: carritos.length,
+      totalCarritosFinalizados: carritosFinalizados.length,
+      totalAbandonados: carritosAbandonados.length,
+    };
   }
 
   async finishCart(
@@ -707,7 +786,11 @@ export class CartContadoService {
       .createQueryBuilder('cart')
       .where(
         "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id_usuario AND cart.codigo = :codigo AND cart.estado != :estado",
-        { id_usuario: this.jwtService.decode(clienteToken)?.sub, codigo, estado: '0' },
+        {
+          id_usuario: this.jwtService.decode(clienteToken)?.sub,
+          codigo,
+          estado: '0',
+        },
       )
       .getOne();
     if (!carrito) {
@@ -791,6 +874,7 @@ export class CartContadoService {
           registradoEnPayments: true,
         },
         estado: '0',
+        finished: '1',
         cliente: {
           ...process.cliente,
           equipo: clienteToken,
@@ -798,7 +882,6 @@ export class CartContadoService {
         envio: process?.envio || {},
       });
 
-      // Crear orden
       const orderItems: Partial<OrderItem>[] = [];
       const articulos = carrito.articulos || {};
       const contado = articulos.contado || [];
@@ -840,7 +923,7 @@ export class CartContadoService {
         total: montoTotal,
         datos_envio: process?.envio || {},
         datos_pago: process,
-        estado: 1,
+        estado: 0,
       });
 
       const savedOrder = await this.orderWrite.save(order);
@@ -848,7 +931,6 @@ export class CartContadoService {
         item.orden_id = savedOrder.id;
       }
       await this.orderItemWrite.save(orderItems);
-
       setImmediate(async () => {
         try {
           await this.insertarSolicitudesCentralApp(
@@ -1017,7 +1099,8 @@ export class CartContadoService {
           credito: [],
         };
 
-        const resultadoContado = await this.utilsCart.insertarCarritos(solicitudContado);
+        const resultadoContado =
+          await this.utilsCart.insertarCarritos(solicitudContado);
         resultados.push({
           cuotas: 0,
           success: resultadoContado === 1,
@@ -1117,11 +1200,17 @@ export class CartContadoService {
   async countDailyFinishedCarts(clienteDocumento: number): Promise<number> {
     try {
       const today = new Date();
-      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const todayStart = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+      );
       const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
       const orderCount = await this.orderRead
         .createQueryBuilder('order')
-        .where('order.cliente_documento = :clienteDocumento', { clienteDocumento })
+        .where('order.cliente_documento = :clienteDocumento', {
+          clienteDocumento,
+        })
         .andWhere('order.estado = 1')
         .andWhere('order.fecha_creacion BETWEEN :start AND :end', {
           start: todayStart,
@@ -1139,13 +1228,14 @@ export class CartContadoService {
 
   async validateDailyPurchaseBenefits(clienteDocumento: number): Promise<void> {
     try {
-      const dailyPurchases = await this.countDailyFinishedCarts(clienteDocumento);
+      const dailyPurchases =
+        await this.countDailyFinishedCarts(clienteDocumento);
       const benefitEventsResponse = await firstValueFrom(
         this.contentService.send(
           { cmd: 'getBenefitEvents' },
-          { 
+          {
             minPurchases: dailyPurchases,
-            active: true 
+            active: true,
           },
         ),
       );
@@ -1166,7 +1256,10 @@ export class CartContadoService {
     }
   }
 
-  async generateCouponForUser(clienteDocumento: number, event: any): Promise<void> {
+  async generateCouponForUser(
+    clienteDocumento: number,
+    event: any,
+  ): Promise<void> {
     try {
       const userResponse = await firstValueFrom(
         this.authService.send(
@@ -1187,12 +1280,8 @@ export class CartContadoService {
       };
 
       await firstValueFrom(
-        this.authService.send(
-          { cmd: 'createUserCoupon' },
-          couponData,
-        ),
+        this.authService.send({ cmd: 'createUserCoupon' }, couponData),
       );
-
     } catch (error) {
       this.logger.error('Error al generar cupón:', error);
     }
