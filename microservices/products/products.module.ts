@@ -9,10 +9,16 @@ import { OfertasValidationService } from './service/errors/ofertas.spec';
 import { PromosValidationService } from './service/errors/promos.spec';
 import { MariaDbModule } from './config/mariadb.module';
 import { ProductsUtils } from './utils/utils-products';
+import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
+import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    MicroserviceModule.register('PRODUCTS_SERVICE'),
+    MicroserviceModule.forRoot([
+      'CART_SERVICE',
+    ]),
     MariaDbModule.forWrite(),
     MariaDbModule.forWriteEcommerceProducts(),
     MariaDbModule.forReadEcommerceProducts(),
@@ -35,6 +41,7 @@ import { ProductsUtils } from './utils/utils-products';
     OfertasValidationService,
     PromosValidationService,
     ProductsUtils,
+    ResilientService,
   ],
   exports: [ProductsService, ProductsImagesService, PromosService, OfertasService],
 })

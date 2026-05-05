@@ -71,7 +71,7 @@ export class ProductsController {
     try {
       const products = await firstValueFrom(
         this.productsClient.send({ cmd: 'get_products' }, filters).pipe(
-          timeout(10000),
+          timeout(40000),
           catchError((error) => {
             console.error('Error in productsClient.send:', {
               message: error.message,
@@ -86,6 +86,37 @@ export class ProductsController {
       return products;
     } catch (error) {
       console.error('Error in getProducts:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        code: error.code,
+      });
+      throw new Error('Error al obtener los productos: ' + error.message);
+    }
+  }
+
+  @Post('/getProductsPrefetch')
+  async getProductsPrefetch(@Body() body: {
+    codigo: number
+  }) {
+    try {
+      const products = await firstValueFrom(
+        this.productsClient.send({ cmd: 'get_products_prefetch' }, body).pipe(
+          timeout(10000),
+          catchError((error) => {
+            console.error('Error in productsClient.send:', {
+              message: error.message,
+              name: error.name,
+              stack: error.stack,
+              code: error.code,
+            });
+            throw error;
+          }),
+        ),
+      );
+      return products;
+    } catch (error) {
+      console.error('Error in getProductsPrefetch:', {
         message: error.message,
         stack: error.stack,
         name: error.name,

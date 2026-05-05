@@ -1,5 +1,10 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ClientProxy } from '@nestjs/microservices';
+import {
+  ResilientService,
+  ResilientOptions,
+} from '@shared/common/decorators/resilient-client.decorator';
 import { Repository, In } from 'typeorm';
 import { PromosService } from './promos.service';
 import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
@@ -11,6 +16,13 @@ import { ProductsImagesService } from './products-images.service';
 
 import { ProductsUtils } from '@products/utils/utils-products';
 //import { Promo } from '../schemas/promo.schemas';
+
+interface CartResponse {
+  data: any[];
+  success: boolean;
+  message: string;
+  total: number;
+}
 
 @Injectable()
 export class ProductsService {
@@ -30,6 +42,8 @@ export class ProductsService {
     private readonly promosService: PromosService,
     private readonly productsUtils: ProductsUtils,
     private readonly productsImagesService: ProductsImagesService,
+    @Inject('CART_SERVICE') private readonly cartClient: ClientProxy,
+    private readonly resilientService: ResilientService,
   ) {}
 
   private productosCache = new Map<
@@ -82,28 +96,32 @@ export class ProductsService {
     const offset = Number(filters.offset) || 0;
     const result = await this.productReadRepository.query(
       'CALL proc_obtener_listado_articulos_ecommerce(?, ?, ?, NULL)',
-      [limit, offset, filters.marca || null]
+      [limit, offset, filters.marca || null],
     );
 
     const productos = result[0] || [];
-    const codigosProductos = productos.map((item: any) => item.codigo_articulo.trim());
+    const codigosProductos = productos.map((item: any) =>
+      item.codigo_articulo.trim(),
+    );
     const imagenesMap = new Map();
     if (codigosProductos.length > 0) {
       const imagenes = await this.productsImagesReadRepository
         .createQueryBuilder('img')
-        .where('img.producto_codigo IN (:...codigos)', { codigos: codigosProductos })
+        .where('img.producto_codigo IN (:...codigos)', {
+          codigos: codigosProductos,
+        })
         .andWhere('img.activo = :activo', { activo: true })
         .orderBy('img.orden', 'ASC')
         .getMany();
-      
-      imagenes.forEach(img => {
+
+      imagenes.forEach((img) => {
         if (!imagenesMap.has(img.producto_codigo)) {
           imagenesMap.set(img.producto_codigo, []);
         }
         imagenesMap.get(img.producto_codigo).push(img.url_imagen);
       });
     }
-    
+
     const dataWithTrimmedNames = productos.map((item: any) => ({
       ...item,
       codigo_articulo: item.codigo_articulo.trim(),
@@ -115,16 +133,17 @@ export class ProductsService {
       descripcion: item.nota.trim(),
       imagenes: imagenesMap.get(item.codigo_articulo.trim()) || [],
     }));
-    
+
     const data = dataWithTrimmedNames || [];
-    const dataConCuotas = await this.productsUtils.calculoCreditoProductos(data);
+    const dataConCuotas =
+      await this.productsUtils.calculoCreditoProductos(data);
     const total = result[1]?.[0]?.total_registros || dataConCuotas.length;
 
     if (this.productosCache.size >= this.MAX_CACHE_ENTRIES) {
       const oldestKey = this.productosCache.keys().next().value;
       this.productosCache.delete(oldestKey);
     }
-    
+
     this.productosCache.set(cacheKey, {
       data: dataConCuotas as any[],
       total,
@@ -136,31 +155,134 @@ export class ProductsService {
 
   async findAll(filters: any = {}): Promise<{ data: any[]; total: number }> {
     if (filters.search) {
-      const searchParams = this.productsUtils.processIntelligentSearch(filters.search);
+      const searchParams = this.productsUtils.processIntelligentSearch(
+        filters.search,
+      );
       const updatedFilters = {
         ...filters,
         nombre: searchParams.nombre || filters.nombre,
         marca: searchParams.marca || filters.marca,
-        search: undefined
+        search: undefined,
       };
 
       const result = await this.getCachedPrismaProductos(updatedFilters);
       if (searchParams.nombre || searchParams.marca || searchParams.categoria) {
         const filteredData = this.productsUtils.filterProductsBySearch(
-          result.data, 
-          searchParams
+          result.data,
+          searchParams,
         );
-        
+
         return {
           data: filteredData,
-          total: filteredData.length
+          total: filteredData.length,
         };
       }
-      
+
       return result;
     }
-    
+
     return this.getCachedPrismaProductos(filters);
+  }
+
+  async prefetchfindAll(
+    filters: any = {},
+  ): Promise<{
+    data: { carritos: any[]; promociones: any[] };
+    message: string;
+    success: boolean;
+    total: number;
+  }> {
+    try {
+      const products = await this.productReadRepository.query(
+        'SELECT * FROM articulo WHERE codigo_articulo = ?',
+        [filters.codigo],
+      );
+      let promocionesPorProductosId = await this.productReadRepository.query(
+        'CALL proc_promos_por_articulo(?, ?)',
+        [filters.codigo, true],
+      );
+
+      const carritosProductosId = [];
+      const productosRelacionados = [];
+      const resilientOptions: ResilientOptions = {
+        retries: 3,
+        delay: 1000,
+        fallback: async () => {
+          this.logger.warn('Using fallback cart data');
+          return {
+            data: [],
+            total: 0,
+            message: 'Fallback cart data',
+            success: false,
+          };
+        },
+        circuitBreaker: {
+          failureThreshold: 3,
+          resetTimeout: 30000,
+        },
+      };
+
+      for (const product of products) {
+        if (product.codigo_articulo) {
+          try {
+            const cartResponse =
+              (await this.resilientService.sendWithResilience(
+                this.cartClient as any,
+                { cmd: 'get_missing_cart_by_product' },
+                {
+                  limit: 10,
+                  skip: 0,
+                  sort: 'createdAt',
+                  order: 'DESC',
+                  codigo: product.codigo_articulo,
+                },
+                resilientOptions,
+              )) as CartResponse;
+
+            if (
+              cartResponse &&
+              cartResponse.success &&
+              cartResponse.data.length > 0
+            ) {
+              carritosProductosId.push({
+                productoCodigo: product.codigo_articulo,
+                carritos: cartResponse.data,
+                total: cartResponse.total,
+              });
+            }
+          } catch (error) {
+            this.logger.warn(
+              `Failed to fetch cart data for product ${product.codigo_articulo}:`,
+              error,
+            );
+            return {
+              data: { carritos: [], promociones: [] },
+              message: 'Error prefetching products and cart data',
+              success: false,
+              total: 0,
+            };
+          }
+        }
+      }
+
+      return {
+        data: {
+          carritos: carritosProductosId.map((item) => item.carritos).flat(),
+          promociones: promocionesPorProductosId[0],
+        },
+        message: `Prefetching completed for ${products.length} products`,
+        success: true,
+        total: carritosProductosId.length,
+      };
+    } catch (error) {
+      this.logger.error('Error in prefetchfindAll:', error);
+      return {
+        data: { carritos: [], promociones: [] },
+        message: 'Error prefetching products and cart data',
+        success: false,
+        total: 0,
+      };
+    }
   }
 
   async create(createPrismaProductDto: CreateProductDto): Promise<any> {
@@ -301,7 +423,9 @@ export class ProductsService {
     return this.comboReadRepository.findOne({ where });
   }
 
-  async getProductsJota(filters: any = {}): Promise<{ data: any[]; total: number }> {
+  async getProductsJota(
+    filters: any = {},
+  ): Promise<{ data: any[]; total: number }> {
     const cacheKey = this.getCacheKey({ ...filters, type: 'jota' });
     const now = Date.now();
     const cached = this.productosJotaCache.get(cacheKey);
@@ -312,28 +436,32 @@ export class ProductsService {
     const offset = Number(filters.offset) || 0;
     const result = await this.productReadRepository.query(
       'CALL proc_obtener_listado_articulos_ecommerce(?, ?, 257, NULL)',
-      [limit, offset]
+      [limit, offset],
     );
 
     const productos = result[0] || [];
-    const codigosProductos = productos.map((item: any) => item.codigo_articulo.trim());
+    const codigosProductos = productos.map((item: any) =>
+      item.codigo_articulo.trim(),
+    );
     const imagenesMap = new Map();
     if (codigosProductos.length > 0) {
       const imagenes = await this.productsImagesReadRepository
         .createQueryBuilder('img')
-        .where('img.producto_codigo IN (:...codigos)', { codigos: codigosProductos })
+        .where('img.producto_codigo IN (:...codigos)', {
+          codigos: codigosProductos,
+        })
         .andWhere('img.activo = :activo', { activo: true })
         .orderBy('img.orden', 'ASC')
         .getMany();
-      
-      imagenes.forEach(img => {
+
+      imagenes.forEach((img) => {
         if (!imagenesMap.has(img.producto_codigo)) {
           imagenesMap.set(img.producto_codigo, []);
         }
         imagenesMap.get(img.producto_codigo).push(img.url_imagen);
       });
     }
-    
+
     const dataWithTrimmedNames = productos.map((item: any) => ({
       ...item,
       codigo_articulo: item.codigo_articulo.trim(),
@@ -345,9 +473,10 @@ export class ProductsService {
       descripcion: item.nota.trim(),
       imagenes: imagenesMap.get(item.codigo_articulo.trim()) || [],
     }));
-    
+
     const data = dataWithTrimmedNames || [];
-    const dataConCuotas = await this.productsUtils.calculoCreditoProductos(data);
+    const dataConCuotas =
+      await this.productsUtils.calculoCreditoProductos(data);
     const total = result[1]?.[0]?.total_registros || dataConCuotas.length;
 
     if (this.productosJotaCache.size >= this.MAX_CACHE_ENTRIES) {

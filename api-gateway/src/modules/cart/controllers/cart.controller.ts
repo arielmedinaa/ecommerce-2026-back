@@ -81,6 +81,22 @@ export class CartController {
     )
   }
 
+  @Post('getCartWithoutToken')
+  @UsePipes(new ValidationPipe())
+  @SneakyThrows('CartService', 'getCartWithoutToken')
+  async getCartWithoutToken(@Body() body: {
+    limit: number;
+    skip: number;
+    sort: string;
+    order: string;
+  }){
+    return await firstValueFrom(
+      this.cartClient.send({
+        cmd: 'getAllCartWhithoutToken'
+      }, body)
+    )
+  }
+
   @Post('getMissingCart')
   @UsePipes(new ValidationPipe())
   @SneakyThrows('CartService', 'getMissingCart')

@@ -39,6 +39,11 @@ export class ProductsController {
     }
   }
 
+  @MessagePattern({ cmd: 'get_products_prefetch' })
+  async prefetchFindAll(@Payload() filters: any = {}) {
+    return await this.productsService.prefetchfindAll(filters);
+  }
+
   // @MessagePattern({ cmd: 'get_products_by_promos' })
   // async findByPromos(filters: any = {}) {
   //   try {

@@ -612,7 +612,7 @@ export class CartContadoService {
     };
   }
 
-  async getMissingCartByProduct(
+  async getCartByProduct(
     filters: any,
   ): Promise<{
     data: Cart[];
@@ -627,14 +627,14 @@ export class CartContadoService {
         return {
           data: [],
           total: 0,
-          message: 'El código del producto es requerido',
+          message: 'El código del producto es requerido'.toUpperCase(),
           success: false,
         };
       }
 
       const query = this.carritoRead
         .createQueryBuilder('cart')
-        .where('cart.estado = :estado', { estado: 1 })
+        .where('cart.estado = :estado', { estado: filters.estado || 1 })
         .andWhere("(cart.finished IS NULL OR cart.finished = '')")
         .andWhere("(cart.proceso IS NULL OR cart.proceso = '')")
         .andWhere(
@@ -651,7 +651,7 @@ export class CartContadoService {
       if (total === 0) {
         const queryLike = this.carritoRead
           .createQueryBuilder('cart')
-          .where('cart.estado = :estado', { estado: 1 })
+          .where('cart.estado = :estado', { estado: filters.estado || 1 })
           .andWhere("(cart.finished IS NULL OR cart.finished = '')")
           .andWhere("(cart.proceso IS NULL OR cart.proceso = '')")
           .andWhere('cart.articulos LIKE :codigo', {
@@ -728,8 +728,6 @@ export class CartContadoService {
     const carritosAbandonados = await this.carritoRead.find({
       where: {
         estado: '1',
-        finished: '',
-        proceso: '',
       },
       order: {
         createdAt: 'DESC',
@@ -740,7 +738,8 @@ export class CartContadoService {
     return {
       data: {
         carritos,
-        carritosAbandonados: carritosAbandonados,
+        carritosAbandonados,
+        carritosFinalizados
       },
       message: 'Carrito obtenido exitosamente',
       success: true,

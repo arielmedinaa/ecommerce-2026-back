@@ -75,8 +75,13 @@ export class CartController {
 
   @MessagePattern({ cmd: 'get_missing_cart_by_product' })
   async getMissingCartByProduct(@Payload() payload: any) {
-    const {limit, skip, sort, order, codigo } = payload;
-    return this.cartService.getMissingCartByProduct({limit, skip, sort, order, codigo });
+    const {limit, skip, sort, order, codigo, estado } = payload;
+    return this.cartService.getCartByProduct({limit, skip, sort, order, codigo, estado });
+  }
+
+  @MessagePattern({ cmd: 'getAllCartWhithoutToken' })
+  async getAllCartWhithoutToken(@Payload() payload: any) {
+    return this.cartService.getCartWithoutToken(payload);
   }
 
   @MessagePattern({ cmd: 'finish_cart' })
