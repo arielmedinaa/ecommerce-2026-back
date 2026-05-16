@@ -18,7 +18,7 @@ import { UserCoupon } from '@auth/schemas/user-coupon.schema';
         database: configService.get<string>('DATABASE_NAME'),
         entities: [User, UserCoupon],
         synchronize: process.env.SYNCRONICE === 'true',
-        logging: false,
+        logging: true,
       }),
       inject: [ConfigService],
     }),

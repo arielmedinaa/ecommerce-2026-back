@@ -270,6 +270,7 @@ export class ContentController {
 
   @Post('cupon')
   @SneakyThrows('ContentController', 'crearCupon')
+  @UseGuards(JwtAuthGuard)
   async crearCupon(@Body() body: any) {
     const cupon = await firstValueFrom(
       this.contentClient.send({ cmd: 'crearCupon' }, body),

@@ -36,7 +36,7 @@ export class AuthService {
       infoDispositivo: deviceInfo || {},
       ultimoInicioSesion: new Date(),
       fechaExpiracion: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      etiquetas: ['NUEVO_USUARIO'], // Agregar etiqueta automáticamente
+      etiquetas: ['NUEVO_USUARIO'],
     });
 
     await this.userRepository.save(guestUser);
@@ -54,7 +54,7 @@ export class AuthService {
       idProveedor: email,
       esInvitado: false,
       ultimoInicioSesion: new Date(),
-      etiquetas: ['NUEVO_USUARIO'], // Agregar etiqueta automáticamente
+      etiquetas: ['NUEVO_USUARIO'],
     });
 
     await this.userRepository.save(user);
@@ -108,6 +108,7 @@ export class AuthService {
       };
     }
 
+    await this.ultimoInicioSesionUsuario('', email);
     const newToken = await this.generateUserToken(user);
     return {
       data: user,

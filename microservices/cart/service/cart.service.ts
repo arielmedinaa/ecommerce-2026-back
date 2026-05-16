@@ -60,6 +60,14 @@ export class CartContadoService {
   ): Promise<{ data: Cart[]; success: boolean; message: string }> {
     const decoded = this.jwtService.verify(clienteToken);
     usuario_id = parseInt(decoded.sub);
+    if (isNaN(usuario_id) || !usuario_id) {
+      this.logger.error('Invalid user ID from JWT token', { sub: decoded.sub, parsed: usuario_id });
+      return {
+        data: [],
+        success: false,
+        message: 'TOKEN DE USUARIO INVÁLIDO: ID DE USUARIO NO VÁLIDO',
+      };
+    }
 
     const validation = await this.cartValidationService.validateCartPayload(
       clienteToken,
@@ -99,7 +107,6 @@ export class CartContadoService {
       }
       if (eventoValidation.precioOferta && eventoValidation.precioOferta > 0) {
         producto.precio = eventoValidation.precioOferta;
-        // Si el producto tiene credito, actualizar también el precio en credito
         if (producto.credito) {
           producto.credito.precio = eventoValidation.precioOferta;
         }
@@ -761,6 +768,16 @@ export class CartContadoService {
   }> {
     const decoded = this.jwtService.verify(clienteToken);
     const usuario_id = parseInt(decoded.sub);
+    
+    // Validar que usuario_id sea un número válido
+    if (isNaN(usuario_id) || !usuario_id) {
+      this.logger.error('Invalid user ID from JWT token in finishCart', { sub: decoded.sub, parsed: usuario_id });
+      return {
+        data: [],
+        success: false,
+        message: 'TOKEN DE USUARIO INVÁLIDO: ID DE USUARIO NO VÁLIDO',
+      };
+    }
     const validation = await this.cartValidationService.validateFinishCart(
       clienteToken,
       cuenta,
@@ -918,10 +935,12 @@ export class CartContadoService {
       const order = this.orderWrite.create({
         codigo: `ORD-${codigo}-${Date.now()}`,
         carrito_codigo: carrito.codigo,
-        cliente_documento: usuario_id.toLocaleString(),
+        cliente_documento: String(usuario_id),
         total: montoTotal,
         datos_envio: process?.envio || {},
         datos_pago: process,
+        // Mantener consistencia con el sistema actual: las órdenes finalizadas
+        // se registran con `estado = 0` (y el conteo de beneficios diarios usa ese valor).
         estado: 0,
       });
 
@@ -1210,7 +1229,9 @@ export class CartContadoService {
         .where('order.cliente_documento = :clienteDocumento', {
           clienteDocumento,
         })
-        .andWhere('order.estado = 1')
+        // En este proyecto las órdenes "finalizadas" se guardan con `estado = 0`
+        // (ver datos reales). Este conteo alimenta los beneficios diarios.
+        .andWhere('order.estado = 0')
         .andWhere('order.fecha_creacion BETWEEN :start AND :end', {
           start: todayStart,
           end: todayEnd,

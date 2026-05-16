@@ -1,1484 +1,1047 @@
 {
   "productos": [
     {
-      "codigo_articulo": "2723",
-      "nombre_articulo": "COCINA VITROCERAMICA JAM  MOD400VC 2 QUEMADORES TACTIL 2436",
-      "preciocosto": "733431.00",
+      "codigo_articulo": "46612",
+      "nombre_articulo": "",
+      "preciocosto": "638000.00",
       "recargo": "12.00",
       "recargosug": "15.00",
       "web": 1,
-      "websc": 0,
-      "codigo_categoria": 6,
-      "nombre_categoria": "COCINAS Y ANAFES",
-      "codigo_subcategoria": 19,
-      "nombre_subcategoria": "COCINA",
-      "codigo_marca": 1,
-      "nombre_marca": "JAM",
-      "codigo_proveedor": 4,
-      "nombre_proveedor": "GLOBO IMPORT EXPORT S.A.",
-      "cantidad_compras": "132.000",
+      "websc": 1,
+      "codigo_categoria": 24,
+      "nombre_categoria": "ECOMMERCE",
+      "codigo_subcategoria": 289,
+      "nombre_subcategoria": "ECOMMERCE",
+      "codigo_marca": 347,
+      "nombre_marca": "ECOMMERCE",
+      "codigo_proveedor": 1,
+      "nombre_proveedor": "OCASIONAL",
+      "cantidad_compras": "0.000",
       "cantidad_entradas": "0.000",
-      "cantidad_ventas": "132.000",
+      "cantidad_ventas": "0.000",
       "cantidad_salidas": "0.000",
       "cantidad_transferencias_salida": "0.000",
       "cantidad_transferencias_entrada": "0.000",
       "nuevo_costo": "0.0",
       "stock_actual": "0.000",
-      "precioventa": "821400.00",
-      "preciotope": "843400.00",
-      "dias_transcurridos": "25",
+      "precioventa": "714600.00",
+      "preciotope": "747000.00",
+      "dias_transcurridos": "0",
       "codigo_de_barra": "",
-      "nota": "2 hornallas\r\nEmpotrable\r\n2.200 vatios y 1.800 vatios por hornalla (4.000 vatios totales).\r\nTecnología infrarroja.\r\nPanel digital.\r\nApto para todo tipo de ollas.\r\nFuncion táctil\r\nDimensiones del producto: 9x30x52cm\r\n ",
-      "descripcion": "2 hornallas\r\nEmpotrable\r\n2.200 vatios y 1.800 vatios por hornalla (4.000 vatios totales).\r\nTecnología infrarroja.\r\nPanel digital.\r\nApto para todo tipo de ollas.\r\nFuncion táctil\r\nDimensiones del producto: 9x30x52cm",
-      "precioventaRedondeado": 822000,
+      "nota": "",
+      "descripcion": "",
+      "imagenes": [],
+      "precioventaRedondeado": 715000,
       "cuotas": [
         {
           "cuota": 0,
           "incremento": 0,
-          "precio": 822000,
-          "precioFormateado": "822000"
+          "precio": 715000,
+          "precioFormateado": "715000"
         },
         {
           "cuota": 1,
           "incremento": 2.3,
-          "precio": 841000,
-          "precioFormateado": "841000"
+          "precio": 732000,
+          "precioFormateado": "732000"
         },
         {
           "cuota": 2,
           "incremento": 4.6,
-          "precio": 860000,
-          "precioFormateado": "860000"
+          "precio": 748000,
+          "precioFormateado": "748000"
         },
         {
           "cuota": 3,
           "incremento": 6.9,
-          "precio": 879000,
-          "precioFormateado": "879000"
+          "precio": 765000,
+          "precioFormateado": "765000"
         },
         {
           "cuota": 4,
           "incremento": 14.6,
-          "precio": 943000,
-          "precioFormateado": "943000"
+          "precio": 820000,
+          "precioFormateado": "820000"
         },
         {
           "cuota": 5,
           "incremento": 18.3,
-          "precio": 973000,
-          "precioFormateado": "973000"
+          "precio": 846000,
+          "precioFormateado": "846000"
         },
         {
           "cuota": 6,
           "incremento": 21.9,
-          "precio": 1003000,
-          "precioFormateado": "1003000"
+          "precio": 872000,
+          "precioFormateado": "872000"
         },
         {
           "cuota": 7,
           "incremento": 28.7,
-          "precio": 1058000,
-          "precioFormateado": "1058000"
+          "precio": 921000,
+          "precioFormateado": "921000"
         },
         {
           "cuota": 8,
           "incremento": 32.8,
-          "precio": 1092000,
-          "precioFormateado": "1092000"
+          "precio": 950000,
+          "precioFormateado": "950000"
         },
         {
           "cuota": 9,
           "incremento": 36.9,
-          "precio": 1126000,
-          "precioFormateado": "1126000"
+          "precio": 979000,
+          "precioFormateado": "979000"
         },
         {
           "cuota": 10,
           "incremento": 41,
-          "precio": 1160000,
-          "precioFormateado": "1160000"
+          "precio": 1009000,
+          "precioFormateado": "1009000"
         },
         {
           "cuota": 11,
           "incremento": 45.1,
-          "precio": 1193000,
-          "precioFormateado": "1193000"
+          "precio": 1038000,
+          "precioFormateado": "1038000"
         },
         {
           "cuota": 12,
           "incremento": 49.2,
-          "precio": 1227000,
-          "precioFormateado": "1227000"
+          "precio": 1067000,
+          "precioFormateado": "1067000"
         },
         {
           "cuota": 13,
           "incremento": 58.5,
-          "precio": 1303000,
-          "precioFormateado": "1303000"
+          "precio": 1134000,
+          "precioFormateado": "1134000"
         },
         {
           "cuota": 14,
           "incremento": 63,
-          "precio": 1340000,
-          "precioFormateado": "1340000"
+          "precio": 1166000,
+          "precioFormateado": "1166000"
         },
         {
           "cuota": 15,
           "incremento": 67.5,
-          "precio": 1377000,
-          "precioFormateado": "1377000"
+          "precio": 1198000,
+          "precioFormateado": "1198000"
         },
         {
           "cuota": 16,
           "incremento": 72,
-          "precio": 1414000,
-          "precioFormateado": "1414000"
+          "precio": 1230000,
+          "precioFormateado": "1230000"
         },
         {
           "cuota": 17,
           "incremento": 76.5,
-          "precio": 1451000,
-          "precioFormateado": "1451000"
+          "precio": 1262000,
+          "precioFormateado": "1262000"
         },
         {
           "cuota": 18,
           "incremento": 81,
-          "precio": 1488000,
-          "precioFormateado": "1488000"
+          "precio": 1295000,
+          "precioFormateado": "1295000"
         }
       ]
     },
     {
-      "codigo_articulo": "33907",
-      "nombre_articulo": "AUTORADIO PIONER DMH-G225BT  PANTALLA TÁCTIL WVGA DE 6,2\" DE PANEL RESISTIVO CON LUZ DE FONDO LED",
-      "preciocosto": "1100000.00",
+      "codigo_articulo": "17579",
+      "nombre_articulo": "AMOLADORA BOSCH 2500W 9”GWS 25-230",
+      "preciocosto": "1348200.00",
       "recargo": "10.00",
       "recargosug": "15.00",
       "web": 1,
       "websc": 0,
-      "codigo_categoria": 2,
-      "nombre_categoria": "TELEVISORES Y AUDIO",
-      "codigo_subcategoria": 10,
-      "nombre_subcategoria": "EQUIPOS DE SONIDO",
-      "codigo_marca": 1,
-      "nombre_marca": "JAM",
-      "codigo_proveedor": 1607,
-      "nombre_proveedor": "PROAUDIO DE MARCOS ARIEL AYALA MACCHI",
-      "cantidad_compras": "10.000",
+      "codigo_categoria": 21,
+      "nombre_categoria": "JARDIN Y HERRAMIENTAS",
+      "codigo_subcategoria": 183,
+      "nombre_subcategoria": "AMOLADORA",
+      "codigo_marca": 99,
+      "nombre_marca": "MAKITA",
+      "codigo_proveedor": 5,
+      "nombre_proveedor": "TUPI RAMOS GENERALES S.A.",
+      "cantidad_compras": "2.000",
       "cantidad_entradas": "0.000",
-      "cantidad_ventas": "10.000",
+      "cantidad_ventas": "2.000",
       "cantidad_salidas": "0.000",
-      "cantidad_transferencias_salida": "2.000",
-      "cantidad_transferencias_entrada": "2.000",
+      "cantidad_transferencias_salida": "1.000",
+      "cantidad_transferencias_entrada": "1.000",
       "nuevo_costo": "0.0",
       "stock_actual": "0.000",
-      "precioventa": "1210000.00",
-      "preciotope": "1265000.00",
-      "dias_transcurridos": "4",
-      "codigo_de_barra": "",
-      "nota": "* Presalidas RCA 3(2V)* Entrada Auxiliar Audio y Video* Salida de video* Reproductor de CD/DVD* Reproducción de video Full HD desde Dispositivo USB* Formatos de videos: DivX/ DivX/MPEG-1, 2, 4 desde Dispositivo USB* Formatos de audio MP3/ WMA/ AAC/WAV/ desde Dispositivo USB* Puerto USB (Capacidad de Manejo 1.5A de Corriente)* Entrada de cámara* Control en el volante* Ecualizador Gráfico de 13 Bandas* Control directo para ciertos teléfonos Android USB* MOSFET 50W x 4",
-      "descripcion": "* Presalidas RCA 3(2V)* Entrada Auxiliar Audio y Video* Salida de video* Reproductor de CD/DVD* Reproducción de video Full HD desde Dispositivo USB* Formatos de videos: DivX/ DivX/MPEG-1, 2, 4 desde Dispositivo USB* Formatos de audio MP3/ WMA/ AAC/WAV/ desde Dispositivo USB* Puerto USB (Capacidad de Manejo 1.5A de Corriente)* Entrada de cámara* Control en el volante* Ecualizador Gráfico de 13 Bandas* Control directo para ciertos teléfonos Android USB* MOSFET 50W x 4",
-      "precioventaRedondeado": 1210000,
+      "precioventa": "1483000.00",
+      "preciotope": "1550400.00",
+      "dias_transcurridos": "16",
+      "codigo_de_barra": "4059952527178",
+      "nota": "                                             ",
+      "descripcion": "",
+      "imagenes": [],
+      "precioventaRedondeado": 1483000,
       "cuotas": [
         {
           "cuota": 0,
           "incremento": 0,
-          "precio": 1210000,
-          "precioFormateado": "1210000"
+          "precio": 1483000,
+          "precioFormateado": "1483000"
         },
         {
           "cuota": 1,
           "incremento": 2.3,
-          "precio": 1238000,
-          "precioFormateado": "1238000"
+          "precio": 1518000,
+          "precioFormateado": "1518000"
         },
         {
           "cuota": 2,
           "incremento": 4.6,
-          "precio": 1266000,
-          "precioFormateado": "1266000"
+          "precio": 1552000,
+          "precioFormateado": "1552000"
         },
         {
           "cuota": 3,
           "incremento": 6.9,
-          "precio": 1294000,
-          "precioFormateado": "1294000"
+          "precio": 1586000,
+          "precioFormateado": "1586000"
         },
         {
           "cuota": 4,
           "incremento": 14.6,
-          "precio": 1387000,
-          "precioFormateado": "1387000"
+          "precio": 1700000,
+          "precioFormateado": "1700000"
         },
         {
           "cuota": 5,
           "incremento": 18.3,
-          "precio": 1432000,
-          "precioFormateado": "1432000"
+          "precio": 1755000,
+          "precioFormateado": "1755000"
         },
         {
           "cuota": 6,
           "incremento": 21.9,
-          "precio": 1475000,
-          "precioFormateado": "1475000"
+          "precio": 1808000,
+          "precioFormateado": "1808000"
         },
         {
           "cuota": 7,
           "incremento": 28.7,
-          "precio": 1558000,
-          "precioFormateado": "1558000"
+          "precio": 1909000,
+          "precioFormateado": "1909000"
         },
         {
           "cuota": 8,
           "incremento": 32.8,
-          "precio": 1607000,
-          "precioFormateado": "1607000"
+          "precio": 1970000,
+          "precioFormateado": "1970000"
         },
         {
           "cuota": 9,
           "incremento": 36.9,
-          "precio": 1657000,
-          "precioFormateado": "1657000"
+          "precio": 2031000,
+          "precioFormateado": "2031000"
         },
         {
           "cuota": 10,
           "incremento": 41,
-          "precio": 1707000,
-          "precioFormateado": "1707000"
+          "precio": 2092000,
+          "precioFormateado": "2092000"
         },
         {
           "cuota": 11,
           "incremento": 45.1,
-          "precio": 1756000,
-          "precioFormateado": "1756000"
+          "precio": 2152000,
+          "precioFormateado": "2152000"
         },
         {
           "cuota": 12,
           "incremento": 49.2,
-          "precio": 1806000,
-          "precioFormateado": "1806000"
+          "precio": 2213000,
+          "precioFormateado": "2213000"
         },
         {
           "cuota": 13,
           "incremento": 58.5,
-          "precio": 1918000,
-          "precioFormateado": "1918000"
+          "precio": 2351000,
+          "precioFormateado": "2351000"
         },
         {
           "cuota": 14,
           "incremento": 63,
-          "precio": 1973000,
-          "precioFormateado": "1973000"
+          "precio": 2418000,
+          "precioFormateado": "2418000"
         },
         {
           "cuota": 15,
           "incremento": 67.5,
-          "precio": 2027000,
-          "precioFormateado": "2027000"
+          "precio": 2485000,
+          "precioFormateado": "2485000"
         },
         {
           "cuota": 16,
           "incremento": 72,
-          "precio": 2082000,
-          "precioFormateado": "2082000"
+          "precio": 2551000,
+          "precioFormateado": "2551000"
         },
         {
           "cuota": 17,
           "incremento": 76.5,
-          "precio": 2136000,
-          "precioFormateado": "2136000"
+          "precio": 2618000,
+          "precioFormateado": "2618000"
         },
         {
           "cuota": 18,
           "incremento": 81,
-          "precio": 2191000,
-          "precioFormateado": "2191000"
+          "precio": 2685000,
+          "precioFormateado": "2685000"
         }
       ]
     },
     {
-      "codigo_articulo": "37521",
-      "nombre_articulo": "AURICULAR GAMER HERO KGA-312",
-      "preciocosto": "78000.00",
+      "codigo_articulo": "42628",
+      "nombre_articulo": "CAFETERA EXPRESS  (PE-CE5003R)",
+      "preciocosto": "1050000.00",
       "recargo": "10.00",
-      "recargosug": "20.00",
+      "recargosug": "15.00",
       "web": 1,
-      "websc": 0,
-      "codigo_categoria": 3,
-      "nombre_categoria": "TECNOLOGÍA Y GAMING",
-      "codigo_subcategoria": 217,
-      "nombre_subcategoria": "VARIOS",
-      "codigo_marca": 1,
-      "nombre_marca": "JAM",
-      "codigo_proveedor": 383,
-      "nombre_proveedor": "RGA S.A",
-      "cantidad_compras": "1.000",
+      "websc": 1,
+      "codigo_categoria": 8,
+      "nombre_categoria": "PEQUEÑOS ELECTRODOMESTICOS",
+      "codigo_subcategoria": 25,
+      "nombre_subcategoria": "PEQUEÑOS ELECTRODOMESTICOS",
+      "codigo_marca": 77,
+      "nombre_marca": "VARIOS",
+      "codigo_proveedor": 889,
+      "nombre_proveedor": "ESMART S.R.L.",
+      "cantidad_compras": "0.000",
       "cantidad_entradas": "0.000",
       "cantidad_ventas": "0.000",
       "cantidad_salidas": "0.000",
-      "cantidad_transferencias_salida": "3.000",
-      "cantidad_transferencias_entrada": "3.000",
+      "cantidad_transferencias_salida": "0.000",
+      "cantidad_transferencias_entrada": "0.000",
       "nuevo_costo": "0.0",
-      "stock_actual": "1.000",
-      "precioventa": "85800.00",
-      "preciotope": "93600.00",
+      "stock_actual": "0.000",
+      "precioventa": "1155000.00",
+      "preciotope": "1207500.00",
       "dias_transcurridos": "0",
       "codigo_de_barra": "",
       "nota": "",
       "descripcion": "",
-      "precioventaRedondeado": 86000,
+      "imagenes": [],
+      "precioventaRedondeado": 1155000,
       "cuotas": [
         {
           "cuota": 0,
           "incremento": 0,
-          "precio": 86000,
-          "precioFormateado": "86000"
+          "precio": 1155000,
+          "precioFormateado": "1155000"
         },
         {
           "cuota": 1,
           "incremento": 2.3,
-          "precio": 88000,
-          "precioFormateado": "88000"
+          "precio": 1182000,
+          "precioFormateado": "1182000"
         },
         {
           "cuota": 2,
           "incremento": 4.6,
-          "precio": 90000,
-          "precioFormateado": "90000"
+          "precio": 1209000,
+          "precioFormateado": "1209000"
         },
         {
           "cuota": 3,
           "incremento": 6.9,
-          "precio": 92000,
-          "precioFormateado": "92000"
+          "precio": 1235000,
+          "precioFormateado": "1235000"
         },
         {
           "cuota": 4,
           "incremento": 14.6,
-          "precio": 99000,
-          "precioFormateado": "99000"
+          "precio": 1324000,
+          "precioFormateado": "1324000"
         },
         {
           "cuota": 5,
           "incremento": 18.3,
-          "precio": 102000,
-          "precioFormateado": "102000"
+          "precio": 1367000,
+          "precioFormateado": "1367000"
         },
         {
           "cuota": 6,
           "incremento": 21.9,
-          "precio": 105000,
-          "precioFormateado": "105000"
+          "precio": 1408000,
+          "precioFormateado": "1408000"
         },
         {
           "cuota": 7,
           "incremento": 28.7,
-          "precio": 111000,
-          "precioFormateado": "111000"
+          "precio": 1487000,
+          "precioFormateado": "1487000"
         },
         {
           "cuota": 8,
           "incremento": 32.8,
-          "precio": 115000,
-          "precioFormateado": "115000"
+          "precio": 1534000,
+          "precioFormateado": "1534000"
         },
         {
           "cuota": 9,
           "incremento": 36.9,
-          "precio": 118000,
-          "precioFormateado": "118000"
+          "precio": 1582000,
+          "precioFormateado": "1582000"
         },
         {
           "cuota": 10,
           "incremento": 41,
-          "precio": 122000,
-          "precioFormateado": "122000"
+          "precio": 1629000,
+          "precioFormateado": "1629000"
         },
         {
           "cuota": 11,
           "incremento": 45.1,
-          "precio": 125000,
-          "precioFormateado": "125000"
+          "precio": 1676000,
+          "precioFormateado": "1676000"
         },
         {
           "cuota": 12,
           "incremento": 49.2,
-          "precio": 129000,
-          "precioFormateado": "129000"
+          "precio": 1724000,
+          "precioFormateado": "1724000"
         },
         {
           "cuota": 13,
           "incremento": 58.5,
-          "precio": 137000,
-          "precioFormateado": "137000"
+          "precio": 1831000,
+          "precioFormateado": "1831000"
         },
         {
           "cuota": 14,
           "incremento": 63,
-          "precio": 141000,
-          "precioFormateado": "141000"
+          "precio": 1883000,
+          "precioFormateado": "1883000"
         },
         {
           "cuota": 15,
           "incremento": 67.5,
-          "precio": 145000,
-          "precioFormateado": "145000"
+          "precio": 1935000,
+          "precioFormateado": "1935000"
         },
         {
           "cuota": 16,
           "incremento": 72,
-          "precio": 148000,
-          "precioFormateado": "148000"
+          "precio": 1987000,
+          "precioFormateado": "1987000"
         },
         {
           "cuota": 17,
           "incremento": 76.5,
-          "precio": 152000,
-          "precioFormateado": "152000"
+          "precio": 2039000,
+          "precioFormateado": "2039000"
         },
         {
           "cuota": 18,
           "incremento": 81,
-          "precio": 156000,
-          "precioFormateado": "156000"
+          "precio": 2091000,
+          "precioFormateado": "2091000"
         }
       ]
     },
     {
-      "codigo_articulo": "37584",
-      "nombre_articulo": "BOTELLA TERMICA 1.5L ACERO C/PICO ROSA",
-      "preciocosto": "86000.00",
+      "codigo_articulo": "42626",
+      "nombre_articulo": "CAFETERA EXPRESS  PE-CE5003N-N",
+      "preciocosto": "1050000.00",
       "recargo": "10.00",
-      "recargosug": "20.00",
+      "recargosug": "15.00",
       "web": 1,
-      "websc": 0,
-      "codigo_categoria": 20,
-      "nombre_categoria": "BAZAR",
-      "codigo_subcategoria": 217,
-      "nombre_subcategoria": "VARIOS",
-      "codigo_marca": 1,
-      "nombre_marca": "JAM",
-      "codigo_proveedor": 383,
-      "nombre_proveedor": "RGA S.A",
-      "cantidad_compras": "10.000",
+      "websc": 1,
+      "codigo_categoria": 8,
+      "nombre_categoria": "PEQUEÑOS ELECTRODOMESTICOS",
+      "codigo_subcategoria": 25,
+      "nombre_subcategoria": "PEQUEÑOS ELECTRODOMESTICOS",
+      "codigo_marca": 77,
+      "nombre_marca": "VARIOS",
+      "codigo_proveedor": 889,
+      "nombre_proveedor": "ESMART S.R.L.",
+      "cantidad_compras": "0.000",
       "cantidad_entradas": "0.000",
-      "cantidad_ventas": "10.000",
+      "cantidad_ventas": "0.000",
       "cantidad_salidas": "0.000",
-      "cantidad_transferencias_salida": "20.000",
-      "cantidad_transferencias_entrada": "20.000",
+      "cantidad_transferencias_salida": "0.000",
+      "cantidad_transferencias_entrada": "0.000",
       "nuevo_costo": "0.0",
       "stock_actual": "0.000",
-      "precioventa": "94600.00",
-      "preciotope": "103200.00",
+      "precioventa": "1155000.00",
+      "preciotope": "1207500.00",
       "dias_transcurridos": "0",
-      "codigo_de_barra": "7730780228334",
+      "codigo_de_barra": "",
       "nota": "",
       "descripcion": "",
-      "precioventaRedondeado": 95000,
+      "imagenes": [],
+      "precioventaRedondeado": 1155000,
       "cuotas": [
         {
           "cuota": 0,
           "incremento": 0,
-          "precio": 95000,
-          "precioFormateado": "95000"
+          "precio": 1155000,
+          "precioFormateado": "1155000"
         },
         {
           "cuota": 1,
           "incremento": 2.3,
-          "precio": 98000,
-          "precioFormateado": "98000"
+          "precio": 1182000,
+          "precioFormateado": "1182000"
         },
         {
           "cuota": 2,
           "incremento": 4.6,
-          "precio": 100000,
-          "precioFormateado": "100000"
+          "precio": 1209000,
+          "precioFormateado": "1209000"
         },
         {
           "cuota": 3,
           "incremento": 6.9,
-          "precio": 102000,
-          "precioFormateado": "102000"
+          "precio": 1235000,
+          "precioFormateado": "1235000"
         },
         {
           "cuota": 4,
           "incremento": 14.6,
-          "precio": 109000,
-          "precioFormateado": "109000"
+          "precio": 1324000,
+          "precioFormateado": "1324000"
         },
         {
           "cuota": 5,
           "incremento": 18.3,
-          "precio": 113000,
-          "precioFormateado": "113000"
+          "precio": 1367000,
+          "precioFormateado": "1367000"
         },
         {
           "cuota": 6,
           "incremento": 21.9,
-          "precio": 116000,
-          "precioFormateado": "116000"
+          "precio": 1408000,
+          "precioFormateado": "1408000"
         },
         {
           "cuota": 7,
           "incremento": 28.7,
-          "precio": 123000,
-          "precioFormateado": "123000"
+          "precio": 1487000,
+          "precioFormateado": "1487000"
         },
         {
           "cuota": 8,
           "incremento": 32.8,
-          "precio": 127000,
-          "precioFormateado": "127000"
+          "precio": 1534000,
+          "precioFormateado": "1534000"
         },
         {
           "cuota": 9,
           "incremento": 36.9,
-          "precio": 131000,
-          "precioFormateado": "131000"
+          "precio": 1582000,
+          "precioFormateado": "1582000"
         },
         {
           "cuota": 10,
           "incremento": 41,
-          "precio": 134000,
-          "precioFormateado": "134000"
+          "precio": 1629000,
+          "precioFormateado": "1629000"
         },
         {
           "cuota": 11,
           "incremento": 45.1,
-          "precio": 138000,
-          "precioFormateado": "138000"
+          "precio": 1676000,
+          "precioFormateado": "1676000"
         },
         {
           "cuota": 12,
           "incremento": 49.2,
-          "precio": 142000,
-          "precioFormateado": "142000"
+          "precio": 1724000,
+          "precioFormateado": "1724000"
         },
         {
           "cuota": 13,
           "incremento": 58.5,
-          "precio": 151000,
-          "precioFormateado": "151000"
+          "precio": 1831000,
+          "precioFormateado": "1831000"
         },
         {
           "cuota": 14,
           "incremento": 63,
-          "precio": 155000,
-          "precioFormateado": "155000"
+          "precio": 1883000,
+          "precioFormateado": "1883000"
         },
         {
           "cuota": 15,
           "incremento": 67.5,
-          "precio": 160000,
-          "precioFormateado": "160000"
+          "precio": 1935000,
+          "precioFormateado": "1935000"
         },
         {
           "cuota": 16,
           "incremento": 72,
-          "precio": 164000,
-          "precioFormateado": "164000"
+          "precio": 1987000,
+          "precioFormateado": "1987000"
         },
         {
           "cuota": 17,
           "incremento": 76.5,
-          "precio": 168000,
-          "precioFormateado": "168000"
+          "precio": 2039000,
+          "precioFormateado": "2039000"
         },
         {
           "cuota": 18,
           "incremento": 81,
-          "precio": 172000,
-          "precioFormateado": "172000"
+          "precio": 2091000,
+          "precioFormateado": "2091000"
         }
       ]
     },
     {
-      "codigo_articulo": "37642",
-      "nombre_articulo": "AURICULAR GAMER TROOPER KGA-487 LUZ VERDE",
-      "preciocosto": "60000.00",
-      "recargo": "12.00",
+      "codigo_articulo": "42627",
+      "nombre_articulo": "CAFETERA EXPRESS  PE-CE5008IX",
+      "preciocosto": "1200000.00",
+      "recargo": "10.00",
+      "recargosug": "15.00",
+      "web": 1,
+      "websc": 1,
+      "codigo_categoria": 8,
+      "nombre_categoria": "PEQUEÑOS ELECTRODOMESTICOS",
+      "codigo_subcategoria": 25,
+      "nombre_subcategoria": "PEQUEÑOS ELECTRODOMESTICOS",
+      "codigo_marca": 77,
+      "nombre_marca": "VARIOS",
+      "codigo_proveedor": 889,
+      "nombre_proveedor": "ESMART S.R.L.",
+      "cantidad_compras": "0.000",
+      "cantidad_entradas": "0.000",
+      "cantidad_ventas": "0.000",
+      "cantidad_salidas": "0.000",
+      "cantidad_transferencias_salida": "0.000",
+      "cantidad_transferencias_entrada": "0.000",
+      "nuevo_costo": "0.0",
+      "stock_actual": "0.000",
+      "precioventa": "1320000.00",
+      "preciotope": "1380000.00",
+      "dias_transcurridos": "0",
+      "codigo_de_barra": "",
+      "nota": "",
+      "descripcion": "",
+      "imagenes": [],
+      "precioventaRedondeado": 1320000,
+      "cuotas": [
+        {
+          "cuota": 0,
+          "incremento": 0,
+          "precio": 1320000,
+          "precioFormateado": "1320000"
+        },
+        {
+          "cuota": 1,
+          "incremento": 2.3,
+          "precio": 1351000,
+          "precioFormateado": "1351000"
+        },
+        {
+          "cuota": 2,
+          "incremento": 4.6,
+          "precio": 1381000,
+          "precioFormateado": "1381000"
+        },
+        {
+          "cuota": 3,
+          "incremento": 6.9,
+          "precio": 1412000,
+          "precioFormateado": "1412000"
+        },
+        {
+          "cuota": 4,
+          "incremento": 14.6,
+          "precio": 1513000,
+          "precioFormateado": "1513000"
+        },
+        {
+          "cuota": 5,
+          "incremento": 18.3,
+          "precio": 1562000,
+          "precioFormateado": "1562000"
+        },
+        {
+          "cuota": 6,
+          "incremento": 21.9,
+          "precio": 1610000,
+          "precioFormateado": "1610000"
+        },
+        {
+          "cuota": 7,
+          "incremento": 28.7,
+          "precio": 1699000,
+          "precioFormateado": "1699000"
+        },
+        {
+          "cuota": 8,
+          "incremento": 32.8,
+          "precio": 1753000,
+          "precioFormateado": "1753000"
+        },
+        {
+          "cuota": 9,
+          "incremento": 36.9,
+          "precio": 1808000,
+          "precioFormateado": "1808000"
+        },
+        {
+          "cuota": 10,
+          "incremento": 41,
+          "precio": 1862000,
+          "precioFormateado": "1862000"
+        },
+        {
+          "cuota": 11,
+          "incremento": 45.1,
+          "precio": 1916000,
+          "precioFormateado": "1916000"
+        },
+        {
+          "cuota": 12,
+          "incremento": 49.2,
+          "precio": 1970000,
+          "precioFormateado": "1970000"
+        },
+        {
+          "cuota": 13,
+          "incremento": 58.5,
+          "precio": 2093000,
+          "precioFormateado": "2093000"
+        },
+        {
+          "cuota": 14,
+          "incremento": 63,
+          "precio": 2152000,
+          "precioFormateado": "2152000"
+        },
+        {
+          "cuota": 15,
+          "incremento": 67.5,
+          "precio": 2211000,
+          "precioFormateado": "2211000"
+        },
+        {
+          "cuota": 16,
+          "incremento": 72,
+          "precio": 2271000,
+          "precioFormateado": "2271000"
+        },
+        {
+          "cuota": 17,
+          "incremento": 76.5,
+          "precio": 2330000,
+          "precioFormateado": "2330000"
+        },
+        {
+          "cuota": 18,
+          "incremento": 81,
+          "precio": 2390000,
+          "precioFormateado": "2390000"
+        }
+      ]
+    },
+    {
+      "codigo_articulo": "40920",
+      "nombre_articulo": "COMBO TALADRO PERCUTOR + AMOLADORA BL 2X BAT 20V + 4AH + ACC (M) EMTOP 66 NM ECKL20273",
+      "preciocosto": "935900.00",
+      "recargo": "15.00",
       "recargosug": "20.00",
       "web": 1,
       "websc": 0,
-      "codigo_categoria": 3,
-      "nombre_categoria": "TECNOLOGÍA Y GAMING",
-      "codigo_subcategoria": 217,
-      "nombre_subcategoria": "VARIOS",
-      "codigo_marca": 1,
-      "nombre_marca": "JAM",
-      "codigo_proveedor": 383,
-      "nombre_proveedor": "RGA S.A",
-      "cantidad_compras": "1.000",
+      "codigo_categoria": 21,
+      "nombre_categoria": "JARDIN Y HERRAMIENTAS",
+      "codigo_subcategoria": 142,
+      "nombre_subcategoria": "HERRAMIENTAS",
+      "codigo_marca": 276,
+      "nombre_marca": "EMTOP",
+      "codigo_proveedor": 1649,
+      "nombre_proveedor": "CALVO CENDRA S.A.",
+      "cantidad_compras": "4.000",
       "cantidad_entradas": "0.000",
-      "cantidad_ventas": "1.000",
+      "cantidad_ventas": "4.000",
       "cantidad_salidas": "0.000",
       "cantidad_transferencias_salida": "5.000",
       "cantidad_transferencias_entrada": "5.000",
       "nuevo_costo": "0.0",
       "stock_actual": "0.000",
-      "precioventa": "67200.00",
-      "preciotope": "72000.00",
-      "dias_transcurridos": "11",
-      "codigo_de_barra": "",
+      "precioventa": "1076300.00",
+      "preciotope": "1123100.00",
+      "dias_transcurridos": "16",
+      "codigo_de_barra": "7798333209100",
       "nota": "",
       "descripcion": "",
-      "precioventaRedondeado": 68000,
+      "imagenes": [],
+      "precioventaRedondeado": 1077000,
       "cuotas": [
         {
           "cuota": 0,
           "incremento": 0,
-          "precio": 68000,
-          "precioFormateado": "68000"
+          "precio": 1077000,
+          "precioFormateado": "1077000"
         },
         {
           "cuota": 1,
           "incremento": 2.3,
-          "precio": 70000,
-          "precioFormateado": "70000"
+          "precio": 1102000,
+          "precioFormateado": "1102000"
         },
         {
           "cuota": 2,
           "incremento": 4.6,
-          "precio": 72000,
-          "precioFormateado": "72000"
+          "precio": 1127000,
+          "precioFormateado": "1127000"
         },
         {
           "cuota": 3,
           "incremento": 6.9,
-          "precio": 73000,
-          "precioFormateado": "73000"
+          "precio": 1152000,
+          "precioFormateado": "1152000"
         },
         {
           "cuota": 4,
           "incremento": 14.6,
-          "precio": 78000,
-          "precioFormateado": "78000"
+          "precio": 1235000,
+          "precioFormateado": "1235000"
         },
         {
           "cuota": 5,
           "incremento": 18.3,
-          "precio": 81000,
-          "precioFormateado": "81000"
+          "precio": 1275000,
+          "precioFormateado": "1275000"
         },
         {
           "cuota": 6,
           "incremento": 21.9,
-          "precio": 83000,
-          "precioFormateado": "83000"
+          "precio": 1313000,
+          "precioFormateado": "1313000"
         },
         {
           "cuota": 7,
           "incremento": 28.7,
-          "precio": 88000,
-          "precioFormateado": "88000"
+          "precio": 1387000,
+          "precioFormateado": "1387000"
         },
         {
           "cuota": 8,
           "incremento": 32.8,
-          "precio": 91000,
-          "precioFormateado": "91000"
+          "precio": 1431000,
+          "precioFormateado": "1431000"
         },
         {
           "cuota": 9,
           "incremento": 36.9,
-          "precio": 94000,
-          "precioFormateado": "94000"
+          "precio": 1475000,
+          "precioFormateado": "1475000"
         },
         {
           "cuota": 10,
           "incremento": 41,
-          "precio": 96000,
-          "precioFormateado": "96000"
+          "precio": 1519000,
+          "precioFormateado": "1519000"
         },
         {
           "cuota": 11,
           "incremento": 45.1,
-          "precio": 99000,
-          "precioFormateado": "99000"
+          "precio": 1563000,
+          "precioFormateado": "1563000"
         },
         {
           "cuota": 12,
           "incremento": 49.2,
-          "precio": 102000,
-          "precioFormateado": "102000"
+          "precio": 1607000,
+          "precioFormateado": "1607000"
         },
         {
           "cuota": 13,
           "incremento": 58.5,
-          "precio": 108000,
-          "precioFormateado": "108000"
+          "precio": 1708000,
+          "precioFormateado": "1708000"
         },
         {
           "cuota": 14,
           "incremento": 63,
-          "precio": 111000,
-          "precioFormateado": "111000"
+          "precio": 1756000,
+          "precioFormateado": "1756000"
         },
         {
           "cuota": 15,
           "incremento": 67.5,
-          "precio": 114000,
-          "precioFormateado": "114000"
+          "precio": 1804000,
+          "precioFormateado": "1804000"
         },
         {
           "cuota": 16,
           "incremento": 72,
-          "precio": 117000,
-          "precioFormateado": "117000"
+          "precio": 1853000,
+          "precioFormateado": "1853000"
         },
         {
           "cuota": 17,
           "incremento": 76.5,
-          "precio": 121000,
-          "precioFormateado": "121000"
+          "precio": 1901000,
+          "precioFormateado": "1901000"
         },
         {
           "cuota": 18,
           "incremento": 81,
-          "precio": 124000,
-          "precioFormateado": "124000"
-        }
-      ]
-    },
-    {
-      "codigo_articulo": "37684",
-      "nombre_articulo": "TERMO 750ML DOBLE PARED NEGRO AQUA SELECTA",
-      "preciocosto": "71000.00",
-      "recargo": "10.00",
-      "recargosug": "20.00",
-      "web": 1,
-      "websc": 0,
-      "codigo_categoria": 20,
-      "nombre_categoria": "BAZAR",
-      "codigo_subcategoria": 217,
-      "nombre_subcategoria": "VARIOS",
-      "codigo_marca": 1,
-      "nombre_marca": "JAM",
-      "codigo_proveedor": 383,
-      "nombre_proveedor": "RGA S.A",
-      "cantidad_compras": "2.000",
-      "cantidad_entradas": "0.000",
-      "cantidad_ventas": "1.000",
-      "cantidad_salidas": "0.000",
-      "cantidad_transferencias_salida": "3.000",
-      "cantidad_transferencias_entrada": "3.000",
-      "nuevo_costo": "0.0",
-      "stock_actual": "1.000",
-      "precioventa": "78100.00",
-      "preciotope": "85200.00",
-      "dias_transcurridos": "3",
-      "codigo_de_barra": "",
-      "nota": "",
-      "descripcion": "",
-      "precioventaRedondeado": 79000,
-      "cuotas": [
-        {
-          "cuota": 0,
-          "incremento": 0,
-          "precio": 79000,
-          "precioFormateado": "79000"
-        },
-        {
-          "cuota": 1,
-          "incremento": 2.3,
-          "precio": 81000,
-          "precioFormateado": "81000"
-        },
-        {
-          "cuota": 2,
-          "incremento": 4.6,
-          "precio": 83000,
-          "precioFormateado": "83000"
-        },
-        {
-          "cuota": 3,
-          "incremento": 6.9,
-          "precio": 85000,
-          "precioFormateado": "85000"
-        },
-        {
-          "cuota": 4,
-          "incremento": 14.6,
-          "precio": 91000,
-          "precioFormateado": "91000"
-        },
-        {
-          "cuota": 5,
-          "incremento": 18.3,
-          "precio": 94000,
-          "precioFormateado": "94000"
-        },
-        {
-          "cuota": 6,
-          "incremento": 21.9,
-          "precio": 97000,
-          "precioFormateado": "97000"
-        },
-        {
-          "cuota": 7,
-          "incremento": 28.7,
-          "precio": 102000,
-          "precioFormateado": "102000"
-        },
-        {
-          "cuota": 8,
-          "incremento": 32.8,
-          "precio": 105000,
-          "precioFormateado": "105000"
-        },
-        {
-          "cuota": 9,
-          "incremento": 36.9,
-          "precio": 109000,
-          "precioFormateado": "109000"
-        },
-        {
-          "cuota": 10,
-          "incremento": 41,
-          "precio": 112000,
-          "precioFormateado": "112000"
-        },
-        {
-          "cuota": 11,
-          "incremento": 45.1,
-          "precio": 115000,
-          "precioFormateado": "115000"
-        },
-        {
-          "cuota": 12,
-          "incremento": 49.2,
-          "precio": 118000,
-          "precioFormateado": "118000"
-        },
-        {
-          "cuota": 13,
-          "incremento": 58.5,
-          "precio": 126000,
-          "precioFormateado": "126000"
-        },
-        {
-          "cuota": 14,
-          "incremento": 63,
-          "precio": 129000,
-          "precioFormateado": "129000"
-        },
-        {
-          "cuota": 15,
-          "incremento": 67.5,
-          "precio": 133000,
-          "precioFormateado": "133000"
-        },
-        {
-          "cuota": 16,
-          "incremento": 72,
-          "precio": 136000,
-          "precioFormateado": "136000"
-        },
-        {
-          "cuota": 17,
-          "incremento": 76.5,
-          "precio": 140000,
-          "precioFormateado": "140000"
-        },
-        {
-          "cuota": 18,
-          "incremento": 81,
-          "precio": 143000,
-          "precioFormateado": "143000"
+          "precio": 1950000,
+          "precioFormateado": "1950000"
         }
       ]
     }
   ],
   "jota": [
     {
-      "codigo_articulo": "25800",
-      "nombre_articulo": "LAVARROPAS JOTA 10KG SEMI AUTO C/S",
-      "preciocosto": "476390.00",
+      "codigo_articulo": "31137",
+      "nombre_articulo": "AIRE ACONDICIONADO  SPLIT JOTA 18.000BTU",
+      "preciocosto": "3150000.00",
       "recargo": "10.00",
       "recargosug": "15.00",
       "web": 1,
       "websc": 0,
-      "codigo_categoria": 7,
-      "nombre_categoria": "LAVADO Y LIMPIEZA",
-      "codigo_subcategoria": 29,
-      "nombre_subcategoria": "LAVARROPAS",
+      "codigo_categoria": 5,
+      "nombre_categoria": "CLIMATIZACIÓN",
+      "codigo_subcategoria": 26,
+      "nombre_subcategoria": "AIRE ACONDICIONADO",
       "codigo_marca": 257,
       "nombre_marca": "JOTA",
       "codigo_proveedor": 59,
       "nombre_proveedor": "COBRASA",
-      "cantidad_compras": "510.000",
+      "cantidad_compras": "761.000",
       "cantidad_entradas": "1.000",
-      "cantidad_ventas": "438.000",
-      "cantidad_salidas": "2.000",
-      "cantidad_transferencias_salida": "607.000",
-      "cantidad_transferencias_entrada": "607.000",
+      "cantidad_ventas": "302.000",
+      "cantidad_salidas": "12.000",
+      "cantidad_transferencias_salida": "696.000",
+      "cantidad_transferencias_entrada": "696.000",
       "nuevo_costo": "0.0",
-      "stock_actual": "71.000",
-      "precioventa": "524000.00",
-      "preciotope": "547800.00",
+      "stock_actual": "448.000",
+      "precioventa": "3465100.00",
+      "preciotope": "3622500.00",
       "dias_transcurridos": "2",
-      "codigo_de_barra": "7898350363660",
+      "codigo_de_barra": "9000000311374",
       "nota": "",
       "descripcion": "",
-      "precioventaRedondeado": 524000,
+      "imagenes": [],
+      "precioventaRedondeado": 3466000,
       "cuotas": [
         {
           "cuota": 0,
           "incremento": 0,
-          "precio": 524000,
-          "precioFormateado": "524000"
+          "precio": 3466000,
+          "precioFormateado": "3466000"
         },
         {
           "cuota": 1,
           "incremento": 2.3,
-          "precio": 537000,
-          "precioFormateado": "537000"
+          "precio": 3546000,
+          "precioFormateado": "3546000"
         },
         {
           "cuota": 2,
           "incremento": 4.6,
-          "precio": 549000,
-          "precioFormateado": "549000"
+          "precio": 3626000,
+          "precioFormateado": "3626000"
         },
         {
           "cuota": 3,
           "incremento": 6.9,
-          "precio": 561000,
-          "precioFormateado": "561000"
+          "precio": 3706000,
+          "precioFormateado": "3706000"
         },
         {
           "cuota": 4,
           "incremento": 14.6,
-          "precio": 601000,
-          "precioFormateado": "601000"
+          "precio": 3973000,
+          "precioFormateado": "3973000"
         },
         {
           "cuota": 5,
           "incremento": 18.3,
-          "precio": 620000,
-          "precioFormateado": "620000"
+          "precio": 4101000,
+          "precioFormateado": "4101000"
         },
         {
           "cuota": 6,
           "incremento": 21.9,
-          "precio": 639000,
-          "precioFormateado": "639000"
+          "precio": 4226000,
+          "precioFormateado": "4226000"
         },
         {
           "cuota": 7,
           "incremento": 28.7,
-          "precio": 675000,
-          "precioFormateado": "675000"
+          "precio": 4461000,
+          "precioFormateado": "4461000"
         },
         {
           "cuota": 8,
           "incremento": 32.8,
-          "precio": 696000,
-          "precioFormateado": "696000"
+          "precio": 4603000,
+          "precioFormateado": "4603000"
         },
         {
           "cuota": 9,
           "incremento": 36.9,
-          "precio": 718000,
-          "precioFormateado": "718000"
+          "precio": 4745000,
+          "precioFormateado": "4745000"
         },
         {
           "cuota": 10,
           "incremento": 41,
-          "precio": 739000,
-          "precioFormateado": "739000"
+          "precio": 4888000,
+          "precioFormateado": "4888000"
         },
         {
           "cuota": 11,
           "incremento": 45.1,
-          "precio": 761000,
-          "precioFormateado": "761000"
+          "precio": 5030000,
+          "precioFormateado": "5030000"
         },
         {
           "cuota": 12,
           "incremento": 49.2,
-          "precio": 782000,
-          "precioFormateado": "782000"
+          "precio": 5172000,
+          "precioFormateado": "5172000"
         },
         {
           "cuota": 13,
           "incremento": 58.5,
-          "precio": 831000,
-          "precioFormateado": "831000"
+          "precio": 5494000,
+          "precioFormateado": "5494000"
         },
         {
           "cuota": 14,
           "incremento": 63,
-          "precio": 855000,
-          "precioFormateado": "855000"
+          "precio": 5650000,
+          "precioFormateado": "5650000"
         },
         {
           "cuota": 15,
           "incremento": 67.5,
-          "precio": 878000,
-          "precioFormateado": "878000"
+          "precio": 5806000,
+          "precioFormateado": "5806000"
         },
         {
           "cuota": 16,
           "incremento": 72,
-          "precio": 902000,
-          "precioFormateado": "902000"
+          "precio": 5962000,
+          "precioFormateado": "5962000"
         },
         {
           "cuota": 17,
           "incremento": 76.5,
-          "precio": 925000,
-          "precioFormateado": "925000"
+          "precio": 6118000,
+          "precioFormateado": "6118000"
         },
         {
           "cuota": 18,
           "incremento": 81,
-          "precio": 949000,
-          "precioFormateado": "949000"
-        }
-      ]
-    },
-    {
-      "codigo_articulo": "25801",
-      "nombre_articulo": "LAVARROPAS JOTA 7KG SEMI AUTO C/S",
-      "preciocosto": "411390.00",
-      "recargo": "10.00",
-      "recargosug": "15.00",
-      "web": 1,
-      "websc": 0,
-      "codigo_categoria": 7,
-      "nombre_categoria": "LAVADO Y LIMPIEZA",
-      "codigo_subcategoria": 29,
-      "nombre_subcategoria": "LAVARROPAS",
-      "codigo_marca": 257,
-      "nombre_marca": "JOTA",
-      "codigo_proveedor": 59,
-      "nombre_proveedor": "COBRASA",
-      "cantidad_compras": "540.000",
-      "cantidad_entradas": "1.000",
-      "cantidad_ventas": "476.000",
-      "cantidad_salidas": "0.000",
-      "cantidad_transferencias_salida": "687.000",
-      "cantidad_transferencias_entrada": "687.000",
-      "nuevo_costo": "0.0",
-      "stock_actual": "65.000",
-      "precioventa": "452500.00",
-      "preciotope": "473100.00",
-      "dias_transcurridos": "3",
-      "codigo_de_barra": "7898350363653",
-      "nota": "",
-      "descripcion": "",
-      "precioventaRedondeado": 453000,
-      "cuotas": [
-        {
-          "cuota": 0,
-          "incremento": 0,
-          "precio": 453000,
-          "precioFormateado": "453000"
-        },
-        {
-          "cuota": 1,
-          "incremento": 2.3,
-          "precio": 464000,
-          "precioFormateado": "464000"
-        },
-        {
-          "cuota": 2,
-          "incremento": 4.6,
-          "precio": 474000,
-          "precioFormateado": "474000"
-        },
-        {
-          "cuota": 3,
-          "incremento": 6.9,
-          "precio": 485000,
-          "precioFormateado": "485000"
-        },
-        {
-          "cuota": 4,
-          "incremento": 14.6,
-          "precio": 520000,
-          "precioFormateado": "520000"
-        },
-        {
-          "cuota": 5,
-          "incremento": 18.3,
-          "precio": 536000,
-          "precioFormateado": "536000"
-        },
-        {
-          "cuota": 6,
-          "incremento": 21.9,
-          "precio": 553000,
-          "precioFormateado": "553000"
-        },
-        {
-          "cuota": 7,
-          "incremento": 28.7,
-          "precio": 584000,
-          "precioFormateado": "584000"
-        },
-        {
-          "cuota": 8,
-          "incremento": 32.8,
-          "precio": 602000,
-          "precioFormateado": "602000"
-        },
-        {
-          "cuota": 9,
-          "incremento": 36.9,
-          "precio": 621000,
-          "precioFormateado": "621000"
-        },
-        {
-          "cuota": 10,
-          "incremento": 41,
-          "precio": 639000,
-          "precioFormateado": "639000"
-        },
-        {
-          "cuota": 11,
-          "incremento": 45.1,
-          "precio": 658000,
-          "precioFormateado": "658000"
-        },
-        {
-          "cuota": 12,
-          "incremento": 49.2,
-          "precio": 676000,
-          "precioFormateado": "676000"
-        },
-        {
-          "cuota": 13,
-          "incremento": 58.5,
-          "precio": 719000,
-          "precioFormateado": "719000"
-        },
-        {
-          "cuota": 14,
-          "incremento": 63,
-          "precio": 739000,
-          "precioFormateado": "739000"
-        },
-        {
-          "cuota": 15,
-          "incremento": 67.5,
-          "precio": 759000,
-          "precioFormateado": "759000"
-        },
-        {
-          "cuota": 16,
-          "incremento": 72,
-          "precio": 780000,
-          "precioFormateado": "780000"
-        },
-        {
-          "cuota": 17,
-          "incremento": 76.5,
-          "precio": 800000,
-          "precioFormateado": "800000"
-        },
-        {
-          "cuota": 18,
-          "incremento": 81,
-          "precio": 820000,
-          "precioFormateado": "820000"
-        }
-      ]
-    },
-    {
-      "codigo_articulo": "25802",
-      "nombre_articulo": "LAVARROPAS JOTA 12KG SEMI AUTO C/S",
-      "preciocosto": "513005.00",
-      "recargo": "10.00",
-      "recargosug": "15.00",
-      "web": 1,
-      "websc": 0,
-      "codigo_categoria": 7,
-      "nombre_categoria": "LAVADO Y LIMPIEZA",
-      "codigo_subcategoria": 29,
-      "nombre_subcategoria": "LAVARROPAS",
-      "codigo_marca": 257,
-      "nombre_marca": "JOTA",
-      "codigo_proveedor": 59,
-      "nombre_proveedor": "COBRASA",
-      "cantidad_compras": "450.000",
-      "cantidad_entradas": "0.000",
-      "cantidad_ventas": "373.000",
-      "cantidad_salidas": "1.000",
-      "cantidad_transferencias_salida": "566.000",
-      "cantidad_transferencias_entrada": "566.000",
-      "nuevo_costo": "0.0",
-      "stock_actual": "76.000",
-      "precioventa": "564300.00",
-      "preciotope": "590000.00",
-      "dias_transcurridos": "0",
-      "codigo_de_barra": "7898350363677",
-      "nota": "",
-      "descripcion": "",
-      "precioventaRedondeado": 565000,
-      "cuotas": [
-        {
-          "cuota": 0,
-          "incremento": 0,
-          "precio": 565000,
-          "precioFormateado": "565000"
-        },
-        {
-          "cuota": 1,
-          "incremento": 2.3,
-          "precio": 578000,
-          "precioFormateado": "578000"
-        },
-        {
-          "cuota": 2,
-          "incremento": 4.6,
-          "precio": 591000,
-          "precioFormateado": "591000"
-        },
-        {
-          "cuota": 3,
-          "incremento": 6.9,
-          "precio": 604000,
-          "precioFormateado": "604000"
-        },
-        {
-          "cuota": 4,
-          "incremento": 14.6,
-          "precio": 648000,
-          "precioFormateado": "648000"
-        },
-        {
-          "cuota": 5,
-          "incremento": 18.3,
-          "precio": 669000,
-          "precioFormateado": "669000"
-        },
-        {
-          "cuota": 6,
-          "incremento": 21.9,
-          "precio": 689000,
-          "precioFormateado": "689000"
-        },
-        {
-          "cuota": 7,
-          "incremento": 28.7,
-          "precio": 728000,
-          "precioFormateado": "728000"
-        },
-        {
-          "cuota": 8,
-          "incremento": 32.8,
-          "precio": 751000,
-          "precioFormateado": "751000"
-        },
-        {
-          "cuota": 9,
-          "incremento": 36.9,
-          "precio": 774000,
-          "precioFormateado": "774000"
-        },
-        {
-          "cuota": 10,
-          "incremento": 41,
-          "precio": 797000,
-          "precioFormateado": "797000"
-        },
-        {
-          "cuota": 11,
-          "incremento": 45.1,
-          "precio": 820000,
-          "precioFormateado": "820000"
-        },
-        {
-          "cuota": 12,
-          "incremento": 49.2,
-          "precio": 843000,
-          "precioFormateado": "843000"
-        },
-        {
-          "cuota": 13,
-          "incremento": 58.5,
-          "precio": 896000,
-          "precioFormateado": "896000"
-        },
-        {
-          "cuota": 14,
-          "incremento": 63,
-          "precio": 921000,
-          "precioFormateado": "921000"
-        },
-        {
-          "cuota": 15,
-          "incremento": 67.5,
-          "precio": 947000,
-          "precioFormateado": "947000"
-        },
-        {
-          "cuota": 16,
-          "incremento": 72,
-          "precio": 972000,
-          "precioFormateado": "972000"
-        },
-        {
-          "cuota": 17,
-          "incremento": 76.5,
-          "precio": 998000,
-          "precioFormateado": "998000"
-        },
-        {
-          "cuota": 18,
-          "incremento": 81,
-          "precio": 1023000,
-          "precioFormateado": "1023000"
-        }
-      ]
-    },
-    {
-      "codigo_articulo": "27261",
-      "nombre_articulo": "HELADERA JOTA 300LTS F/H 2PTAS BLANCO",
-      "preciocosto": "1149000.00",
-      "recargo": "10.00",
-      "recargosug": "15.00",
-      "web": 1,
-      "websc": 0,
-      "codigo_categoria": 4,
-      "nombre_categoria": "REFRIGERACIÓN",
-      "codigo_subcategoria": 14,
-      "nombre_subcategoria": "HELADERAS",
-      "codigo_marca": 257,
-      "nombre_marca": "JOTA",
-      "codigo_proveedor": 59,
-      "nombre_proveedor": "COBRASA",
-      "cantidad_compras": "1960.000",
-      "cantidad_entradas": "0.000",
-      "cantidad_ventas": "1629.000",
-      "cantidad_salidas": "4.000",
-      "cantidad_transferencias_salida": "2755.000",
-      "cantidad_transferencias_entrada": "2755.000",
-      "nuevo_costo": "0.0",
-      "stock_actual": "327.000",
-      "precioventa": "1263900.00",
-      "preciotope": "1321400.00",
-      "dias_transcurridos": "0",
-      "codigo_de_barra": "",
-      "nota": "",
-      "descripcion": "",
-      "precioventaRedondeado": 1264000,
-      "cuotas": [
-        {
-          "cuota": 0,
-          "incremento": 0,
-          "precio": 1264000,
-          "precioFormateado": "1264000"
-        },
-        {
-          "cuota": 1,
-          "incremento": 2.3,
-          "precio": 1294000,
-          "precioFormateado": "1294000"
-        },
-        {
-          "cuota": 2,
-          "incremento": 4.6,
-          "precio": 1323000,
-          "precioFormateado": "1323000"
-        },
-        {
-          "cuota": 3,
-          "incremento": 6.9,
-          "precio": 1352000,
-          "precioFormateado": "1352000"
-        },
-        {
-          "cuota": 4,
-          "incremento": 14.6,
-          "precio": 1449000,
-          "precioFormateado": "1449000"
-        },
-        {
-          "cuota": 5,
-          "incremento": 18.3,
-          "precio": 1496000,
-          "precioFormateado": "1496000"
-        },
-        {
-          "cuota": 6,
-          "incremento": 21.9,
-          "precio": 1541000,
-          "precioFormateado": "1541000"
-        },
-        {
-          "cuota": 7,
-          "incremento": 28.7,
-          "precio": 1627000,
-          "precioFormateado": "1627000"
-        },
-        {
-          "cuota": 8,
-          "incremento": 32.8,
-          "precio": 1679000,
-          "precioFormateado": "1679000"
-        },
-        {
-          "cuota": 9,
-          "incremento": 36.9,
-          "precio": 1731000,
-          "precioFormateado": "1731000"
-        },
-        {
-          "cuota": 10,
-          "incremento": 41,
-          "precio": 1783000,
-          "precioFormateado": "1783000"
-        },
-        {
-          "cuota": 11,
-          "incremento": 45.1,
-          "precio": 1835000,
-          "precioFormateado": "1835000"
-        },
-        {
-          "cuota": 12,
-          "incremento": 49.2,
-          "precio": 1886000,
-          "precioFormateado": "1886000"
-        },
-        {
-          "cuota": 13,
-          "incremento": 58.5,
-          "precio": 2004000,
-          "precioFormateado": "2004000"
-        },
-        {
-          "cuota": 14,
-          "incremento": 63,
-          "precio": 2061000,
-          "precioFormateado": "2061000"
-        },
-        {
-          "cuota": 15,
-          "incremento": 67.5,
-          "precio": 2118000,
-          "precioFormateado": "2118000"
-        },
-        {
-          "cuota": 16,
-          "incremento": 72,
-          "precio": 2175000,
-          "precioFormateado": "2175000"
-        },
-        {
-          "cuota": 17,
-          "incremento": 76.5,
-          "precio": 2231000,
-          "precioFormateado": "2231000"
-        },
-        {
-          "cuota": 18,
-          "incremento": 81,
-          "precio": 2288000,
-          "precioFormateado": "2288000"
+          "precio": 6274000,
+          "precioFormateado": "6274000"
         }
       ]
     },
@@ -1500,140 +1063,141 @@
       "nombre_proveedor": "COBRASA",
       "cantidad_compras": "3312.000",
       "cantidad_entradas": "0.000",
-      "cantidad_ventas": "3145.000",
+      "cantidad_ventas": "3174.000",
       "cantidad_salidas": "44.000",
-      "cantidad_transferencias_salida": "6014.000",
-      "cantidad_transferencias_entrada": "6014.000",
+      "cantidad_transferencias_salida": "6104.000",
+      "cantidad_transferencias_entrada": "6104.000",
       "nuevo_costo": "0.0",
-      "stock_actual": "123.000",
-      "precioventa": "2035000.00",
+      "stock_actual": "94.000",
+      "precioventa": "2035100.00",
       "preciotope": "2127500.00",
-      "dias_transcurridos": "2",
-      "codigo_de_barra": "",
+      "dias_transcurridos": "0",
+      "codigo_de_barra": "9000000311367",
       "nota": "",
       "descripcion": "",
-      "precioventaRedondeado": 2035000,
+      "imagenes": [],
+      "precioventaRedondeado": 2036000,
       "cuotas": [
         {
           "cuota": 0,
           "incremento": 0,
-          "precio": 2035000,
-          "precioFormateado": "2035000"
+          "precio": 2036000,
+          "precioFormateado": "2036000"
         },
         {
           "cuota": 1,
           "incremento": 2.3,
-          "precio": 2082000,
-          "precioFormateado": "2082000"
+          "precio": 2083000,
+          "precioFormateado": "2083000"
         },
         {
           "cuota": 2,
           "incremento": 4.6,
-          "precio": 2129000,
-          "precioFormateado": "2129000"
+          "precio": 2130000,
+          "precioFormateado": "2130000"
         },
         {
           "cuota": 3,
           "incremento": 6.9,
-          "precio": 2176000,
-          "precioFormateado": "2176000"
+          "precio": 2177000,
+          "precioFormateado": "2177000"
         },
         {
           "cuota": 4,
           "incremento": 14.6,
-          "precio": 2333000,
-          "precioFormateado": "2333000"
+          "precio": 2334000,
+          "precioFormateado": "2334000"
         },
         {
           "cuota": 5,
           "incremento": 18.3,
-          "precio": 2408000,
-          "precioFormateado": "2408000"
+          "precio": 2409000,
+          "precioFormateado": "2409000"
         },
         {
           "cuota": 6,
           "incremento": 21.9,
-          "precio": 2481000,
-          "precioFormateado": "2481000"
+          "precio": 2482000,
+          "precioFormateado": "2482000"
         },
         {
           "cuota": 7,
           "incremento": 28.7,
-          "precio": 2620000,
-          "precioFormateado": "2620000"
+          "precio": 2621000,
+          "precioFormateado": "2621000"
         },
         {
           "cuota": 8,
           "incremento": 32.8,
-          "precio": 2703000,
-          "precioFormateado": "2703000"
+          "precio": 2704000,
+          "precioFormateado": "2704000"
         },
         {
           "cuota": 9,
           "incremento": 36.9,
-          "precio": 2786000,
-          "precioFormateado": "2786000"
+          "precio": 2788000,
+          "precioFormateado": "2788000"
         },
         {
           "cuota": 10,
           "incremento": 41,
-          "precio": 2870000,
-          "precioFormateado": "2870000"
+          "precio": 2871000,
+          "precioFormateado": "2871000"
         },
         {
           "cuota": 11,
           "incremento": 45.1,
-          "precio": 2953000,
-          "precioFormateado": "2953000"
+          "precio": 2955000,
+          "precioFormateado": "2955000"
         },
         {
           "cuota": 12,
           "incremento": 49.2,
-          "precio": 3037000,
-          "precioFormateado": "3037000"
+          "precio": 3038000,
+          "precioFormateado": "3038000"
         },
         {
           "cuota": 13,
           "incremento": 58.5,
-          "precio": 3226000,
-          "precioFormateado": "3226000"
+          "precio": 3228000,
+          "precioFormateado": "3228000"
         },
         {
           "cuota": 14,
           "incremento": 63,
-          "precio": 3318000,
-          "precioFormateado": "3318000"
+          "precio": 3319000,
+          "precioFormateado": "3319000"
         },
         {
           "cuota": 15,
           "incremento": 67.5,
-          "precio": 3409000,
-          "precioFormateado": "3409000"
+          "precio": 3411000,
+          "precioFormateado": "3411000"
         },
         {
           "cuota": 16,
           "incremento": 72,
-          "precio": 3501000,
-          "precioFormateado": "3501000"
+          "precio": 3502000,
+          "precioFormateado": "3502000"
         },
         {
           "cuota": 17,
           "incremento": 76.5,
-          "precio": 3592000,
-          "precioFormateado": "3592000"
+          "precio": 3594000,
+          "precioFormateado": "3594000"
         },
         {
           "cuota": 18,
           "incremento": 81,
-          "precio": 3684000,
-          "precioFormateado": "3684000"
+          "precio": 3686000,
+          "precioFormateado": "3686000"
         }
       ]
     },
     {
-      "codigo_articulo": "31137",
-      "nombre_articulo": "AIRE ACONDICIONADO  SPLIT JOTA 18.000BTU",
-      "preciocosto": "3150000.00",
+      "codigo_articulo": "31138",
+      "nombre_articulo": "AIRE SPLIT JOTA 24.000BTU",
+      "preciocosto": "4250000.00",
       "recargo": "10.00",
       "recargosug": "15.00",
       "web": 1,
@@ -1646,135 +1210,583 @@
       "nombre_marca": "JOTA",
       "codigo_proveedor": 59,
       "nombre_proveedor": "COBRASA",
-      "cantidad_compras": "761.000",
-      "cantidad_entradas": "1.000",
-      "cantidad_ventas": "300.000",
-      "cantidad_salidas": "12.000",
-      "cantidad_transferencias_salida": "696.000",
-      "cantidad_transferencias_entrada": "696.000",
+      "cantidad_compras": "166.000",
+      "cantidad_entradas": "0.000",
+      "cantidad_ventas": "144.000",
+      "cantidad_salidas": "11.000",
+      "cantidad_transferencias_salida": "270.000",
+      "cantidad_transferencias_entrada": "270.000",
       "nuevo_costo": "0.0",
-      "stock_actual": "450.000",
-      "precioventa": "3465000.00",
-      "preciotope": "3622500.00",
-      "dias_transcurridos": "4",
+      "stock_actual": "11.000",
+      "precioventa": "4675000.00",
+      "preciotope": "4887500.00",
+      "dias_transcurridos": "3",
       "codigo_de_barra": "",
       "nota": "",
       "descripcion": "",
-      "precioventaRedondeado": 3465000,
+      "imagenes": [],
+      "precioventaRedondeado": 4675000,
       "cuotas": [
         {
           "cuota": 0,
           "incremento": 0,
-          "precio": 3465000,
-          "precioFormateado": "3465000"
+          "precio": 4675000,
+          "precioFormateado": "4675000"
         },
         {
           "cuota": 1,
           "incremento": 2.3,
-          "precio": 3545000,
-          "precioFormateado": "3545000"
+          "precio": 4783000,
+          "precioFormateado": "4783000"
         },
         {
           "cuota": 2,
           "incremento": 4.6,
-          "precio": 3625000,
-          "precioFormateado": "3625000"
+          "precio": 4891000,
+          "precioFormateado": "4891000"
         },
         {
           "cuota": 3,
           "incremento": 6.9,
-          "precio": 3705000,
-          "precioFormateado": "3705000"
+          "precio": 4998000,
+          "precioFormateado": "4998000"
         },
         {
           "cuota": 4,
           "incremento": 14.6,
-          "precio": 3971000,
-          "precioFormateado": "3971000"
+          "precio": 5358000,
+          "precioFormateado": "5358000"
         },
         {
           "cuota": 5,
           "incremento": 18.3,
-          "precio": 4100000,
-          "precioFormateado": "4100000"
+          "precio": 5531000,
+          "precioFormateado": "5531000"
         },
         {
           "cuota": 6,
           "incremento": 21.9,
-          "precio": 4224000,
-          "precioFormateado": "4224000"
+          "precio": 5699000,
+          "precioFormateado": "5699000"
         },
         {
           "cuota": 7,
           "incremento": 28.7,
-          "precio": 4460000,
-          "precioFormateado": "4460000"
+          "precio": 6017000,
+          "precioFormateado": "6017000"
         },
         {
           "cuota": 8,
           "incremento": 32.8,
-          "precio": 4602000,
-          "precioFormateado": "4602000"
+          "precio": 6209000,
+          "precioFormateado": "6209000"
         },
         {
           "cuota": 9,
           "incremento": 36.9,
-          "precio": 4744000,
-          "precioFormateado": "4744000"
+          "precio": 6401000,
+          "precioFormateado": "6401000"
         },
         {
           "cuota": 10,
           "incremento": 41,
-          "precio": 4886000,
-          "precioFormateado": "4886000"
+          "precio": 6592000,
+          "precioFormateado": "6592000"
         },
         {
           "cuota": 11,
           "incremento": 45.1,
-          "precio": 5028000,
-          "precioFormateado": "5028000"
+          "precio": 6784000,
+          "precioFormateado": "6784000"
         },
         {
           "cuota": 12,
           "incremento": 49.2,
-          "precio": 5170000,
-          "precioFormateado": "5170000"
+          "precio": 6976000,
+          "precioFormateado": "6976000"
         },
         {
           "cuota": 13,
           "incremento": 58.5,
-          "precio": 5493000,
-          "precioFormateado": "5493000"
+          "precio": 7410000,
+          "precioFormateado": "7410000"
         },
         {
           "cuota": 14,
           "incremento": 63,
-          "precio": 5648000,
-          "precioFormateado": "5648000"
+          "precio": 7621000,
+          "precioFormateado": "7621000"
         },
         {
           "cuota": 15,
           "incremento": 67.5,
-          "precio": 5804000,
-          "precioFormateado": "5804000"
+          "precio": 7831000,
+          "precioFormateado": "7831000"
         },
         {
           "cuota": 16,
           "incremento": 72,
-          "precio": 5960000,
-          "precioFormateado": "5960000"
+          "precio": 8041000,
+          "precioFormateado": "8041000"
         },
         {
           "cuota": 17,
           "incremento": 76.5,
-          "precio": 6116000,
-          "precioFormateado": "6116000"
+          "precio": 8252000,
+          "precioFormateado": "8252000"
         },
         {
           "cuota": 18,
           "incremento": 81,
-          "precio": 6272000,
-          "precioFormateado": "6272000"
+          "precio": 8462000,
+          "precioFormateado": "8462000"
+        }
+      ]
+    },
+    {
+      "codigo_articulo": "32298",
+      "nombre_articulo": "AIRE SPLIT JOTA 36.000BTU",
+      "preciocosto": "7270000.00",
+      "recargo": "10.00",
+      "recargosug": "15.00",
+      "web": 1,
+      "websc": 0,
+      "codigo_categoria": 5,
+      "nombre_categoria": "CLIMATIZACIÓN",
+      "codigo_subcategoria": 26,
+      "nombre_subcategoria": "AIRE ACONDICIONADO",
+      "codigo_marca": 257,
+      "nombre_marca": "JOTA",
+      "codigo_proveedor": 59,
+      "nombre_proveedor": "COBRASA",
+      "cantidad_compras": "126.000",
+      "cantidad_entradas": "0.000",
+      "cantidad_ventas": "25.000",
+      "cantidad_salidas": "0.000",
+      "cantidad_transferencias_salida": "60.000",
+      "cantidad_transferencias_entrada": "60.000",
+      "nuevo_costo": "0.0",
+      "stock_actual": "101.000",
+      "precioventa": "7997000.00",
+      "preciotope": "8360500.00",
+      "dias_transcurridos": "3",
+      "codigo_de_barra": "B8397D988102N00099",
+      "nota": "",
+      "descripcion": "",
+      "imagenes": [],
+      "precioventaRedondeado": 7997000,
+      "cuotas": [
+        {
+          "cuota": 0,
+          "incremento": 0,
+          "precio": 7997000,
+          "precioFormateado": "7997000"
+        },
+        {
+          "cuota": 1,
+          "incremento": 2.3,
+          "precio": 8181000,
+          "precioFormateado": "8181000"
+        },
+        {
+          "cuota": 2,
+          "incremento": 4.6,
+          "precio": 8365000,
+          "precioFormateado": "8365000"
+        },
+        {
+          "cuota": 3,
+          "incremento": 6.9,
+          "precio": 8549000,
+          "precioFormateado": "8549000"
+        },
+        {
+          "cuota": 4,
+          "incremento": 14.6,
+          "precio": 9165000,
+          "precioFormateado": "9165000"
+        },
+        {
+          "cuota": 5,
+          "incremento": 18.3,
+          "precio": 9461000,
+          "precioFormateado": "9461000"
+        },
+        {
+          "cuota": 6,
+          "incremento": 21.9,
+          "precio": 9749000,
+          "precioFormateado": "9749000"
+        },
+        {
+          "cuota": 7,
+          "incremento": 28.7,
+          "precio": 10293000,
+          "precioFormateado": "10293000"
+        },
+        {
+          "cuota": 8,
+          "incremento": 32.8,
+          "precio": 10621000,
+          "precioFormateado": "10621000"
+        },
+        {
+          "cuota": 9,
+          "incremento": 36.9,
+          "precio": 10948000,
+          "precioFormateado": "10948000"
+        },
+        {
+          "cuota": 10,
+          "incremento": 41,
+          "precio": 11276000,
+          "precioFormateado": "11276000"
+        },
+        {
+          "cuota": 11,
+          "incremento": 45.1,
+          "precio": 11604000,
+          "precioFormateado": "11604000"
+        },
+        {
+          "cuota": 12,
+          "incremento": 49.2,
+          "precio": 11932000,
+          "precioFormateado": "11932000"
+        },
+        {
+          "cuota": 13,
+          "incremento": 58.5,
+          "precio": 12676000,
+          "precioFormateado": "12676000"
+        },
+        {
+          "cuota": 14,
+          "incremento": 63,
+          "precio": 13036000,
+          "precioFormateado": "13036000"
+        },
+        {
+          "cuota": 15,
+          "incremento": 67.5,
+          "precio": 13395000,
+          "precioFormateado": "13395000"
+        },
+        {
+          "cuota": 16,
+          "incremento": 72,
+          "precio": 13755000,
+          "precioFormateado": "13755000"
+        },
+        {
+          "cuota": 17,
+          "incremento": 76.5,
+          "precio": 14115000,
+          "precioFormateado": "14115000"
+        },
+        {
+          "cuota": 18,
+          "incremento": 81,
+          "precio": 14475000,
+          "precioFormateado": "14475000"
+        }
+      ]
+    },
+    {
+      "codigo_articulo": "31446",
+      "nombre_articulo": "ANAFE 4H POP JOTA NEGRO",
+      "preciocosto": "440000.00",
+      "recargo": "12.00",
+      "recargosug": "15.00",
+      "web": 1,
+      "websc": 0,
+      "codigo_categoria": 6,
+      "nombre_categoria": "COCINAS Y ANAFES",
+      "codigo_subcategoria": 19,
+      "nombre_subcategoria": "COCINA",
+      "codigo_marca": 257,
+      "nombre_marca": "JOTA",
+      "codigo_proveedor": 59,
+      "nombre_proveedor": "COBRASA",
+      "cantidad_compras": "333.000",
+      "cantidad_entradas": "0.000",
+      "cantidad_ventas": "325.000",
+      "cantidad_salidas": "5.000",
+      "cantidad_transferencias_salida": "556.000",
+      "cantidad_transferencias_entrada": "556.000",
+      "nuevo_costo": "0.0",
+      "stock_actual": "3.000",
+      "precioventa": "492800.00",
+      "preciotope": "506000.00",
+      "dias_transcurridos": "7",
+      "codigo_de_barra": "7898385063122",
+      "nota": "",
+      "descripcion": "",
+      "imagenes": [],
+      "precioventaRedondeado": 493000,
+      "cuotas": [
+        {
+          "cuota": 0,
+          "incremento": 0,
+          "precio": 493000,
+          "precioFormateado": "493000"
+        },
+        {
+          "cuota": 1,
+          "incremento": 2.3,
+          "precio": 505000,
+          "precioFormateado": "505000"
+        },
+        {
+          "cuota": 2,
+          "incremento": 4.6,
+          "precio": 516000,
+          "precioFormateado": "516000"
+        },
+        {
+          "cuota": 3,
+          "incremento": 6.9,
+          "precio": 528000,
+          "precioFormateado": "528000"
+        },
+        {
+          "cuota": 4,
+          "incremento": 14.6,
+          "precio": 565000,
+          "precioFormateado": "565000"
+        },
+        {
+          "cuota": 5,
+          "incremento": 18.3,
+          "precio": 584000,
+          "precioFormateado": "584000"
+        },
+        {
+          "cuota": 6,
+          "incremento": 21.9,
+          "precio": 601000,
+          "precioFormateado": "601000"
+        },
+        {
+          "cuota": 7,
+          "incremento": 28.7,
+          "precio": 635000,
+          "precioFormateado": "635000"
+        },
+        {
+          "cuota": 8,
+          "incremento": 32.8,
+          "precio": 655000,
+          "precioFormateado": "655000"
+        },
+        {
+          "cuota": 9,
+          "incremento": 36.9,
+          "precio": 675000,
+          "precioFormateado": "675000"
+        },
+        {
+          "cuota": 10,
+          "incremento": 41,
+          "precio": 696000,
+          "precioFormateado": "696000"
+        },
+        {
+          "cuota": 11,
+          "incremento": 45.1,
+          "precio": 716000,
+          "precioFormateado": "716000"
+        },
+        {
+          "cuota": 12,
+          "incremento": 49.2,
+          "precio": 736000,
+          "precioFormateado": "736000"
+        },
+        {
+          "cuota": 13,
+          "incremento": 58.5,
+          "precio": 782000,
+          "precioFormateado": "782000"
+        },
+        {
+          "cuota": 14,
+          "incremento": 63,
+          "precio": 804000,
+          "precioFormateado": "804000"
+        },
+        {
+          "cuota": 15,
+          "incremento": 67.5,
+          "precio": 826000,
+          "precioFormateado": "826000"
+        },
+        {
+          "cuota": 16,
+          "incremento": 72,
+          "precio": 848000,
+          "precioFormateado": "848000"
+        },
+        {
+          "cuota": 17,
+          "incremento": 76.5,
+          "precio": 871000,
+          "precioFormateado": "871000"
+        },
+        {
+          "cuota": 18,
+          "incremento": 81,
+          "precio": 893000,
+          "precioFormateado": "893000"
+        }
+      ]
+    },
+    {
+      "codigo_articulo": "31981",
+      "nombre_articulo": "COCINA DE MESA 4H ASIATICO JUNIOR NEGRO JOTA",
+      "preciocosto": "250000.00",
+      "recargo": "12.00",
+      "recargosug": "15.00",
+      "web": 1,
+      "websc": 1,
+      "codigo_categoria": 6,
+      "nombre_categoria": "COCINAS Y ANAFES",
+      "codigo_subcategoria": 19,
+      "nombre_subcategoria": "COCINA",
+      "codigo_marca": 257,
+      "nombre_marca": "JOTA",
+      "codigo_proveedor": 59,
+      "nombre_proveedor": "COBRASA",
+      "cantidad_compras": "115.000",
+      "cantidad_entradas": "0.000",
+      "cantidad_ventas": "109.000",
+      "cantidad_salidas": "0.000",
+      "cantidad_transferencias_salida": "284.000",
+      "cantidad_transferencias_entrada": "284.000",
+      "nuevo_costo": "0.0",
+      "stock_actual": "6.000",
+      "precioventa": "280000.00",
+      "preciotope": "287500.00",
+      "dias_transcurridos": "24",
+      "codigo_de_barra": "",
+      "nota": "",
+      "descripcion": "",
+      "imagenes": [],
+      "precioventaRedondeado": 280000,
+      "cuotas": [
+        {
+          "cuota": 0,
+          "incremento": 0,
+          "precio": 280000,
+          "precioFormateado": "280000"
+        },
+        {
+          "cuota": 1,
+          "incremento": 2.3,
+          "precio": 287000,
+          "precioFormateado": "287000"
+        },
+        {
+          "cuota": 2,
+          "incremento": 4.6,
+          "precio": 293000,
+          "precioFormateado": "293000"
+        },
+        {
+          "cuota": 3,
+          "incremento": 6.9,
+          "precio": 300000,
+          "precioFormateado": "300000"
+        },
+        {
+          "cuota": 4,
+          "incremento": 14.6,
+          "precio": 321000,
+          "precioFormateado": "321000"
+        },
+        {
+          "cuota": 5,
+          "incremento": 18.3,
+          "precio": 332000,
+          "precioFormateado": "332000"
+        },
+        {
+          "cuota": 6,
+          "incremento": 21.9,
+          "precio": 342000,
+          "precioFormateado": "342000"
+        },
+        {
+          "cuota": 7,
+          "incremento": 28.7,
+          "precio": 361000,
+          "precioFormateado": "361000"
+        },
+        {
+          "cuota": 8,
+          "incremento": 32.8,
+          "precio": 372000,
+          "precioFormateado": "372000"
+        },
+        {
+          "cuota": 9,
+          "incremento": 36.9,
+          "precio": 384000,
+          "precioFormateado": "384000"
+        },
+        {
+          "cuota": 10,
+          "incremento": 41,
+          "precio": 395000,
+          "precioFormateado": "395000"
+        },
+        {
+          "cuota": 11,
+          "incremento": 45.1,
+          "precio": 407000,
+          "precioFormateado": "407000"
+        },
+        {
+          "cuota": 12,
+          "incremento": 49.2,
+          "precio": 418000,
+          "precioFormateado": "418000"
+        },
+        {
+          "cuota": 13,
+          "incremento": 58.5,
+          "precio": 444000,
+          "precioFormateado": "444000"
+        },
+        {
+          "cuota": 14,
+          "incremento": 63,
+          "precio": 457000,
+          "precioFormateado": "457000"
+        },
+        {
+          "cuota": 15,
+          "incremento": 67.5,
+          "precio": 469000,
+          "precioFormateado": "469000"
+        },
+        {
+          "cuota": 16,
+          "incremento": 72,
+          "precio": 482000,
+          "precioFormateado": "482000"
+        },
+        {
+          "cuota": 17,
+          "incremento": 76.5,
+          "precio": 495000,
+          "precioFormateado": "495000"
+        },
+        {
+          "cuota": 18,
+          "incremento": 81,
+          "precio": 507000,
+          "precioFormateado": "507000"
         }
       ]
     }

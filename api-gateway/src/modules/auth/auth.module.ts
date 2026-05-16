@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthController } from './controllers/auth.controller';
+import { UserController } from './controllers/user.controller';
 import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
 import { PassportModule } from '@nestjs/passport';
 import { GoogleStrategy } from '../../strategies/google.strategy';
@@ -9,7 +10,7 @@ import { GoogleStrategy } from '../../strategies/google.strategy';
     MicroserviceModule.register('AUTH_SERVICE'),
     PassportModule,
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, UserController],
   providers: [GoogleStrategy],
   exports: [],
 })

@@ -326,7 +326,10 @@ export class EventsService {
       allowed: true,
       precioOferta: eventProduct.precioOferta,
       condiciones: conditionsMet.condiciones,
-      limite: limite || null,
+      // En eventos de beneficio (codigo "B-"), el campo `limiteGlobalPorUsuario` se usa
+      // como umbral de compras para otorgar cupón (ver `getBenefitEvents`). No debe
+      // restringir la cantidad de unidades que el usuario puede agregar al carrito.
+      limite: esEventoBeneficio ? null : (limite || null),
       eventoId: selectedEvent.id,
       eventoNombre: selectedEvent.nombre,
     };

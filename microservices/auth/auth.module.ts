@@ -11,6 +11,8 @@ import { MariaDbModule } from './config/mariadb.module';
 import { ConfigModule } from '@nestjs/config';
 import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
 import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
+import { UserController } from './controller/user.controller';
+import { UserService } from './service/user.service';
 
 @Module({
   imports: [
@@ -27,8 +29,8 @@ import { ResilientService } from '@shared/common/decorators/resilient-client.dec
       'CONTENT_SERVICE',
     ]),
   ],
-  controllers: [AuthController],
-  providers: [AuthService, GuestService, UserCouponService, GoogleStrategy, JwtStrategy, ResilientService],
-  exports: [AuthService, GuestService, UserCouponService],
+  controllers: [AuthController, UserController],
+  providers: [AuthService, UserService, GuestService, UserCouponService, GoogleStrategy, JwtStrategy, ResilientService],
+  exports: [AuthService, GuestService, UserCouponService, UserService],
 })
 export class AuthModule {}

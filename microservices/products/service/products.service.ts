@@ -285,7 +285,7 @@ export class ProductsService {
     }
   }
 
-  async create(createPrismaProductDto: CreateProductDto): Promise<any> {
+  async create(createPrismaProductDto: CreateProductDto): Promise<any> {  
     const data: any = { ...createPrismaProductDto };
     if (typeof data.web === 'number') {
       data.web = data.web === 1;
