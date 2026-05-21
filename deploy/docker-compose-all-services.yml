@@ -51,6 +51,8 @@ services:
       - image
     networks:
       - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     deploy:
       resources:
         limits:
@@ -86,6 +88,8 @@ services:
     command: yarn start:dev:auth
     networks:
       - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # Products Service
   products:
@@ -116,6 +120,8 @@ services:
     command: yarn start:dev:products
     networks:
       - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # Cart Service
   cart:
@@ -145,6 +151,8 @@ services:
     command: yarn start:dev:cart
     networks:
       - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # Content Service
   content:
@@ -174,6 +182,8 @@ services:
     command: yarn start:dev:content
     networks:
       - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # Payments Service
   payments:
@@ -203,6 +213,8 @@ services:
     command: yarn start:dev:payments
     networks:
       - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # Image Service
   image:
@@ -227,6 +239,8 @@ services:
     command: yarn start:dev:image
     networks:
       - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 #   mariadb:
 #     image: mariadb:latest

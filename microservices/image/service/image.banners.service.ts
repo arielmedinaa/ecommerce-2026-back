@@ -13,6 +13,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import * as sharp from 'sharp';
+import * as os from 'os';
 
 @Injectable()
 export class BannerService {
@@ -31,9 +32,24 @@ export class BannerService {
     private readonly bannerValidationService: BannerValidationService,
     private readonly bannerErrorService: BannerErrorService,
   ) {
-    this.bannersDir =
+    const configured =
       process.env.DIR_IMAGE ||
       '/home/appuser/Documents/projects/newEcommerce2026/imagesEcommerce/banners';
+    const dockerHome = '/home/appuser';
+    const isDocker =
+      String(process.env.IS_DOCKER || '').toLowerCase() === 'true' ||
+      String(process.env.RUN_MODE || '').toLowerCase() === 'all';
+    const rawHome = os.homedir();
+    // En Docker queremos que "~/" apunte al path montado por volumen (bajo /home/appuser),
+    // así los archivos se reflejan en `ecommerce-2026-back/imagesEcommerce` del host.
+    const homeForTilde = isDocker ? dockerHome : rawHome;
+    // Expand "~" to homedir so paths are absolute and work across services/containers
+    this.bannersDir =
+      configured === '~'
+        ? homeForTilde
+        : configured.startsWith('~/')
+          ? path.join(homeForTilde, configured.slice(2))
+          : configured;
     this.ensureDirectoryExists();
   }
 
@@ -49,6 +65,7 @@ export class BannerService {
     variante: string,
     creadoPor: string,
     modificadoPor: string,
+    meta?: Record<string, any>,
   ): Promise<{ data: Banners; message: string; success: boolean }> {
     try {
       const validation =
@@ -101,6 +118,7 @@ export class BannerService {
         creadoPor,
         modificadoPor,
         dimensiones: savedImages,
+        meta: meta || null,
       };
 
       const newEntity = this.bannerRepository.create(bannerData);

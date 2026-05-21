@@ -99,6 +99,7 @@ export class BannersController {
     variante: string;
     creadoPor: string;
     modificadoPor: string;
+    meta?: Record<string, any>;
   }) {
     return await this.bannerService.uploadBanner(
       data.file,
@@ -106,6 +107,7 @@ export class BannersController {
       data.variante,
       data.creadoPor,
       data.modificadoPor,
+      data.meta,
     );
   }
 
@@ -119,6 +121,47 @@ export class BannersController {
     return {
       data: { filePath },
       message: 'Imagen de banner obtenida exitosamente',
+      success: true,
+    };
+  }
+
+  @MessagePattern({ cmd: 'get_banner_file' })
+  async getBannerFile(data: { nombre: string; device?: string }) {
+    const filePath = await this.bannerService.getBannerImage(
+      data.nombre,
+      data.device || 'desktop',
+    );
+
+    if (!fs.existsSync(filePath)) {
+      return {
+        data: null,
+        message: 'La imagen solicitada no existe',
+        success: false,
+      };
+    }
+
+    const ext = path.extname(filePath).toLowerCase();
+    let contentType = 'image/webp';
+    switch (ext) {
+      case '.jpg':
+      case '.jpeg':
+        contentType = 'image/jpeg';
+        break;
+      case '.png':
+        contentType = 'image/png';
+        break;
+      case '.gif':
+        contentType = 'image/gif';
+        break;
+      case '.webp':
+        contentType = 'image/webp';
+        break;
+    }
+
+    const buffer = fs.readFileSync(filePath);
+    return {
+      data: { buffer, contentType },
+      message: 'Archivo de banner obtenido exitosamente',
       success: true,
     };
   }

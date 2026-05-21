@@ -1,4 +1,5 @@
 import { ResponseData } from '@shared/common/response/response.data';
+import { HomeSectionResponse } from './home-sections.interface';
 
 export interface Banner {
   id: string;
@@ -9,12 +10,22 @@ export interface Banner {
   order: number;
 }
 
+export interface HomeSubfamilia {
+  id: number;
+  subfamiliaId: number;
+  familiaId: number;
+  nombre: string;
+}
+
+export interface HomeCategoriaFamilia {
+  id: number;
+  nombre: string;
+  subfamilias: HomeSubfamilia[];
+}
+
 export interface HomeData {
-  verticales: any[];
-  banners: Banner[];
-  productos: any[];
-  jota: any[];
-  ofertas: any[];
+  sections: HomeSectionResponse[];
+  categorias: HomeCategoriaFamilia[];
 }
 
 export type HomeResponse = ResponseData<HomeData>;

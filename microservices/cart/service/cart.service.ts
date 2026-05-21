@@ -4,7 +4,7 @@ import { Order } from '@cart/schemas/order.schemas';
 import { OrderItem } from '@cart/schemas/order-item.schemas';
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Between, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { JwtService } from '@nestjs/jwt';
@@ -708,16 +708,30 @@ export class CartContadoService {
     totalCarritosFinalizados: number;
     totalAbandonados: number;
   }> {
+    const limit = Number(filters?.limit ?? 10);
+    const offset = Number(filters?.offset ?? 0);
+
+    const where: any = {};
+    const desdeRaw = filters?.desde;
+    const hastaRaw = filters?.hasta;
+
+    const desde = desdeRaw ? new Date(desdeRaw) : null;
+    const hasta = hastaRaw ? new Date(hastaRaw) : null;
+
+    const hasDesde = !!(desde && !Number.isNaN(desde.getTime()));
+    const hasHasta = !!(hasta && !Number.isNaN(hasta.getTime()));
+
+    if (hasDesde && hasHasta) where.createdAt = Between(desde as Date, hasta as Date);
+    else if (hasDesde) where.createdAt = MoreThanOrEqual(desde as Date);
+    else if (hasHasta) where.createdAt = LessThanOrEqual(hasta as Date);
+
     const carritos = await this.carritoRead.find({
-      where: {
-        createdAt: filters.desde,
-        updatedAt: filters.hasta,
-      },
+      where,
       order: {
         createdAt: 'DESC',
       },
-      take: filters.limit,
-      skip: filters.offset,
+      take: limit,
+      skip: offset,
     });
 
     const carritosFinalizados = await this.carritoRead.find({
@@ -728,8 +742,8 @@ export class CartContadoService {
       order: {
         createdAt: 'DESC',
       },
-      take: filters.limit,
-      skip: filters.offset,
+      take: limit,
+      skip: offset,
     });
 
     const carritosAbandonados = await this.carritoRead.find({
@@ -739,8 +753,8 @@ export class CartContadoService {
       order: {
         createdAt: 'DESC',
       },
-      take: filters.limit,
-      skip: filters.offset,
+      take: limit,
+      skip: offset,
     });
     return {
       data: {

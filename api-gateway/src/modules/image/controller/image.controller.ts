@@ -69,17 +69,27 @@ export class ImageController {
       variante: string;
       creadoPor: string;
       modificadoPor: string;
+      meta?: any;
     }
   ) {
     try {
       this.logger.log(`Uploading banner: ${body.nombre}`);
       const pattern = { cmd: 'upload_banner' };
+      let meta: any = body.meta;
+      if (typeof meta === 'string') {
+        try {
+          meta = JSON.parse(meta);
+        } catch {
+          meta = undefined;
+        }
+      }
       const payload = {
         file,
         nombre: body.nombre,
         variante: body.variante,
         creadoPor: body.creadoPor,
-        modificadoPor: body.modificadoPor
+        modificadoPor: body.modificadoPor,
+        meta,
       };
 
       const result = await this.imageClient.send(pattern, payload);
@@ -105,45 +115,23 @@ export class ImageController {
   ) {
     try {
       this.logger.log(`Getting banner image: ${nombre} - ${device}`);
-      const pattern = { cmd: 'get_banner_image' };
+      const pattern = { cmd: 'get_banner_file' };
       const payload = { nombre, device };
       const result = await this.imageClient.send(pattern, payload).toPromise();
-      if (result && result.success && result.data && result.data.filePath) {
-        const filePath = result.data.filePath;
-        const fs = require('fs');
-        const path = require('path');
-        
-        if (!fs.existsSync(filePath)) {
-          return res.status(404).json({
-            statusCode: HttpStatus.NOT_FOUND,
-            message: 'La imagen solicitada no existe',
-            success: false
-          });
-        }
-        const ext = path.extname(filePath).toLowerCase();
-        let contentType = 'image/webp'; // default
-        
-        switch (ext) {
-          case '.jpg':
-          case '.jpeg':
-            contentType = 'image/jpeg';
-            break;
-          case '.png':
-            contentType = 'image/png';
-            break;
-          case '.gif':
-            contentType = 'image/gif';
-            break;
-          case '.webp':
-            contentType = 'image/webp';
-            break;
-        }
+      if (result && result.success && result.data && result.data.buffer) {
+        const contentType = result.data.contentType || 'image/webp';
         res.setHeader('Content-Type', contentType);
         res.setHeader('Cache-Control', 'public, max-age=86400');
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET');
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-        return res.sendFile(filePath);
+        const raw = result.data.buffer as any;
+        const buf = Buffer.isBuffer(raw)
+          ? raw
+          : raw && Array.isArray(raw.data)
+            ? Buffer.from(raw.data)
+            : Buffer.from(raw);
+        return res.send(buf);
       } else {
         return res.status(404).json({
           statusCode: HttpStatus.NOT_FOUND,
@@ -152,11 +140,11 @@ export class ImageController {
         });
       }
     } catch (error) {
-      this.logger.error(`Error getting banner image: ${error.message}`);
+      this.logger.error(`Error getting banner image: ${error?.message || String(error)}`);
       return res.status(500).json({
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
         message: 'Error al obtener la imagen del banner',
-        error: error.message
+        error: error?.message || String(error)
       });
     }
   }

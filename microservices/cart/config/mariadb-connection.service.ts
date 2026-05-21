@@ -1,16 +1,16 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { InjectConnection } from '@nestjs/typeorm';
-import { Connection } from 'typeorm';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class MariaDbConnectionService implements OnModuleInit {
   private readonly logger = new Logger(MariaDbConnectionService.name);
 
-  constructor(@InjectConnection() private readonly connection: Connection) {}
+  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
   onModuleInit() {
-    if (this.connection.isInitialized) {
-      const { host, port, database } = this.connection.options as any;
+    if (this.dataSource.isInitialized) {
+      const { host, port, database } = this.dataSource.options as any;
       this.logger.log(
         `✅ Successfully connected to MariaDB database`,
       );

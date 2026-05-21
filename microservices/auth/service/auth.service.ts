@@ -267,7 +267,7 @@ export class AuthService {
   ): Promise<{ etiquetas: string[] }> {
     const user = await this.userRepository.findOne({
       where: { id: Number(usuario_id) },
-      select: ['etiquetas'],
+      select: { etiquetas: true },
     });
     const etiquetas = user?.etiquetas || [];
     this.logger.log(

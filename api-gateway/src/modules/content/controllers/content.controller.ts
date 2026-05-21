@@ -42,6 +42,33 @@ export class ContentController {
     }
   }
 
+  @Get('home/sections')
+  @SneakyThrows()
+  async listHomeSections() {
+    return await firstValueFrom(
+      this.contentClient.send({ cmd: 'list_home_sections' }, {}),
+    );
+  }
+
+  @Post('home/sections')
+  @SneakyThrows()
+  async upsertHomeSection(@Body() body: any) {
+    return await firstValueFrom(
+      this.contentClient.send({ cmd: 'upsert_home_section' }, body),
+    );
+  }
+
+  @Put('home/sections/:key')
+  @SneakyThrows()
+  async upsertHomeSectionByKey(@Param('key') key: string, @Body() body: any) {
+    return await firstValueFrom(
+      this.contentClient.send(
+        { cmd: 'upsert_home_section_by_key' },
+        { key, ...body },
+      ),
+    );
+  }
+
   @Post('landing')
   @SneakyThrows('ContentService', 'createLanding')
   async createLanding(@Body() body: { createLandingDto: any; userId: string }) {

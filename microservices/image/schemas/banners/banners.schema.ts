@@ -37,6 +37,9 @@ export class Banners {
   @Column('json', { nullable: true })
   dimensiones: any;
 
+  @Column('json', { nullable: true })
+  meta?: Record<string, any>;
+
   @Column()
   creadoPor: string;
 
