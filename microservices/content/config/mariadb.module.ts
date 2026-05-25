@@ -13,6 +13,9 @@ import { Order } from '@content/events/schemas/order.schema';
 import { OrderItem } from '@content/events/schemas/order-item.schema';
 import { EventCondition } from '@content/events/schemas/event-condition.schema';
 import { HomeSection } from '@content/home/schemas/home-section.schema';
+import { Promotion } from '@content/promotions/schemas/promotion.schema';
+import { PromotionProduct } from '@content/promotions/schemas/promotion-product.schema';
+import { PromotionVisit } from '@content/promotions/schemas/promotion-visit.schema';
 
 @Module({
   imports: [
@@ -48,6 +51,9 @@ export class MariaDbModule {
           OrderItem,
           EventCondition,
           HomeSection,
+          Promotion,
+          PromotionProduct,
+          PromotionVisit,
         ],
         synchronize: process.env.SYNCRONICE === 'true',
         logging: process.env.SYNCRONICE === 'true',
@@ -82,6 +88,9 @@ export class MariaDbModule {
           OrderItem,
           EventCondition,
           HomeSection,
+          Promotion,
+          PromotionProduct,
+          PromotionVisit,
         ],
         synchronize: process.env.SYNCRONICE === 'true',
         logging: process.env.SYNCRONICE === 'true',
@@ -107,6 +116,9 @@ export class MariaDbModule {
         OrderItem,
         EventCondition,
         HomeSection,
+        Promotion,
+        PromotionProduct,
+        PromotionVisit,
       ],
       'WRITE_CONNECTION',
     );
@@ -127,6 +139,9 @@ export class MariaDbModule {
         OrderItem,
         EventCondition,
         HomeSection,
+        Promotion,
+        PromotionProduct,
+        PromotionVisit,
       ],
       'READ_CONNECTION',
     );

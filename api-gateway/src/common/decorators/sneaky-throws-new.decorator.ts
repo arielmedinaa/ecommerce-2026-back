@@ -53,6 +53,18 @@ export function SneakyThrows(serviceName?: string, operation?: string, lineNumbe
       }
     };
 
+    // Preserve Nest metadata (interceptors/guards/params/etc.) that may be attached to the original method
+    // Some decorators (e.g. multer interceptors) rely on metadata being present on the handler reference.
+    try {
+      const keys = Reflect.getMetadataKeys(method) || [];
+      for (const key of keys) {
+        const value = Reflect.getMetadata(key, method);
+        Reflect.defineMetadata(key, value, descriptor.value);
+      }
+    } catch {
+      // ignore metadata copy errors
+    }
+
     return descriptor;
   };
 }
@@ -106,6 +118,17 @@ export function SneakyThrowsSync(serviceName?: string, operation?: string, lineN
         BaseHttpException.handle(error, serviceName, operation, line);
       }
     };
+
+    // Preserve Nest metadata on the original method
+    try {
+      const keys = Reflect.getMetadataKeys(method) || [];
+      for (const key of keys) {
+        const value = Reflect.getMetadata(key, method);
+        Reflect.defineMetadata(key, value, descriptor.value);
+      }
+    } catch {
+      // ignore
+    }
 
     return descriptor;
   };

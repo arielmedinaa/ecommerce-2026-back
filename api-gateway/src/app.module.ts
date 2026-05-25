@@ -21,7 +21,7 @@ import { ImageModule } from './modules/image/image.module';
       envFilePath: '.env',
     }),
     JwtModule.register({
-      secret: process.env.JWT_SECRET,
+      secret: process.env.JWT_SECRET || 'default-secret',
       signOptions: { expiresIn: '1d' },
     }),
     MicroserviceModule.forRoot([

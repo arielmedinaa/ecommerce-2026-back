@@ -6,6 +6,7 @@ import { VerticalesModule } from './verticales/verticales.module';
 import { MariaDbModule } from './config/mariadb.module';
 import { CuponesModule } from './cupones/cupones.module';
 import { EventsModule } from './events/events.module';
+import { PromotionsModule } from './promotions/promotions.module';
 
 @Module({
   imports: [
@@ -17,8 +18,15 @@ import { EventsModule } from './events/events.module';
     VerticalesModule,
     CuponesModule,
     EventsModule,
+    PromotionsModule,
     MariaDbModule,
   ],
-  exports: [HomeModule, LandingsModule, VerticalesModule, EventsModule],
+  exports: [
+    HomeModule,
+    LandingsModule,
+    VerticalesModule,
+    EventsModule,
+    PromotionsModule,
+  ],
 })
 export class ContentModule {}
