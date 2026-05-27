@@ -6,6 +6,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UserCouponService } from './user-coupon.service';
 import { ClientProxy } from '@nestjs/microservices';
 import { ResilientService, ResilientOptions } from '@shared/common/decorators/resilient-client.decorator';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -23,15 +24,14 @@ export class AuthService {
     deviceInfo?: any,
     email?: string,
   ): Promise<{ data: User; guestToken: string }> {
-    const guestToken = this.generateGuestToken();
-    this.logger.log(`Generated guest token: ${guestToken}`);
-    const guestEmail = email || `guest_${guestToken}@temp.ecommerce`;
+    const guestSessionId = crypto.randomBytes(32).toString('hex');
+    const guestEmail = email || `guest_${guestSessionId}@temp.ecommerce`;
 
     const guestUser = this.userRepository.create({
       email: guestEmail,
       nombre: 'Usuario Invitado',
       proveedor: 'guest',
-      idProveedor: guestToken,
+      idProveedor: guestSessionId,
       esInvitado: true,
       infoDispositivo: deviceInfo || {},
       ultimoInicioSesion: new Date(),
@@ -40,8 +40,9 @@ export class AuthService {
     });
 
     await this.userRepository.save(guestUser);
-    this.logger.log(`Created new guest user: ${guestToken}`);
-    return { data: guestUser, guestToken };
+    const jwtToken = await this.generateUserToken(guestUser);
+    this.logger.log(`Created new guest user: ${guestUser.id}`);
+    return { data: guestUser, guestToken: jwtToken };
   }
 
   async createBasicUser(
@@ -118,17 +119,6 @@ export class AuthService {
     };
   }
 
-  private generateGuestToken(): string {
-    const payload = {
-      sub: 'guest',
-      email: `guest_${Date.now()}@temp.ecommerce`,
-      name: 'Usuario Invitado',
-      provider: 'guest',
-    };
-
-    return this.jwtService.sign(payload, { expiresIn: '7d' });
-  }
-
   private async generateUserToken(user: User): Promise<string> {
     const userCoupons = await this.userCouponService.getCouponsForToken(
       user.id,
@@ -140,7 +130,9 @@ export class AuthService {
       provider: user.proveedor,
       etiquetas: user.etiquetas || [],
       cupones: userCoupons,
-      perfil: user.perfil || "administrador"
+      perfil: user.perfil || "administrador",
+      numeroCelular: user.numeroCelular || "",
+      numeroDocumento: user.numeroDocumento || ""
     };
 
     return this.jwtService.sign(payload, { expiresIn: '24h' });

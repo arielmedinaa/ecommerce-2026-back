@@ -17,6 +17,12 @@ export class User {
   @Column({ nullable: true })
   nombre: string;
 
+  @Column({ nullable: true, default: '' })
+  numeroCelular: string;
+
+  @Column({ nullable: true, default: '', length: 20 })
+  numeroDocumento: string;
+
   @Column({ nullable: true })
   avatar: string;
 

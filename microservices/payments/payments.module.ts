@@ -6,14 +6,20 @@ import { PaymentsValidationService } from './service/payments.spec';
 import { PaymentErrorService } from './service/errors/payment-error.service';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ErrorLoggingInterceptor } from './interceptors/error-logging.interceptor';
+import { SqsModule } from '@shared/common/queue/sqs/sqs.module';
+import { PaymentsQueueService } from './service/payments.queue.service';
+import { PaymentsSqsWorker } from './service/payments.sqs.worker';
 
 @Module({
   imports: [
     MariaDbModule,
+    SqsModule,
   ],
   controllers: [PaymentsController],
   providers: [
     PaymentsService,
+    PaymentsQueueService,
+    PaymentsSqsWorker,
     PaymentsValidationService,
     PaymentErrorService,
     {
@@ -21,6 +27,11 @@ import { ErrorLoggingInterceptor } from './interceptors/error-logging.intercepto
       useClass: ErrorLoggingInterceptor,
     },
   ],
-  exports: [PaymentsService, PaymentsValidationService, PaymentErrorService],
+  exports: [
+    PaymentsService,
+    PaymentsQueueService,
+    PaymentsValidationService,
+    PaymentErrorService,
+  ],
 })
 export class PaymentModule {}

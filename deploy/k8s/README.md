@@ -64,6 +64,13 @@ El entorno local (`/dev`) requiere que tengas iniciado \`minikube\` y habilitado
 
 ---
 
+## 1.b Entorno de Desarrollo (Local con Kind)
+
+Para levantar el stack en el cluster `kind-ecommerce-local` (provider Podman) usa:
+- `deploy/k8s/kind/README.md`
+
+> Importante: Kind requiere **cargar las imágenes dentro del nodo** (con `kind load docker-image ...`) porque el overlay usa `imagePullPolicy: Never`.
+
 ## 2. Entorno de Producción (AWS EKS + Karpenter)
 
 El directorio `prod/` incluye configuraciones robustas: HPA, peticiones (Requests) y límites (Limits) estrictos, y los pods no se crearán si no hay espacio, lo que gatilla que Karpenter provea servidores automáticamente.
@@ -83,6 +90,7 @@ Asumiendo conocimientos nulos, AWS usa la herramienta `eksctl`.
    - Reemplazar las variables dentro de \`prod/configmap.yaml\` y \`prod/secrets.yaml\`.
 
 ### B. Despliegue con Karpenter
+> **Karpenter solo funciona en EKS/AWS** (aprovisiona nodos EC2). No aplica para Kind/Minikube.
 Karpenter lee dos recursos principales:
 - **`NodeClass`**: Configura la Red (Subnets de AWS), Grupos de Seguridad (Firewalls).
 - **`NodePool`**: Define si usar instancias baratas (Spot), o estables (On-Demand), familias de AWS, y reglas.

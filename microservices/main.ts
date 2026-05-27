@@ -4,13 +4,46 @@ import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import compression from 'compression';
+import { JsonLogger } from '@shared/common/logging/json-logger';
+import { requestIdMiddleware } from '@gateway/common/middlewares/request-id.middleware';
+import { HttpLoggingInterceptor } from '@gateway/common/interceptors/http-logging.interceptor';
+import { ClientProxy } from '@nestjs/microservices';
+import { RequestContext } from '@shared/common/logging/request-context';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    abortOnError: false,
+    logger: process.env.LOG_FORMAT === 'json' ? new JsonLogger('api-gateway') : undefined,
+  });
   const configService = app.get(ConfigService);
   const port = configService.get('GATEWAY_PORT') || 3000;
 
   app.use(compression());
+  app.use(requestIdMiddleware);
+  app.useGlobalInterceptors(new HttpLoggingInterceptor());
+
+  // Auto-propagate requestId to all microservice calls via ClientProxy.send(...)
+  // This keeps controller code clean and enables end-to-end log correlation.
+  const originalSend = ClientProxy.prototype.send;
+  ClientProxy.prototype.send = function (pattern: any, data: any) {
+    const ctx = RequestContext.get();
+    if (!ctx?.requestId) return originalSend.call(this, pattern, data);
+    if (!data || typeof data !== 'object') return originalSend.call(this, pattern, data);
+
+    if (data.headers && (data.headers['x-request-id'] || data.headers['x-correlation-id'])) {
+      return originalSend.call(this, pattern, data);
+    }
+
+    const nextData = {
+      ...data,
+      headers: {
+        ...(data.headers || {}),
+        'x-request-id': ctx.requestId,
+      },
+      ...(ctx.userId ? { userId: ctx.userId } : {}),
+    };
+    return originalSend.call(this, pattern, nextData);
+  };
 
   app.setGlobalPrefix('api');
   app.enableCors();

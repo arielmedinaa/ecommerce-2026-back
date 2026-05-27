@@ -92,24 +92,42 @@ export const DEFAULT_SOLICITUD: Partial<Cart> = {
   transaccion: []
 }
 
-export const NEW_CART_INITIAL_STATE = (codigo: number, clienteToken: string, cuenta: string, id_usuario?: number): Partial<Cart> => ({
+export const NEW_CART_INITIAL_STATE = (
+  codigo: number,
+  clienteToken: string,
+  cuenta: string,
+  id_usuario?: number,
+  clienteData?: Partial<Cart['cliente']>,
+): Partial<Cart> => ({
   ...DEFAULT_CART,
   codigo,
   cliente: {
     ...DEFAULT_CART.cliente!,
+    ...clienteData,
     equipo: clienteToken,
-    correo: cuenta === 'undefined' ? '' : cuenta,
+    correo:
+      clienteData?.correo ||
+      (cuenta === 'undefined' ? '' : cuenta),
     id_usuario: id_usuario || 0,
   },
 });
 
-export const NEW_SOLICITUD_INITIAL_STATE = (codigo: number, clienteToken: string, cuenta: string, id_usuario?: number): Partial<Cart> => ({
+export const NEW_SOLICITUD_INITIAL_STATE = (
+  codigo: number,
+  clienteToken: string,
+  cuenta: string,
+  id_usuario?: number,
+  clienteData?: Partial<Cart['cliente']>,
+): Partial<Cart> => ({
   ...DEFAULT_SOLICITUD,
   codigo,
   cliente: {
     ...DEFAULT_SOLICITUD.cliente!,
+    ...clienteData,
     equipo: clienteToken,
-    correo: cuenta === 'undefined' ? '' : cuenta,
+    correo:
+      clienteData?.correo ||
+      (cuenta === 'undefined' ? '' : cuenta),
     id_usuario: id_usuario || 0,
   },
 });

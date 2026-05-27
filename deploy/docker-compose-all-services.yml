@@ -11,6 +11,17 @@ services:
     networks:
       - app-network
 
+  # LocalStack (AWS emulation) - SQS
+  localstack:
+    image: localstack/localstack:3.5
+    environment:
+      - SERVICES=sqs
+      - DEBUG=${LOCALSTACK_DEBUG:-0}
+    ports:
+      - '4566:4566'
+    networks:
+      - app-network
+
   # API Gateway
   api-gateway:
     build:
@@ -37,6 +48,8 @@ services:
       - PAYMENTS_SERVICE_URL=deploy-payments-1
       - PRODUCTS_SERVICE_URL=deploy-products-1
       - IMAGE_SERVICE_URL=deploy-image-1
+      - SQS_ENDPOINT=${SQS_ENDPOINT:-http://localstack:4566}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
     volumes:
       - ../:/usr/src/app
       - /usr/src/app/node_modules
@@ -49,6 +62,7 @@ services:
       - content
       - payments
       - image
+      - localstack
     networks:
       - app-network
     extra_hosts:
@@ -206,6 +220,9 @@ services:
       - PAYMENTS_SERVICE_URL=deploy-payments-1
       - PRODUCTS_SERVICE_URL=deploy-products-1
       - IMAGE_SERVICE_URL=deploy-image-1
+      - SQS_ENDPOINT=${SQS_ENDPOINT:-http://localstack:4566}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - PAYMENTS_SQS_QUEUE_NAME=${PAYMENTS_SQS_QUEUE_NAME:-payments-jobs}
     volumes:
       - ../:/usr/src/app
       - /usr/src/app/node_modules

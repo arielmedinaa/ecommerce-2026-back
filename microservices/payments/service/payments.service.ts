@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { Payment } from '../schemas/payments.schema';
 import moment from 'moment-timezone';
 import { PaymentErrorService } from './errors/payment-error.service';
+import { PaymentsQueueService } from './payments.queue.service';
+import { PaymentIntent } from '../schemas/payment-intent.schema';
 
 @Injectable()
 export class PaymentsService {
@@ -13,7 +15,12 @@ export class PaymentsService {
     private readonly paymentRepositoryWrite: Repository<Payment>,
     @InjectRepository(Payment, 'READ_CONNECTION')
     private readonly paymentRepositoryRead: Repository<Payment>,
+    @InjectRepository(PaymentIntent, 'WRITE_CONNECTION')
+    private readonly paymentIntentRepositoryWrite: Repository<PaymentIntent>,
+    @InjectRepository(PaymentIntent, 'READ_CONNECTION')
+    private readonly paymentIntentRepositoryRead: Repository<PaymentIntent>,
     private readonly paymentErrorService: PaymentErrorService,
+    private readonly paymentsQueue: PaymentsQueueService,
   ) {}
 
   async registrarPago(
@@ -26,18 +33,18 @@ export class PaymentsService {
     descripcion?: string,
     respuestaPagopar?: any,
     respuestaBancard?: any,
-  ): Promise<{ data: Payment | null; success: boolean; message: string }> {
+  ): Promise<{ data: any; success: boolean; message: string }> {
     const idTransaccion = this.generarIdTransaccion();
     try {
-      const nuevoPago = this.paymentRepositoryWrite.create({
+      const intent = this.paymentIntentRepositoryWrite.create({
+        idTransaccion,
         codigoCarrito,
-        carrito,
-        estado: 'pendiente',
+        estado: 'creado',
         metodoPago,
         monto,
         moneda,
-        idTransaccion,
         descripcion: descripcion || `Pago del carrito ${codigoCarrito}`,
+        carrito: carrito || {},
         cliente: cliente || {
           equipo: '',
           nombre: '',
@@ -49,15 +56,25 @@ export class PaymentsService {
         respuestaPagopar: respuestaPagopar || {},
         respuestaBancard: respuestaBancard || {},
         metadatos: {},
-        procesado: new Date(),
-        expira: this.calcularFechaExpiracion(metodoPago),
-      });
+        expiraEn: this.calcularFechaExpiracion(metodoPago),
+      } as any);
+      const intentSaved = await this.paymentIntentRepositoryWrite.save(
+        intent as any,
+      );
 
-      await this.paymentRepositoryWrite.save(nuevoPago);
+      await this.paymentsQueue.enqueuePaymentIntentCreated(intentSaved.id);
       return {
-        data: nuevoPago,
+        data: {
+          idIntentoPago: intentSaved.id,
+          idTransaccion,
+          estado: intentSaved.estado,
+          codigoCarrito,
+          metodoPago,
+          monto,
+          moneda: moneda || 'PYG',
+        },
         success: true,
-        message: 'PAGO REGISTRADO CON ÉXITO',
+        message: 'INTENTO DE PAGO CREADO Y ENCOLADO',
       };
     } catch (error) {
       this.paymentErrorService.logMicroserviceError(
@@ -71,6 +88,108 @@ export class PaymentsService {
         message: `ERROR AL REGISTRAR PAGO: ${error.message}`,
       };
     }
+  }
+
+  async actualizarEstadoIntentoPago(
+    idIntentoPago: string,
+    estado: string,
+    ultimoError?: string,
+  ) {
+    const existing = await this.paymentIntentRepositoryRead.findOne({
+      where: { id: idIntentoPago },
+    });
+    if (!existing) return null;
+    await this.paymentIntentRepositoryWrite.update(
+      { id: idIntentoPago },
+      {
+        estado: estado as any,
+        ultimoError: ultimoError || null,
+        intentosReintento: existing.intentosReintento,
+      } as any,
+    );
+    return await this.paymentIntentRepositoryRead.findOne({
+      where: { id: idIntentoPago },
+    });
+  }
+
+  async marcarIntentoComoProcesando(idIntentoPago: string) {
+    const existing = await this.paymentIntentRepositoryRead.findOne({
+      where: { id: idIntentoPago },
+    });
+    if (!existing) return null;
+    if (existing.estado === 'completado' || existing.estado === 'cancelado') {
+      return existing;
+    }
+    await this.paymentIntentRepositoryWrite.update(
+      { id: idIntentoPago },
+      { estado: 'procesando' as any } as any,
+    );
+    return await this.paymentIntentRepositoryRead.findOne({
+      where: { id: idIntentoPago },
+    });
+  }
+
+  async registrarPagoDesdeIntento(
+    idIntentoPago: string,
+  ): Promise<Payment | null> {
+    const intent = await this.paymentIntentRepositoryRead.findOne({
+      where: { id: idIntentoPago },
+    });
+    if (!intent) return null;
+
+    // No duplicar pagos
+    const existingPayment = await this.paymentRepositoryRead.findOne({
+      where: { idTransaccion: intent.idTransaccion },
+    });
+    if (existingPayment) return existingPayment;
+
+    const nuevoPago = this.paymentRepositoryWrite.create({
+      codigoCarrito: intent.codigoCarrito,
+      carrito: intent.carrito || {},
+      estado: 'completado',
+      metodoPago: intent.metodoPago,
+      monto: intent.monto,
+      moneda: intent.moneda,
+      idTransaccion: intent.idTransaccion,
+      descripcion: intent.descripcion,
+      cliente: intent.cliente as any,
+      respuestaPagopar: intent.respuestaPagopar as any,
+      respuestaBancard: intent.respuestaBancard as any,
+      metadatos: intent.metadatos || {},
+      procesado: new Date(),
+      finalizado: new Date(),
+      finalizadoFlag: true,
+      procesadoFlag: true,
+      expira: intent.expiraEn as any,
+    } as any);
+
+    return (await this.paymentRepositoryWrite.save(nuevoPago as any)) as any;
+  }
+
+  async registrarFalloIntento(
+    idIntentoPago: string,
+    errorMessage: string,
+    proximoReintento?: Date,
+  ) {
+    const intent = await this.paymentIntentRepositoryRead.findOne({
+      where: { id: idIntentoPago },
+    });
+    if (!intent) return null;
+
+    const nextAttempts = (intent.intentosReintento || 0) + 1;
+    await this.paymentIntentRepositoryWrite.update(
+      { id: idIntentoPago },
+      {
+        estado: 'creado' as any, // vuelve a cola por retry
+        intentosReintento: nextAttempts,
+        ultimoError: errorMessage,
+        proximoReintento: proximoReintento || null,
+      } as any,
+    );
+
+    return await this.paymentIntentRepositoryRead.findOne({
+      where: { id: idIntentoPago },
+    });
   }
 
   async listarPagosPorCarrito(

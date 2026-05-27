@@ -7,8 +7,6 @@ import * as mysql from 'mysql2/promise';
 export class UtilsCart {
   private logger = new Logger();
   async insertarCarritos(parametros: any): Promise<number> {
-    const url = `${process.env.CENTRAL_APP_URL}`;
-
     return new Promise((resolve, reject) => {
       const postData = JSON.stringify(parametros);
 
@@ -130,5 +128,27 @@ export class UtilsCart {
     });
 
     return Array.from(mapaUnicos.values());
+  }
+
+  buildClienteFromToken(
+    decodedToken: any,
+    clienteToken: string,
+    cuenta?: string,
+    clienteActual?: any,
+  ) {
+    const idUsuario = parseInt(decodedToken?.sub || clienteActual?.id_usuario || 0);
+    const correoToken = decodedToken?.email || '';
+    const correoCuenta = cuenta && cuenta !== 'undefined' ? cuenta : '';
+
+    return {
+      ...clienteActual,
+      equipo: clienteToken,
+      razonsocial: decodedToken?.name || clienteActual?.razonsocial || '',
+      documento:
+        decodedToken?.numeroDocumento || clienteActual?.documento || '',
+      correo: correoToken || correoCuenta || clienteActual?.correo || '',
+      telefono: decodedToken?.numeroCelular || clienteActual?.telefono || '',
+      id_usuario: Number.isNaN(idUsuario) ? 0 : idUsuario,
+    };
   }
 }

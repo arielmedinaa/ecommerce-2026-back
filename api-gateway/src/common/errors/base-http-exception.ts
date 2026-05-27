@@ -58,6 +58,11 @@ export class BaseHttpException extends HttpException {
       })
     };
 
+    if (process.env.LOG_FORMAT === 'json') {
+      console.error(JSON.stringify(logData));
+      return;
+    }
+
     console.error('\n' + '='.repeat(80));
     console.error('SNEAKY THROWS ERROR DETECTED');
     console.error('='.repeat(80));
@@ -67,18 +72,10 @@ export class BaseHttpException extends HttpException {
     console.error(`Context: ${logData.context}`);
     console.error(`Status Code: ${logData.statusCode} ${logData.error}`);
     console.error(`Message: ${logData.message}`);
-    
-    if (logData.field) {
-      console.error(`Field: ${logData.field}`);
-    }
-    
-    if (logData.line) {
-      console.error(`Line: ${logData.line}`);
-    }
-    
-    if (logData.path) {
-      console.error(`Path: ${logData.path}`);
-    }
+
+    if (logData.field) console.error(`Field: ${logData.field}`);
+    if (logData.line) console.error(`Line: ${logData.line}`);
+    if (logData.path) console.error(`Path: ${logData.path}`);
 
     if (logData.originalError) {
       console.error('\n🔍 Original Error Details:');

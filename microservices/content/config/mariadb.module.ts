@@ -59,6 +59,12 @@ export class MariaDbModule {
         logging: process.env.SYNCRONICE === 'true',
         timezone: '-03:00',
         charset: 'utf8mb4',
+        keepConnectionAlive: true,
+        retryAttempts: Number(process.env.DB_RETRY_ATTEMPTS || 10),
+        retryDelay: Number(process.env.DB_RETRY_DELAY_MS || 3000),
+        extra: {
+          connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
+        },
       }),
       inject: [ConfigService],
     });
@@ -96,6 +102,12 @@ export class MariaDbModule {
         logging: process.env.SYNCRONICE === 'true',
         timezone: '-03:00',
         charset: 'utf8mb4',
+        keepConnectionAlive: true,
+        retryAttempts: Number(process.env.DB_RETRY_ATTEMPTS || 10),
+        retryDelay: Number(process.env.DB_RETRY_DELAY_MS || 3000),
+        extra: {
+          connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
+        },
       }),
       inject: [ConfigService],
     });

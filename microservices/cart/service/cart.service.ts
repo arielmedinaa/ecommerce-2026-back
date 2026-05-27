@@ -69,6 +69,12 @@ export class CartContadoService {
       };
     }
 
+    const clienteData = this.utilsCart.buildClienteFromToken(
+      decoded,
+      clienteToken,
+      cuenta,
+    );
+
     const validation = await this.cartValidationService.validateCartPayload(
       clienteToken,
       cuenta,
@@ -191,7 +197,6 @@ export class CartContadoService {
       }
     }
 
-    // Evaluar condiciones dinámicas del evento (si las hay)
     if (
       eventoValidation.condiciones &&
       eventoValidation.condiciones.length > 0
@@ -262,6 +267,7 @@ export class CartContadoService {
           clienteToken,
           cuenta,
           usuario_id,
+          clienteData,
         ),
         articulos: {
           [articuloTipo]: [producto],
@@ -374,6 +380,12 @@ export class CartContadoService {
       articuloTipo,
     );
     carritoExistente.articulos[articuloTipo] = articulosUnicos;
+    carritoExistente.cliente = this.utilsCart.buildClienteFromToken(
+      decoded,
+      clienteToken,
+      cuenta,
+      carritoExistente.cliente,
+    );
 
     await this.carritoWrite.save(carritoExistente);
 
@@ -874,6 +886,16 @@ export class CartContadoService {
     descripcion = paymentData.getDescripcion();
 
     try {
+      const clientePersistido = this.utilsCart.buildClienteFromToken(
+        decoded,
+        clienteToken,
+        cuenta,
+        {
+          ...carrito.cliente,
+          ...process.cliente,
+        },
+      );
+
       this.logger.log('Registrando pago en payments service');
       const pagoResponse = await firstValueFrom(
         this.paymentsService.send(
@@ -884,10 +906,7 @@ export class CartContadoService {
             metodoPago: metodoPago,
             monto: montoTotal,
             moneda: process.moneda || 'PYG',
-            cliente: {
-              ...process.cliente,
-              equipo: clienteToken,
-            },
+            cliente: clientePersistido,
             descripcion: descripcion,
             respuestaPagopar:
               metodoPago === 'pagopar' ? process.pagoparResponse || {} : {},
@@ -900,15 +919,13 @@ export class CartContadoService {
       await this.carritoWrite.update(carrito.id!, {
         pago: {
           ...process,
-          pagoId: pagoResponse.data.idTransaccion,
+          pagoId: pagoResponse.data?.idTransaccion,
+          intentoPagoId: pagoResponse.data?.idIntentoPago,
           registradoEnPayments: true,
         },
         estado: '0',
         finished: '1',
-        cliente: {
-          ...process.cliente,
-          equipo: clienteToken,
-        },
+        cliente: clientePersistido,
         envio: process?.envio || {},
       });
 
@@ -991,7 +1008,7 @@ export class CartContadoService {
       return {
         data: [pagoResponse.data],
         success: true,
-        message: 'CARRITO FINALIZADO Y PAGO REGISTRADO CON ÉXITO',
+        message: 'CARRITO FINALIZADO E INTENTO DE PAGO ENCOLADO',
       };
     } catch (error) {
       await this.cartErrorService.logMicroserviceError(
@@ -1086,6 +1103,8 @@ export class CartContadoService {
           codigo!,
           clienteToken,
           cuenta || '',
+          Number(datos.cliente?.id_usuario || 0),
+          datos.cliente,
         );
 
         solicitudContado.cliente = {
@@ -1147,6 +1166,8 @@ export class CartContadoService {
           codigo!,
           clienteToken,
           cuenta || '',
+          Number(datos.cliente?.id_usuario || 0),
+          datos.cliente,
         );
 
         nuevaSolicitud.cliente = {

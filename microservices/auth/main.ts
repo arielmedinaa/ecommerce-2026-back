@@ -4,9 +4,16 @@ import { AuthModule } from './auth.module';
 import { Logger } from '@nestjs/common';
 import { SERVICE_PORTS } from '@shared/config/microservice/microservice.config';
 import { ConfigService } from '@nestjs/config';
+import { JsonLogger } from '@shared/common/logging/json-logger';
+import { RpcRequestContextInterceptor } from '@shared/common/interceptors/rpc-request-context.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AuthModule);
+  const app = await NestFactory.create(AuthModule, {
+    abortOnError: false,
+    logger:
+      process.env.LOG_FORMAT === 'json' ? new JsonLogger('auth') : undefined,
+  });
+  app.useGlobalInterceptors(new RpcRequestContextInterceptor());
   const configService = app.get(ConfigService);
   const microservicePort = configService.get<number>('AUTH_PORT', SERVICE_PORTS.AUTH);
   
@@ -27,7 +34,24 @@ async function bootstrap() {
   logger.log(`Microservice is listening on TCP host ${process.env.AUTH_SERVICE_HOST || 'localhost'} port ${microservicePort}`);
 }
 
-bootstrap().catch(err => {
-  console.error('Error starting auth microservice:', err);
-  process.exit(1);
-});
+async function bootstrapWithRetry() {
+  let attempt = 0;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    try {
+      attempt++;
+      await bootstrap();
+      break;
+    } catch (err) {
+      const delayMs = Math.min(30000, 1000 * attempt);
+      // eslint-disable-next-line no-console
+      console.error(
+        `Auth bootstrap failed (attempt ${attempt}). Retrying in ${delayMs}ms`,
+        err,
+      );
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+}
+
+bootstrapWithRetry();

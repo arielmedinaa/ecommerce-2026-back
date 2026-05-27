@@ -26,7 +26,13 @@ export class MariaDbModule {
         database: configService.get<string>('ECONT_DB_DATABASE'),
         entities: [Product, Combo, Promo, Oferta, ProductoOferta, ProductsImage],
         synchronize: process.env.SYNCRONICE === 'true',
-        logging: false,
+        logging: process.env.SYNCRONICE === 'true',
+        keepConnectionAlive: true,
+        retryAttempts: Number(process.env.DB_RETRY_ATTEMPTS || 10),
+        retryDelay: Number(process.env.DB_RETRY_DELAY_MS || 3000),
+        extra: {
+          connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
+        },
       }),
       inject: [ConfigService],
     });
@@ -45,7 +51,13 @@ export class MariaDbModule {
         database: configService.get<string>('DATABASE_NAME'),
         entities: [ProductsImage],
         synchronize: process.env.SYNCRONICE === 'true',
-        logging: false,
+        logging: process.env.SYNCRONICE === 'true',
+        keepConnectionAlive: true,
+        retryAttempts: Number(process.env.DB_RETRY_ATTEMPTS || 10),
+        retryDelay: Number(process.env.DB_RETRY_DELAY_MS || 3000),
+        extra: {
+          connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
+        },
       }),
       inject: [ConfigService],
     });
@@ -64,7 +76,13 @@ export class MariaDbModule {
         database: configService.get<string>('DATABASE_NAME'),
         entities: [ProductsImage],
         synchronize: process.env.SYNCRONICE === 'true',
-        logging: false,
+        logging: process.env.SYNCRONICE === 'true',
+        keepConnectionAlive: true,
+        retryAttempts: Number(process.env.DB_RETRY_ATTEMPTS || 10),
+        retryDelay: Number(process.env.DB_RETRY_DELAY_MS || 3000),
+        extra: {
+          connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
+        },
       }),
       inject: [ConfigService],
     });
@@ -83,7 +101,13 @@ export class MariaDbModule {
         database: configService.get<string>('ECONT_DB_DATABASE'),
         entities: [Product, Combo, Promo, Oferta, ProductoOferta, ProductsImage],
         synchronize: process.env.SYNCRONICE === 'true',
-        logging: false,
+        logging: process.env.SYNCRONICE === 'true',
+        keepConnectionAlive: true,
+        retryAttempts: Number(process.env.DB_RETRY_ATTEMPTS || 10),
+        retryDelay: Number(process.env.DB_RETRY_DELAY_MS || 3000),
+        extra: {
+          connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
+        },
       }),
       inject: [ConfigService],
     });
@@ -102,7 +126,13 @@ export class MariaDbModule {
         database: configService.get<string>('DATABASE_NAME'),
         entities: [Oferta, ProductoOferta],
         synchronize: process.env.SYNCRONICE === 'true',
-        logging: false,
+        logging: process.env.SYNCRONICE === 'true',
+        keepConnectionAlive: true,
+        retryAttempts: Number(process.env.DB_RETRY_ATTEMPTS || 10),
+        retryDelay: Number(process.env.DB_RETRY_DELAY_MS || 3000),
+        extra: {
+          connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
+        },
       }),
       inject: [ConfigService],
     });
@@ -121,7 +151,13 @@ export class MariaDbModule {
         database: configService.get<string>('DATABASE_NAME_REPLIC'),
         entities: [Oferta, ProductoOferta],
         synchronize: process.env.SYNCRONICE === 'true',
-        logging: false,
+        logging: process.env.SYNCRONICE === 'true',
+        keepConnectionAlive: true,
+        retryAttempts: Number(process.env.DB_RETRY_ATTEMPTS || 10),
+        retryDelay: Number(process.env.DB_RETRY_DELAY_MS || 3000),
+        extra: {
+          connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
+        },
       }),
       inject: [ConfigService],
     });

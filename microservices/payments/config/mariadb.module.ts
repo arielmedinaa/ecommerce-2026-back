@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Payment } from '../schemas/payments.schema';
 import { MariaDbConnectionService } from './mariadb-connection.service';
+import { PaymentIntent } from '../schemas/payment-intent.schema';
 
 @Module({
   imports: [
@@ -28,9 +29,15 @@ export class MariaDbModule {
         username: configService.get<string>('DATABASE_USER'),
         password: configService.get<string>('DATABASE_PASSWORD'),
         database: configService.get<string>('DATABASE_NAME'),
-        entities: [Payment],
+        entities: [Payment, PaymentIntent],
         synchronize: process.env.SYNCRONICE === 'true',
-        logging: true,
+        logging: process.env.SYNCRONICE === 'true',
+        keepConnectionAlive: true,
+        retryAttempts: Number(process.env.DB_RETRY_ATTEMPTS || 10),
+        retryDelay: Number(process.env.DB_RETRY_DELAY_MS || 3000),
+        extra: {
+          connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
+        },
       }),
       inject: [ConfigService],
     });
@@ -47,19 +54,25 @@ export class MariaDbModule {
         username: configService.get<string>('DATABASE_USER_REPLIC'),
         password: configService.get<string>('DATABASE_PASSWORD_REPLIC'),
         database: configService.get<string>('DATABASE_NAME_REPLIC'),
-        entities: [Payment],
+        entities: [Payment, PaymentIntent],
         synchronize: process.env.SYNCRONICE === 'true',
-        logging: true,
+        logging: process.env.SYNCRONICE === 'true',
+        keepConnectionAlive: true,
+        retryAttempts: Number(process.env.DB_RETRY_ATTEMPTS || 10),
+        retryDelay: Number(process.env.DB_RETRY_DELAY_MS || 3000),
+        extra: {
+          connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
+        },
       }),
       inject: [ConfigService],
     });
   }
 
   static forFeature(): DynamicModule {
-    return TypeOrmModule.forFeature([Payment], 'WRITE_CONNECTION');
+    return TypeOrmModule.forFeature([Payment, PaymentIntent], 'WRITE_CONNECTION');
   }
 
   static forFeatureRead(): DynamicModule {
-    return TypeOrmModule.forFeature([Payment], 'READ_CONNECTION');
+    return TypeOrmModule.forFeature([Payment, PaymentIntent], 'READ_CONNECTION');
   }
 }

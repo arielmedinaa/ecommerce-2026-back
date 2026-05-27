@@ -22,7 +22,6 @@ export class HomeSection {
   @PrimaryGeneratedColumn()
   id: number;
 
-  // Identificador estable para referenciar desde el admin / frontend.
   @Column({ length: 80 })
   key: string;
 

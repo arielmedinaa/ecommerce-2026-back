@@ -1,4 +1,4 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../schemas/user.schemas';
@@ -7,8 +7,6 @@ import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class GuestService {
-  private readonly logger = new Logger(GuestService.name);
-
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
@@ -29,7 +27,18 @@ export class GuestService {
       existingGuest.ultimoInicioSesion = new Date();
       await this.userRepository.save(existingGuest);
       
-      const jwtToken = this.jwtService.sign({ sub: existingGuest.id });
+      const payload = {
+        sub: existingGuest.id.toString(),
+        email: existingGuest.email,
+        name: existingGuest.nombre,
+        provider: existingGuest.proveedor,
+        etiquetas: existingGuest.etiquetas || [],
+        cupones: [],
+        perfil: existingGuest.perfil || "cliente",
+        numeroCelular: existingGuest.numeroCelular || "",
+        numeroDocumento: existingGuest.numeroDocumento || ""
+      };
+      const jwtToken = this.jwtService.sign(payload, { expiresIn: '7d' });
       return { token: jwtToken, user: existingGuest };
     }
 
@@ -44,8 +53,20 @@ export class GuestService {
       fechaExpiracion: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días
     });
 
+    const payload = {
+      sub: guestUser.id.toString(),
+      email: guestUser.email,
+      name: guestUser.nombre,
+      provider: guestUser.proveedor,
+      etiquetas: guestUser.etiquetas || [],
+      cupones: [],
+      perfil: guestUser.perfil || "cliente",
+      numeroCelular: guestUser.numeroCelular || "",
+      numeroDocumento: guestUser.numeroDocumento || ""
+    };
+
     await this.userRepository.save(guestUser);
-    const jwtToken = this.jwtService.sign({ sub: guestUser.id });
+    const jwtToken = this.jwtService.sign(payload, { expiresIn: '7d' });
     return { token: jwtToken, user: guestUser };
   }
 }
