@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Payment } from '../schemas/payments.schema';
 import moment from 'moment-timezone';
 import { PaymentErrorService } from './errors/payment-error.service';
-import { PaymentsQueueService } from './payments.queue.service';
+import { PaymentsQueueService } from '../queue/payments.queue.service';
 import { PaymentIntent } from '../schemas/payment-intent.schema';
 
 @Injectable()
@@ -137,7 +137,6 @@ export class PaymentsService {
     });
     if (!intent) return null;
 
-    // No duplicar pagos
     const existingPayment = await this.paymentRepositoryRead.findOne({
       where: { idTransaccion: intent.idTransaccion },
     });
@@ -180,7 +179,7 @@ export class PaymentsService {
     await this.paymentIntentRepositoryWrite.update(
       { id: idIntentoPago },
       {
-        estado: 'creado' as any, // vuelve a cola por retry
+        estado: 'creado' as any,
         intentosReintento: nextAttempts,
         ultimoError: errorMessage,
         proximoReintento: proximoReintento || null,

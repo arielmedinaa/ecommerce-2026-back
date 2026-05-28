@@ -13,24 +13,43 @@ export const SERVICE_PORTS = {
 
 type ServiceName = keyof typeof SERVICE_PORTS;
 
+const parsePort = (value: unknown): number | undefined => {
+  if (value === undefined || value === null) return;
+  const str = String(value).trim();
+  if (!str) return;
+  if (/^\d+$/.test(str)) return Number(str);
+
+  // Kubernetes injects env vars like AUTH_SERVICE_PORT=tcp://10.96.x.y:3101
+  // Accept that format too.
+  const match = str.match(/:(\d+)$/);
+  if (match) return Number(match[1]);
+};
+
 export const getMicroserviceConfig = (serviceName: string) => {
   const service = serviceName.toUpperCase() as ServiceName;
-  const port = Number(process.env[`${service}_PORT`] || 
-              SERVICE_PORTS[service] || 
-              process.env.PORT || 
-              3000);
+  const serviceAlias = service.replace('_SERVICE', '');
+  const port =
+    parsePort(process.env[`${service}_PORT`]) ??
+    parsePort(process.env[`${serviceAlias}_PORT`]) ??
+    SERVICE_PORTS[service] ??
+    parsePort(process.env.PORT) ??
+    3000;
 
-  const host = process.env.IS_DOCKER
+  const configuredHost =
+    process.env[`${service}_URL`] ||
+    process.env[`${serviceAlias}_SERVICE_URL`];
+  const fallbackHost = process.env.IS_DOCKER
     ? `deploy-${serviceName.replace('_SERVICE', '').toLowerCase()}-1`
     : 'localhost';
-  
+  const host = configuredHost || fallbackHost;
+
   console.log(`Configuring ${service} microservice at ${host}:${port}`);
-  
+
   return {
     transport: Transport.TCP,
     options: {
-      host: host,
-      port: port,
+      host,
+      port,
     },
   };
 };

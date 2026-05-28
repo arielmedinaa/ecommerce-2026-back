@@ -6,8 +6,12 @@ metadata:
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   ingressClassName: nginx
+  tls:
+  - hosts:
+    - api.localhost.localstack.cloud
+    secretName: api-gateway-tls
   rules:
-  - host: api.ecommerce.local # Se debe mapear a 127.0.0.1 (minikube tunnel)
+  - host: api.localhost.localstack.cloud
     http:
       paths:
       - path: /

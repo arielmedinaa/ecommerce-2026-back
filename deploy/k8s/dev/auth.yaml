@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: auth-service
-        image: auth-service-dev:latest
+        image: localhost/auth-service:latest
         imagePullPolicy: Never
         ports:
         - containerPort: 3101

@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: api-gateway
-        image: api-gateway-dev:latest
+        image: localhost/api-gateway:latest
         imagePullPolicy: Never # Usa imagenes locales en minikube
         ports:
         - containerPort: 3100

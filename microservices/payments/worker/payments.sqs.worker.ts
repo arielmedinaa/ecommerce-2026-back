@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { SqsService } from '@shared/common/queue/sqs/sqs.service';
 import { resolveQueueUrl } from '@shared/common/queue/sqs/sqs.util';
-import { PaymentsService } from './payments.service';
+import { PaymentsService } from '../service/payments.service';
 
 @Injectable()
 export class PaymentsSqsWorker implements OnModuleDestroy {

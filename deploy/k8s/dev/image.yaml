@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: image-service
-        image: image-service-dev:latest
+        image: localhost/image-service:latest
         imagePullPolicy: Never
         ports:
         - containerPort: 4093

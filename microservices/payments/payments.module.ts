@@ -7,8 +7,8 @@ import { PaymentErrorService } from './service/errors/payment-error.service';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ErrorLoggingInterceptor } from './interceptors/error-logging.interceptor';
 import { SqsModule } from '@shared/common/queue/sqs/sqs.module';
-import { PaymentsQueueService } from './service/payments.queue.service';
-import { PaymentsSqsWorker } from './service/payments.sqs.worker';
+import { PaymentsQueueService } from './queue/payments.queue.service';
+import { PaymentsSqsWorker } from './worker/payments.sqs.worker';
 
 @Module({
   imports: [

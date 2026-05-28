@@ -1,0 +1,21 @@
+image:
+  repository: localstack/localstack
+  tag: "3.5"
+
+service:
+  type: ClusterIP
+
+extraEnvVars:
+  - name: SERVICES
+    value: "s3,sqs,cloudfront,iam,sts"
+  - name: AWS_DEFAULT_REGION
+    value: "us-east-1"
+  - name: DEBUG
+    value: "0"
+  - name: PERSISTENCE
+    value: "0"
+
+startupScriptContent: |
+  #!/bin/bash
+  set -euo pipefail
+  awslocal sqs create-queue --queue-name payments-jobs >/dev/null 2>&1 || true

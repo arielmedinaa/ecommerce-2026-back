@@ -20,9 +20,9 @@ RUN yarn install --network-timeout 600000 && \
     yarn add @nestjs/typeorm typeorm mysql2 && \
     yarn add -D tsconfig-paths
 
-COPY microservices/cart/ ./src/
+COPY microservices/cart/ ./microservices/cart/
 COPY shared/ ./shared/
 
 EXPOSE 3101
 
-CMD ["yarn", "start:dev"]
+CMD ["yarn", "start:dev:cart"]

@@ -6,7 +6,7 @@ import { SERVICE_PORTS } from "@shared/config/microservice/microservice.config";
 import { Transport } from "@nestjs/microservices";
 import { JsonLogger } from "@shared/common/logging/json-logger";
 import { RpcRequestContextInterceptor } from "@shared/common/interceptors/rpc-request-context.interceptor";
-import { PaymentsSqsWorker } from "./service/payments.sqs.worker";
+import { PaymentsSqsWorker } from "./worker/payments.sqs.worker";
 
 async function bootstrap() {
     const app = await NestFactory.create(PaymentModule, {

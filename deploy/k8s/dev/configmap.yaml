@@ -7,9 +7,11 @@ data:
   NODE_ENV: "development"
   IS_DOCKER: "true"
   RUN_MODE: "all"
+  LOG_FORMAT: "json"
   
   # API Gateway
   PORT: "3100"
+  GATEWAY_PORT: "3100"
   CORS_ORIGIN: "http://localhost:5173"
   
   # Microservices Ports
@@ -27,3 +29,27 @@ data:
   PAYMENTS_SERVICE_URL: "payments-service"
   PRODUCTS_SERVICE_URL: "products-service"
   IMAGE_SERVICE_URL: "image-service"
+
+  # Database (Local dev: mariadb Service)
+  DATABASE_HOST: "mariadb"
+  DATABASE_PORT: "3306"
+  DATABASE_USER: "ecommerce"
+  DATABASE_PASSWORD: "ecommerce"
+  DATABASE_NAME: "ecommerce"
+  SYNCRONICE: "false"
+  DB_RETRY_ATTEMPTS: "30"
+  DB_RETRY_DELAY_MS: "3000"
+  DB_CONNECT_TIMEOUT_MS: "10000"
+
+  # Google OAuth (optional; leave blank to disable)
+  GOOGLE_CLIENT_ID: ""
+  GOOGLE_CLIENT_SECRET: ""
+  GOOGLE_CALLBACK_URL: "http://localhost:3101/auth/google/callback"
+
+  # LocalStack (in-cluster)
+  SQS_ENDPOINT: "http://localstack.localstack.svc.cluster.local:4566"
+  AWS_REGION: "us-east-1"
+  AWS_ACCESS_KEY_ID: "test"
+  AWS_SECRET_ACCESS_KEY: "test"
+  PAYMENTS_SQS_QUEUE_NAME: "payments-jobs"
+  PAYMENTS_SQS_WORKER_ENABLED: "true"

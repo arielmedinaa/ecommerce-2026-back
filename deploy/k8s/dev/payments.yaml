@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: payments-service
-        image: payments-service-dev:latest
+        image: localhost/payments-service:latest
         imagePullPolicy: Never
         ports:
         - containerPort: 3105

@@ -11,9 +11,11 @@ RUN apk add --no-cache \
 
 RUN npm install -g nodemon ts-node tsconfig-paths
 
-COPY microservices/products/package*.json .
+COPY package*.json ./
 COPY yarn.lock ./
+COPY nest-cli.json ./
 COPY tsconfig.json ./
+COPY tsconfig.build.json ./
 COPY tsconfig.paths.json ./
 
 RUN yarn config set network-timeout 600000 && \
@@ -21,9 +23,10 @@ RUN yarn config set network-timeout 600000 && \
     yarn install --network-timeout 600000 || \
     npm install --registry https://registry.npmjs.org/ --timeout=600000
 
-COPY microservices/products/ ./microservices/products/
+COPY api-gateway/ ./api-gateway/
+COPY microservices/ ./microservices/
 COPY shared/ ./shared/
 
-EXPOSE 3106
+EXPOSE 3100
 
-CMD ["yarn", "start:dev:products"]
+CMD ["yarn", "start:dev:gateway"]
