@@ -15,7 +15,7 @@ services:
   localstack:
     image: localstack/localstack:3.5
     environment:
-      - SERVICES=sqs
+      - SERVICES=s3,sqs,cloudfront,iam,sts
       - DEBUG=${LOCALSTACK_DEBUG:-0}
     ports:
       - '4566:4566'
@@ -246,6 +246,13 @@ services:
       - IMAGE_PORT=3107
       #- MONGO_URL=${MONGO_URL}
       - IS_DOCKER=true
+      - IMAGE_STORAGE_PROVIDER=s3
+      - IMAGE_S3_ENDPOINT=${S3_ENDPOINT:-http://localstack:4566}
+      - IMAGE_S3_BUCKET=${IMAGE_S3_BUCKET:-ecommerce-images}
+      - IMAGE_S3_KEY_PREFIX=${IMAGE_S3_KEY_PREFIX:-banners}
+      - IMAGE_S3_ENSURE_BUCKET=${IMAGE_S3_ENSURE_BUCKET:-true}
+      - IMAGE_S3_EXTERNAL_BASE_URL=${IMAGE_S3_EXTERNAL_BASE_URL:-http://localhost:4566/ecommerce-images}
+      - IMAGE_CDN_BASE_URL=${IMAGE_CDN_BASE_URL:-}
     # ports:
     #   - "3107:3107"
     volumes:

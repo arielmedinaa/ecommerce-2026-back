@@ -39,6 +39,28 @@ export class ProductsController {
     }
   }
 
+  @MessagePattern({ cmd: 'get_products_facets' })
+  async getProductsFacets() {
+    try {
+      const data = await this.productsService.getFacets();
+      return { data, success: true, message: 'FACETAS DE PRODUCTOS' };
+    } catch (error) {
+      this.logger.error('Error in get_products_facets:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'get_products_stats' })
+  async getProductsStats() {
+    try {
+      const data = await this.productsService.getStats();
+      return { data, success: true, message: 'STATS DE PRODUCTOS' };
+    } catch (error) {
+      this.logger.error('Error in get_products_stats:', error);
+      throw error;
+    }
+  }
+
   @MessagePattern({ cmd: 'get_products_prefetch' })
   async prefetchFindAll(@Payload() filters: any = {}) {
     return await this.productsService.prefetchfindAll(filters);
@@ -64,14 +86,39 @@ export class ProductsController {
     return await this.productsService.getProductsJota(filters);
   }
 
+  @MessagePattern({ cmd: 'get_products_by_codigos' })
+  async getProductsByCodigos(
+    @Payload() payload: { codigos: string[]; limit?: number },
+  ) {
+    try {
+      return await this.productsService.getProductsByCodigos(
+        payload?.codigos || [],
+        payload?.limit ?? 24,
+      );
+    } catch (error) {
+      this.logger.error('Error in get_products_by_codigos:', error);
+      throw error;
+    }
+  }
+
   @MessagePattern({ cmd: 'create_oferta' })
   async createOferta(ofertaData: any) {
-    return await this.ofertasService.createOrUpdateOferta(ofertaData);
+    // Si viene id/codigo, es UPDATE (agregar/quitar productos de una oferta existente).
+    const codigo = ofertaData?.id ?? ofertaData?.codigo;
+    return await this.ofertasService.createOrUpdateOferta(
+      ofertaData,
+      codigo ? Number(codigo) : undefined,
+    );
   }
   
   @MessagePattern({ cmd: 'get_ofertas' })
   async getOfertas(@Payload() filters: { limit: number; offset: number }) {
     return await this.ofertasService.getAllOfertas(filters);
+  }
+
+  @MessagePattern({ cmd: 'get_oferta_by_id' })
+  async getOfertaById(@Payload() payload: { id: number }) {
+    return await this.ofertasService.getOfertaById(Number(payload?.id));
   }
   
   @MessagePattern({ cmd: 'create_promo' })
@@ -109,6 +156,26 @@ export class ProductsController {
     } catch (error) {
       this.logger.error('Error in get_product_images:', error);
       throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'get_product_image_file' })
+  async getProductImageFile(@Payload() data: { filename: string }) {
+    try {
+      const { buffer, contentType } = await this.productsImagesService.getProductImageFile(
+        data.filename,
+      );
+      return {
+        data: { buffer, contentType },
+        message: 'Archivo de imagen de producto obtenido exitosamente',
+        success: true,
+      };
+    } catch (error) {
+      return {
+        data: null,
+        message: error?.message || 'Error obteniendo imagen de producto',
+        success: false,
+      };
     }
   }
 

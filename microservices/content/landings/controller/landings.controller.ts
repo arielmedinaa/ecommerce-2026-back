@@ -13,8 +13,11 @@ export class LandingsController {
     data: {};
     message?: any;
   }> {
-    const { createLandingDto, usuario } = payload;
-    return this.landingsService.crearLanding(createLandingDto, usuario);
+    const { createLandingDto, usuario, userId } = payload;
+    return this.landingsService.crearLanding(
+      createLandingDto,
+      usuario || userId || 'admin',
+    );
   }
 
   @MessagePattern({ cmd: 'getAllLandings' })
@@ -42,6 +45,23 @@ export class LandingsController {
     return this.landingsService.getLandingById(id);
   }
 
+  @MessagePattern({ cmd: 'getLandingBySlug' })
+  async getLandingBySlug(@Payload() payload: any): Promise<Landing> {
+    const { slug } = payload;
+    return this.landingsService.getLandingBySlug(slug);
+  }
+
+  @MessagePattern({ cmd: 'togglePublishLanding' })
+  async togglePublishLanding(@Payload() payload: any): Promise<Landing> {
+    const { id, userId } = payload;
+    return this.landingsService.togglePublishLanding(id, userId);
+  }
+
+  @MessagePattern({ cmd: 'getLandingStats' })
+  async getLandingStats(): Promise<any> {
+    return this.landingsService.getLandingsStats();
+  }
+
   @MessagePattern({ cmd: 'updateLanding' })
   async updateLanding(@Payload() payload: any): Promise<Landing> {
     const { id, updateLandingDto, userId } = payload;
@@ -49,9 +69,10 @@ export class LandingsController {
   }
 
   @MessagePattern({ cmd: 'deleteLanding' })
-  async deleteLanding(@Payload() payload: any): Promise<void> {
+  async deleteLanding(@Payload() payload: any): Promise<{ success: boolean }> {
     const { id } = payload;
-    return this.landingsService.deleteLanding(id);
+    await this.landingsService.deleteLanding(id);
+    return { success: true };
   }
 
   @MessagePattern({ cmd: 'getAllFormatos' })

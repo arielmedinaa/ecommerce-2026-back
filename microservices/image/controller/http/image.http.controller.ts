@@ -45,10 +45,28 @@ export class ImageHttpController {
       device = 'desktop';
     }
     try {
-      const filePath = await this.bannerService.getBannerImage(nombre, device);
-      if (!fs.existsSync(filePath)) {
-        throw new NotFoundException('La imagen solicitada no existe');
+      const location = await this.bannerService.getBannerImage(nombre, device);
+      if (location.kind === 'url') {
+        // If bucket is private and we generate signed URLs with an internal endpoint,
+        // the browser won't reach it. In that case, proxy the bytes through this service.
+        if (String(process.env.IMAGE_S3_SIGNED_URLS || '').toLowerCase() === 'true') {
+          const { buffer, contentType } = await this.bannerService.getBannerFileBuffer(nombre, device);
+          res.set({
+            'Content-Type': contentType || 'image/webp',
+            'Cache-Control': 'public, max-age=86400',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          });
+          return res.status(HttpStatus.OK).send(buffer);
+        }
+        // CDN/S3 delivery: redirect to the object URL (so browser caches and CDN does the heavy lifting)
+        return res.redirect(HttpStatus.FOUND, location.value);
       }
+
+      const filePath = location.value;
+      if (!fs.existsSync(filePath)) throw new NotFoundException('La imagen solicitada no existe');
+
       const ext = path.extname(filePath).toLowerCase();
       let contentType = 'image/webp';
 

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ProductsImage } from '../schemas/products-image.schema';
 import { Product } from '../schemas/product.schemas';
+import { ImageStorageService } from '@shared/common/services/image-storage.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -22,7 +23,7 @@ interface MulterFile {
 export class ProductsImagesService {
   private readonly logger = new Logger(ProductsImagesService.name);
   private readonly imagesPath = '/home/appuser/Documents/projects/newEcommerce2026/imagesEcommerce/productos';
-  private readonly baseUrl = process.env.API_GATEWAY_URL;
+  private readonly baseUrl = String(process.env.API_GATEWAY_URL || '').replace(/\/+$/, '');
 
   constructor(
     @InjectRepository(ProductsImage, 'WRITE_ECOMMERCE_PRODUCTS_CONNECTION')
@@ -31,8 +32,14 @@ export class ProductsImagesService {
     private readonly productsImagesReadRepository: Repository<ProductsImage>,
     @InjectRepository(Product, 'READ_CONNECTION')
     private readonly productReadRepository: Repository<Product>,
+    private readonly imageStorage: ImageStorageService,
   ) {
     this.ensureDirectoryExists();
+  }
+
+  /** S3 key bajo la que se guardan las imágenes de producto (mismo bucket que banners). */
+  private productKey(fileName: string): string {
+    return `products/images/${fileName}`;
   }
 
   private ensureDirectoryExists() {
@@ -96,8 +103,17 @@ export class ProductsImagesService {
         throw new Error(`Formato de archivo inválido: ${typeof file.buffer}`);
       }
       
-      fs.writeFileSync(filePath, bufferData);
-      const cdnUrl = `${this.baseUrl}products/images/${fileName}`;
+      if (this.imageStorage.isS3()) {
+        await this.imageStorage.putObject({
+          key: this.productKey(fileName),
+          body: bufferData,
+          contentType: 'image/webp',
+          cacheControl: 'public, max-age=86400',
+        });
+      } else {
+        fs.writeFileSync(filePath, bufferData);
+      }
+      const cdnUrl = `${this.baseUrl}/products/images/${fileName}`;
       const productImage = this.productsImagesWriteRepository.create({
         producto_codigo: productoCodigo,
         url_imagen: cdnUrl,
@@ -118,12 +134,38 @@ export class ProductsImagesService {
 
   async getImagesByProduct(productoCodigo: string): Promise<ProductsImage[]> {
     return await this.productsImagesReadRepository.find({
-      where: { 
+      where: {
         producto_codigo: productoCodigo,
-        activo: true 
+        activo: true
       },
       order: { orden: 'ASC', id: 'ASC' }
     });
+  }
+
+  /**
+   * Devuelve el binario de una imagen de producto para que el gateway lo sirva.
+   * En S3 lee del bucket; en modo local lee del disco (compatibilidad). Espejo de
+   * `BannerService.getBannerFileBuffer`.
+   */
+  async getProductImageFile(
+    filename: string,
+  ): Promise<{ buffer: Buffer; contentType: string }> {
+    if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      throw new NotFoundException('Archivo no encontrado');
+    }
+
+    if (this.imageStorage.isS3()) {
+      const { buffer, contentType } = await this.imageStorage.getObjectBuffer(
+        this.productKey(filename),
+      );
+      return { buffer, contentType: contentType || 'image/webp' };
+    }
+
+    const filePath = path.join(this.imagesPath, filename);
+    if (!fs.existsSync(filePath)) {
+      throw new NotFoundException('Imagen no encontrada');
+    }
+    return { buffer: fs.readFileSync(filePath), contentType: 'image/webp' };
   }
 
   async updateImage(
@@ -154,11 +196,7 @@ export class ProductsImagesService {
       throw new NotFoundException(`Imagen con id ${id} no encontrada`);
     }
 
-    const filePath = path.join(this.imagesPath, image.nombre_archivo);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      this.logger.log(`Archivo eliminado: ${image.nombre_archivo}`);
-    }
+    await this.removeStoredFile(image.nombre_archivo);
 
     await this.productsImagesWriteRepository.delete(id);
     this.logger.log(`Imagen eliminada: ${id}`);
@@ -171,10 +209,7 @@ export class ProductsImagesService {
     });
 
     for (const image of images) {
-      const filePath = path.join(this.imagesPath, image.nombre_archivo);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
+      await this.removeStoredFile(image.nombre_archivo);
     }
 
     await this.productsImagesWriteRepository.delete({ producto_codigo: productoCodigo });
@@ -192,17 +227,23 @@ export class ProductsImagesService {
     this.logger.log(`Imágenes reordenadas para producto: ${productoCodigo}`);
   }
 
-  // Simulación de subida a CDN AWS (futuro)
-  private async uploadToAWSCDN(filePath: string, fileName: string): Promise<string> {
-    // TODO: Implementar AWS S3 upload
-    // Por ahora, simula la URL del CDN
-    return `${this.baseUrl}/${fileName}`;
-  }
+  /**
+   * Borra el archivo físico de una imagen de producto: del bucket S3 si está en
+   * modo S3, o del disco local en caso contrario. No toca la BD.
+   */
+  private async removeStoredFile(fileName?: string): Promise<void> {
+    if (!fileName) return;
 
-  // Simulación de eliminación de CDN AWS (futuro)
-  private async deleteFromAWSCDN(fileName: string): Promise<void> {
-    // TODO: Implementar AWS S3 delete
-    // Por ahora, solo log
-    this.logger.log(`Simulación: Eliminando ${fileName} de AWS CDN`);
+    if (this.imageStorage.isS3()) {
+      await this.imageStorage.deleteObject(this.productKey(fileName));
+      this.logger.log(`Objeto S3 eliminado: ${this.productKey(fileName)}`);
+      return;
+    }
+
+    const filePath = path.join(this.imagesPath, fileName);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      this.logger.log(`Archivo eliminado: ${fileName}`);
+    }
   }
 }

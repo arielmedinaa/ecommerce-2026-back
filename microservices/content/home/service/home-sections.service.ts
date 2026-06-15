@@ -44,14 +44,15 @@ export class HomeSectionsService {
     try {
       const existing = await this.homeSectionRepoWrite.findOne({ where: { key } });
       if (existing) {
-        const updatePayload: Partial<HomeSection> = {
-          ...data,
-          key,
-          titulo: data.titulo ?? undefined,
-          config: data.config ?? undefined,
-        };
-        await this.homeSectionRepoWrite.update(existing.id, updatePayload as any);
-        return await this.homeSectionRepoWrite.findOne({ where: { id: existing.id } });
+        // Usamos save() sobre la entidad cargada (no update()): save corre el
+        // transformer de la columna json `config`, serializándola correctamente.
+        // update() pasaba el objeto crudo → MariaDB rechazaba el CHECK json_valid.
+        if (data.type !== undefined) existing.type = data.type as any;
+        if (data.orden !== undefined) existing.orden = data.orden;
+        if (data.activo !== undefined) existing.activo = data.activo;
+        existing.titulo = data.titulo ?? null;
+        existing.config = data.config ?? null;
+        return await this.homeSectionRepoWrite.save(existing);
       }
       const created = this.homeSectionRepoWrite.create({
         key,

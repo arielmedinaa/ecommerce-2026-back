@@ -369,6 +369,23 @@ export class PromotionsService {
     return top || null;
   }
 
+  // Devuelve los codigos de producto asociados a una promocion (para el carrusel
+  // de landings). Orden estable por mas vendidos / mas vistos.
+  async getPromotionProducts(promoId: number): Promise<{
+    promoId: number;
+    codigos: string[];
+    total: number;
+  }> {
+    const rows = await this.promotionProductRepositoryRead.find({
+      where: { promoId, activo: true },
+      order: { soldCount: 'DESC', viewCount: 'DESC' },
+    });
+    const codigos = rows
+      .map((r) => String(r.producto_codigo ?? '').trim())
+      .filter(Boolean);
+    return { promoId, codigos, total: codigos.length };
+  }
+
   async getLastVisitedPromosByUser(userId: string, limit: number = 10) {
     const visits = await this.promotionVisitRepositoryRead.find({
       where: { userId },

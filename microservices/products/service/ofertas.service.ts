@@ -142,6 +142,35 @@ export class OfertasService {
     }
   }
 
+  async getOfertaById(id: number): Promise<{
+    data: any;
+    message: string;
+    success: boolean;
+  }> {
+    try {
+      const oferta = await this.ofertaReadRepository.findOne({
+        where: { id },
+        relations: ['productos'],
+      });
+      if (!oferta) {
+        return { data: null, message: 'Oferta no encontrada', success: false };
+      }
+      const productosConCuotas =
+        await this.productsUtils.calculoCreditoProductosOferta(oferta.productos);
+      return {
+        data: { ...oferta, productos: productosConCuotas },
+        message: 'Oferta encontrada',
+        success: true,
+      };
+    } catch (error) {
+      return {
+        data: null,
+        message: `Error al obtener la oferta: ${error.message}`,
+        success: false,
+      };
+    }
+  }
+
   async getAllOfertas(filters: {limit: number; offset: number}): Promise<{
     data: any[];
     message: string;

@@ -11,6 +11,7 @@ import { MariaDbModule } from './config/mariadb.module';
 import { ProductsUtils } from './utils/utils-products';
 import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
 import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
+import { ImageStorageService } from '@shared/common/services/image-storage.service';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { ResilientService } from '@shared/common/decorators/resilient-client.dec
     PromosValidationService,
     ProductsUtils,
     ResilientService,
+    ImageStorageService,
   ],
   exports: [ProductsService, ProductsImagesService, PromosService, OfertasService],
 })

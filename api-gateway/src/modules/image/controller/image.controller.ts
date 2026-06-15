@@ -19,6 +19,10 @@ import { ApiTags, ApiOperation, ApiResponse, ApiConsumes } from '@nestjs/swagger
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { JwtAuthGuard } from '@gateway/common/guards/jwt-auth.guard';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import * as fs from 'fs';
+import { firstValueFrom } from 'rxjs';
+import { v4 as uuidv4 } from 'uuid';
 
 @ApiTags('Banners')
 @Controller('image')
@@ -44,15 +48,17 @@ export class ImageController {
         },
       }),
       fileFilter: (req, file, cb) => {
-        const allowedMimes = ['image/webp'];
+        // Imágenes (se convierten a .webp con Sharp) o video mp4 (se guarda tal cual).
+        const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4'];
         if (allowedMimes.includes(file.mimetype)) {
           cb(null, true);
         } else {
-          cb(new Error('Solo se permiten archivos de imagen (webp)'), false);
+          cb(new Error('Solo se permiten imágenes (jpg, png, webp, gif) o video mp4'), false);
         }
       },
       limits: {
-        fileSize: 10 * 1024 * 1024,
+        // Hasta 60MB para permitir videos mp4 de promoción.
+        fileSize: 60 * 1024 * 1024,
       },
     })
   )
@@ -74,7 +80,15 @@ export class ImageController {
   ) {
     try {
       this.logger.log(`Uploading banner: ${body.nombre}`);
-      const pattern = { cmd: 'upload_banner' };
+      const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || 'us-east-1';
+      const endpoint = process.env.IMAGE_S3_ENDPOINT || process.env.S3_ENDPOINT || process.env.AWS_ENDPOINT;
+      const bucket = process.env.IMAGE_S3_BUCKET || 'ecommerce-images';
+      const originalKeyPrefix = (process.env.IMAGE_S3_ORIGINAL_KEY_PREFIX || 'uploads/banners').replace(/^\/+|\/+$/g, '');
+
+      if (!endpoint) {
+        throw new Error('IMAGE_S3_ENDPOINT no está configurado (necesario para LocalStack)');
+      }
+
       let meta: any = body.meta;
       if (typeof meta === 'string') {
         try {
@@ -83,16 +97,47 @@ export class ImageController {
           meta = undefined;
         }
       }
+
+      const originalKey = `${originalKeyPrefix}/${uuidv4()}_${file.filename}`;
+      const s3 = new S3Client({
+        region,
+        endpoint,
+        forcePathStyle: true,
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'test',
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'test',
+        },
+      });
+
+      const bodyBuffer = fs.readFileSync(file.path);
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: originalKey,
+          Body: bodyBuffer,
+          ContentType: file.mimetype || 'image/webp',
+          CacheControl: 'private, max-age=0, no-cache',
+        }),
+      );
+
       const payload = {
-        file,
+        key: originalKey,
         nombre: body.nombre,
         variante: body.variante,
         creadoPor: body.creadoPor,
         modificadoPor: body.modificadoPor,
         meta,
+        contentType: file.mimetype,
       };
 
-      const result = await this.imageClient.send(pattern, payload);
+      const pattern = { cmd: 'upload_banner_from_s3' };
+      const result = await firstValueFrom(this.imageClient.send(pattern, payload));
+
+      // Cleanup temp file
+      try {
+        if (file?.path) fs.unlinkSync(file.path);
+      } catch {}
+
       return result;
     } catch (error) {
       this.logger.error(`Error uploading banner: ${error.message}`);

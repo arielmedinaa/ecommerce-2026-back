@@ -30,10 +30,14 @@ export class BannersController {
       device = 'desktop';
     }
     try {
-      const filePath = await this.bannerService.getBannerImage(nombre, device);
-      if (!fs.existsSync(filePath)) {
-        throw new NotFoundException('La imagen solicitada no existe');
+      const location = await this.bannerService.getBannerImage(nombre, device);
+      if (location.kind === 'url') {
+        return res.redirect(HttpStatus.FOUND, location.value);
       }
+
+      const filePath = location.value;
+      if (!fs.existsSync(filePath)) throw new NotFoundException('La imagen solicitada no existe');
+
       const ext = path.extname(filePath).toLowerCase();
       let contentType = 'image/webp';
 
@@ -113,13 +117,13 @@ export class BannersController {
 
   @MessagePattern({ cmd: 'get_banner_image' })
   async getBannerImage(data: { nombre: string; device?: string }) {
-    const filePath = await this.bannerService.getBannerImage(
+    const location = await this.bannerService.getBannerImage(
       data.nombre,
       data.device || 'desktop',
     );
 
     return {
-      data: { filePath },
+      data: { filePath: location.value },
       message: 'Imagen de banner obtenida exitosamente',
       success: true,
     };
@@ -127,43 +131,23 @@ export class BannersController {
 
   @MessagePattern({ cmd: 'get_banner_file' })
   async getBannerFile(data: { nombre: string; device?: string }) {
-    const filePath = await this.bannerService.getBannerImage(
-      data.nombre,
-      data.device || 'desktop',
-    );
-
-    if (!fs.existsSync(filePath)) {
+    try {
+      const { buffer, contentType } = await this.bannerService.getBannerFileBuffer(
+        data.nombre,
+        data.device || 'desktop',
+      );
+      return {
+        data: { buffer, contentType },
+        message: 'Archivo de banner obtenido exitosamente',
+        success: true,
+      };
+    } catch (err: any) {
       return {
         data: null,
-        message: 'La imagen solicitada no existe',
+        message: err?.message || 'Error obteniendo archivo de banner',
         success: false,
       };
     }
-
-    const ext = path.extname(filePath).toLowerCase();
-    let contentType = 'image/webp';
-    switch (ext) {
-      case '.jpg':
-      case '.jpeg':
-        contentType = 'image/jpeg';
-        break;
-      case '.png':
-        contentType = 'image/png';
-        break;
-      case '.gif':
-        contentType = 'image/gif';
-        break;
-      case '.webp':
-        contentType = 'image/webp';
-        break;
-    }
-
-    const buffer = fs.readFileSync(filePath);
-    return {
-      data: { buffer, contentType },
-      message: 'Archivo de banner obtenido exitosamente',
-      success: true,
-    };
   }
 
   @MessagePattern({ cmd: 'get_banner_by_id' })

@@ -1,8 +1,6 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { BannerService } from '../../service/image.banners.service';
-import * as fs from 'fs';
-import * as path from 'path';
 
 @Controller()
 export class BannersController {
@@ -27,15 +25,36 @@ export class BannersController {
     );
   }
 
+  @MessagePattern({ cmd: 'upload_banner_from_s3' })
+  async uploadBannerFromS3(@Payload() data: {
+    key: string;
+    nombre: string;
+    variante: string;
+    creadoPor: string;
+    modificadoPor: string;
+    meta?: Record<string, any>;
+    contentType?: string;
+  }) {
+    return await this.bannerService.uploadBannerFromS3(
+      data.key,
+      data.nombre,
+      data.variante,
+      data.creadoPor,
+      data.modificadoPor,
+      data.meta,
+      data.contentType,
+    );
+  }
+
   @MessagePattern({ cmd: 'get_banner_image' })
   async getBannerImage(@Payload() data: { nombre: string; device?: string }) {
-    const filePath = await this.bannerService.getBannerImage(
+    const location = await this.bannerService.getBannerImage(
       data.nombre,
       data.device || 'desktop',
     );
 
     return {
-      data: { filePath },
+      data: { filePath: location.value },
       message: 'Imagen de banner obtenida exitosamente',
       success: true,
     };
@@ -43,43 +62,23 @@ export class BannersController {
 
   @MessagePattern({ cmd: 'get_banner_file' })
   async getBannerFile(@Payload() data: { nombre: string; device?: string }) {
-    const filePath = await this.bannerService.getBannerImage(
-      data.nombre,
-      data.device || 'desktop',
-    );
-
-    if (!fs.existsSync(filePath)) {
+    try {
+      const { buffer, contentType } = await this.bannerService.getBannerFileBuffer(
+        data.nombre,
+        data.device || 'desktop',
+      );
+      return {
+        data: { buffer, contentType },
+        message: 'Archivo de banner obtenido exitosamente',
+        success: true,
+      };
+    } catch (err: any) {
       return {
         data: null,
-        message: 'La imagen solicitada no existe',
+        message: err?.message || 'Error obteniendo archivo de banner',
         success: false,
       };
     }
-
-    const ext = path.extname(filePath).toLowerCase();
-    let contentType = 'image/webp';
-    switch (ext) {
-      case '.jpg':
-      case '.jpeg':
-        contentType = 'image/jpeg';
-        break;
-      case '.png':
-        contentType = 'image/png';
-        break;
-      case '.gif':
-        contentType = 'image/gif';
-        break;
-      case '.webp':
-        contentType = 'image/webp';
-        break;
-    }
-
-    const buffer = fs.readFileSync(filePath);
-    return {
-      data: { buffer, contentType },
-      message: 'Archivo de banner obtenido exitosamente',
-      success: true,
-    };
   }
 
   @MessagePattern({ cmd: 'get_all_banners' })

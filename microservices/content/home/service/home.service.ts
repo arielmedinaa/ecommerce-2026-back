@@ -1,5 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
 import { FilterHomeDto } from '@content/home/dto/filter.home';
 import { HomeData, HomeCategoriaFamilia } from '@content/home/interfaces/home.interface';
 import { HomeSectionResponse } from '@content/home/interfaces/home-sections.interface';
@@ -78,12 +79,21 @@ export class HomeService {
       };
 
       const verticales = await this.verticalesService.findAll({page: 1, limit: 5});
+      // Opciones propias para banners: el fallback debe devolver banners vacíos,
+      // NO el fallback de productos (que rompía el match por nombre → 0 banners).
+      const bannerOptions: ResilientOptions = {
+        retries: 3,
+        delay: 1000,
+        fallback: async () => ({ data: [], message: 'fallback banners', success: true }),
+        circuitBreaker: { failureThreshold: 3, resetTimeout: 30000 },
+      };
       const banners = await this.resilientService.sendWithResilience(
         this.imageClient,
         { cmd: 'get_all_banners' },
         { fields: this.fieldsImage },
-        resilientOptions,
+        bannerOptions,
       ) as BannerResponse;
+      this.logger.log(`[home] get_all_banners → ${Array.isArray((banners as any)?.data) ? (banners as any).data.length : 'sin data'} banners`);
       const [jota, ofertas, productos] = await Promise.all([
         this.resilientService.sendWithResilience(
           this.productsClient,
@@ -161,6 +171,108 @@ export class HomeService {
     const dbSections = await this.homeSectionsService.getActiveSections();
     const sections = dbSections.length > 0 ? dbSections : this.getDefaultSections();
 
+    // JOTA: si en el admin se eligieron productos puntuales (config.codigos),
+    // usamos esos en vez del listado por marca por defecto (input.jota).
+    let jotaData: any = (input as any).jota?.data ?? input.jota ?? [];
+    let jotaTotal: any = (input as any).jota?.total ?? null;
+    const jotaSection = sections.find((s) => s.type === 'JOTA');
+    const jotaCodigos: string[] = Array.isArray((jotaSection?.config as any)?.codigos)
+      ? (jotaSection!.config as any).codigos
+          .map((c: any) => String(typeof c === 'string' ? c : c?.codigo ?? '').trim())
+          .filter(Boolean)
+      : [];
+    if (jotaCodigos.length > 0) {
+      try {
+        const res: any = await firstValueFrom(
+          this.productsClient.send(
+            { cmd: 'get_products_by_codigos' },
+            { codigos: jotaCodigos, limit: 30 },
+          ),
+        );
+        const data = res?.data ?? res ?? [];
+        if (Array.isArray(data) && data.length > 0) {
+          jotaData = data;
+          jotaTotal = res?.total ?? data.length;
+        }
+      } catch (e) {
+        this.logger.warn(`No se pudo resolver JOTA por codigos: ${e}`);
+      }
+    }
+
+    // OFERTAS: si el admin configuró la sección (config.ofertaId), traemos ESA
+    // oferta y la fusionamos con la programación/colores de la config. Cada
+    // producto se enriquece con datos de catálogo (imagen/marca/precio tachado),
+    // manteniendo los precios de oferta (precioContado/precioCredito/cuotas).
+    const ofertasSection = sections.find((s) => s.type === 'OFERTAS');
+    const ofertasCfg: any = ofertasSection?.config || {};
+    let ofertaPayload: any = null;
+    if (ofertasCfg.ofertaId) {
+      try {
+        const ofRes: any = await firstValueFrom(
+          this.productsClient.send(
+            { cmd: 'get_oferta_by_id' },
+            { id: Number(ofertasCfg.ofertaId) },
+          ),
+        );
+        const oferta = ofRes?.data;
+        if (oferta) {
+          const productos: any[] = Array.isArray(oferta.productos) ? oferta.productos : [];
+          const codigos = productos
+            .map((p) => String(p?.codigo_articulo ?? '').trim())
+            .filter(Boolean);
+          let catalogoByCod = new Map<string, any>();
+          if (codigos.length > 0) {
+            try {
+              const catRes: any = await firstValueFrom(
+                this.productsClient.send(
+                  { cmd: 'get_products_by_codigos' },
+                  { codigos, limit: codigos.length },
+                ),
+              );
+              const catData: any[] = catRes?.data ?? [];
+              catalogoByCod = new Map(
+                catData.map((c) => [String(c?.codigo_articulo ?? '').trim(), c]),
+              );
+            } catch {
+              // sin enriquecimiento si falla
+            }
+          }
+          // 18 cuotas sin interés: toggle general de la oferta + override por código.
+          const sin18General = !!ofertasCfg.cuotasSinInteres18;
+          const sin18Override: Record<string, boolean> =
+            (ofertasCfg.sin18Override && typeof ofertasCfg.sin18Override === 'object')
+              ? ofertasCfg.sin18Override
+              : {};
+          const productosEnriquecidos = productos.map((p) => {
+            const cod = String(p?.codigo_articulo ?? '').trim();
+            const cat = catalogoByCod.get(cod) || {};
+            const sinInteres18 =
+              cod in sin18Override ? !!sin18Override[cod] : sin18General;
+            return {
+              ...p,
+              imagenes: Array.isArray(cat?.imagenes) ? cat.imagenes : [],
+              nombre_marca: cat?.nombre_marca ?? null,
+              nombre_subcategoria: cat?.nombre_subcategoria ?? null,
+              precioCatalogo: cat?.precioventaRedondeado ?? cat?.precioventa ?? null,
+              precioTope: cat?.preciotope ?? null,
+              sinInteres18,
+            };
+          });
+          ofertaPayload = {
+            ofertaId: oferta.id,
+            titulo: oferta.titulo,
+            descripcion: oferta.descripcion,
+            fechaInicio: ofertasCfg.fechaInicio ?? null,
+            fechaFin: ofertasCfg.fechaFin ?? null,
+            tema: ofertasCfg.tema ?? null,
+            productos: productosEnriquecidos,
+          };
+        }
+      } catch (e) {
+        this.logger.warn(`No se pudo resolver OFERTAS por ofertaId: ${e}`);
+      }
+    }
+
     const banners = Array.isArray(input.banners) ? input.banners : [];
     const bannersByNombre = new Map<string, any>();
     for (const b of banners) {
@@ -175,14 +287,33 @@ export class HomeService {
       bannersByVariante.get(key)!.push(b);
     }
 
-    const resolveBannerPayload = (cfg: Record<string, any> | undefined) => {
-      const baseUrl = String(process.env.API_GATEWAY_URL || '').replace(/\/+$/, '');
-      const bannerUrl = (nombre: string, device: string = 'desktop') => {
-        if (!nombre) return null;
-        const path = `/image/banner/${encodeURIComponent(nombre)}/${device}`;
-        return baseUrl ? `${baseUrl}${path}` : path;
-      };
+    const baseUrl = String(process.env.API_GATEWAY_URL || '').replace(/\/+$/, '');
+    const bannerUrl = (nombre: string, device: string = 'desktop') => {
+      if (!nombre) return null;
+      const path = `/image/banner/${encodeURIComponent(nombre)}/${device}`;
+      return baseUrl ? `${baseUrl}${path}` : path;
+    };
 
+    // BANNERS2 (banners secundarios): layout estructurado de 2 hero anchos + 3
+    // feature cards + 4 promo cards. Cada slot referencia su imagen por `nombre`;
+    // acá le resolvemos la `imageUrl` reusando el mismo patrón que los banners.
+    const resolveBanners2Payload = (cfg: Record<string, any> | undefined) => {
+      const c: any = cfg && typeof cfg === 'object' ? cfg : {};
+      const withImg = (slot: any) => {
+        if (!slot || typeof slot !== 'object') return slot ?? null;
+        const nombre = String(slot?.nombre || '').trim();
+        return { ...slot, imageUrl: nombre ? bannerUrl(nombre, 'desktop') : null };
+      };
+      return {
+        theme: c.theme ?? null,
+        heroTop: withImg(c.heroTop),
+        features: Array.isArray(c.features) ? c.features.map(withImg) : [],
+        promos: Array.isArray(c.promos) ? c.promos.map(withImg) : [],
+        heroBottom: withImg(c.heroBottom),
+      };
+    };
+
+    const resolveBannerPayload = (cfg: Record<string, any> | undefined) => {
       const heroSlidesRaw = (cfg as any)?.heroSlides;
       if (Array.isArray(heroSlidesRaw) && heroSlidesRaw.length > 0) {
         const out: any[] = [];
@@ -259,13 +390,21 @@ export class HomeService {
             (b as any)?.meta && typeof (b as any).meta === 'object'
               ? (b as any).meta
               : {};
+          // Meta editado en el admin (title/subtitle/badge/ctaText/bg) vive en el
+          // item de config. Lo fusionamos (precedencia sobre el meta de la entidad)
+          // para que los textos y colores lleguen al storefront, no solo la imagen.
+          const itemMeta =
+            (it as any)?.meta && typeof (it as any).meta === 'object'
+              ? (it as any).meta
+              : {};
 
           out.push({
             ...b,
             meta: {
               ...meta,
+              ...itemMeta,
               slot,
-              order: Number.isFinite(order) ? order : meta?.order,
+              order: Number.isFinite(order) ? order : itemMeta?.order ?? meta?.order,
               imageUrl: bannerUrl(nombre, 'desktop'),
             },
           });
@@ -295,6 +434,49 @@ export class HomeService {
       });
     };
 
+    // PRODUCTOS config-driven: cada sección PRODUCTOS puede traer productos
+    // puntuales (config.codigos) o un set aleatorio acotado a productos con
+    // stock y precio (config.modo === 'aleatorio', ej. "Lo Más Vendido").
+    const productosByKey = new Map<string, any[]>();
+    for (const s of sections) {
+      if ((s.type as HomeSectionType) !== 'PRODUCTOS') continue;
+      const cfg: any = s.config || {};
+      const codigos: string[] = Array.isArray(cfg.codigos)
+        ? cfg.codigos
+            .map((c: any) => String(typeof c === 'string' ? c : c?.codigo ?? '').trim())
+            .filter(Boolean)
+        : [];
+      try {
+        if (codigos.length > 0) {
+          const res: any = await firstValueFrom(
+            this.productsClient.send(
+              { cmd: 'get_products_by_codigos' },
+              { codigos, limit: codigos.length },
+            ),
+          );
+          productosByKey.set(s.key, res?.data ?? res ?? []);
+        } else if (cfg.modo === 'aleatorio' || s.key === 'lo_mas_vendido') {
+          const limit = Number(cfg.limit) > 0 ? Number(cfg.limit) : 20;
+          const pool = Number(cfg.pool) > 0 ? Number(cfg.pool) : Math.max(limit * 3, 60);
+          const res: any = await firstValueFrom(
+            this.productsClient.send(
+              { cmd: 'get_products' },
+              { limit: pool, offset: 0, soloConStock: true, precioMin: 1 },
+            ),
+          );
+          const data: any[] = Array.isArray(res?.data) ? [...res.data] : [];
+          // Barajado Fisher-Yates y corte al límite.
+          for (let i = data.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [data[i], data[j]] = [data[j], data[i]];
+          }
+          productosByKey.set(s.key, data.slice(0, limit));
+        }
+      } catch (e) {
+        this.logger.warn(`No se pudo resolver PRODUCTOS (${s.key}): ${e}`);
+      }
+    }
+
     return sections.map((s) => {
       const section: HomeSectionResponse = {
         key: s.key,
@@ -321,21 +503,27 @@ export class HomeService {
             banners: resolveBannerPayload(s.config) || [],
           };
           break;
+        case 'BANNERS2':
+          section.payload = resolveBanners2Payload(s.config);
+          break;
         case 'OFERTAS':
-          section.payload = {
-            ofertas: input.ofertas || [],
-          };
+          // Si hay oferta configurada en el admin, se usa ese payload enriquecido
+          // (título/desc/fechas/tema/productos). Si no, fallback al listado general.
+          section.payload = ofertaPayload
+            ? { oferta: ofertaPayload, ofertas: input.ofertas || [] }
+            : { ofertas: input.ofertas || [] };
           break;
         case 'JOTA':
           section.payload = {
-            data: (input as any).jota?.data ?? input.jota ?? [],
-            total: (input as any).jota?.total ?? null,
+            data: jotaData,
+            total: jotaTotal,
           };
           break;
         case 'PRODUCTOS':
         default:
           section.payload = {
-            productos: input.productos || [],
+            productos: productosByKey.get(s.key) ?? input.productos ?? [],
+            titulo: s.titulo ?? null,
           };
           break;
       }
@@ -397,6 +585,28 @@ export class HomeService {
         activo: true,
         titulo: 'JOTA',
         config: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: 0,
+        key: 'lo_mas_vendido',
+        type: 'PRODUCTOS',
+        orden: 55,
+        activo: true,
+        titulo: 'Lo Más Vendido',
+        config: { modo: 'aleatorio', limit: 20 },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: 0,
+        key: 'banners_secundarios',
+        type: 'BANNERS2',
+        orden: 57,
+        activo: true,
+        titulo: null as any,
+        config: { variantes: ['banners2'] },
         createdAt: new Date(),
         updatedAt: new Date(),
       },

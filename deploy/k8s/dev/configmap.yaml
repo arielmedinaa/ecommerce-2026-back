@@ -9,12 +9,12 @@ data:
   RUN_MODE: "all"
   LOG_FORMAT: "json"
   
-  # API Gateway
   PORT: "3100"
   GATEWAY_PORT: "3100"
   CORS_ORIGIN: "http://localhost:5173"
+  # Base pública del API Gateway (sin slash final). La usan products (url_imagen) y content (URLs de banners).
+  API_GATEWAY_URL: "https://api.localhost.localstack.cloud:8443/api"
   
-  # Microservices Ports
   AUTH_PORT: "3101"
   CART_PORT: "3102"
   CONTENT_PORT: "3103"
@@ -22,7 +22,6 @@ data:
   PRODUCTS_PORT: "3106"
   IMAGE_PORT: "3107"
 
-  # Internal Dns URLs (Kubernetes Service Names)
   AUTH_SERVICE_URL: "auth-service"
   CART_SERVICE_URL: "cart-service"
   CONTENT_SERVICE_URL: "content-service"
@@ -30,26 +29,42 @@ data:
   PRODUCTS_SERVICE_URL: "products-service"
   IMAGE_SERVICE_URL: "image-service"
 
-  # Database (Local dev: mariadb Service)
   DATABASE_HOST: "mariadb"
   DATABASE_PORT: "3306"
   DATABASE_USER: "ecommerce"
   DATABASE_PASSWORD: "ecommerce"
   DATABASE_NAME: "ecommerce"
+  DATABASE_HOST_REPLIC: "mariadb"
+  DATABASE_PORT_REPLIC: "3306"
+  DATABASE_USER_REPLIC: "ecommerce"
+  DATABASE_PASSWORD_REPLIC: "ecommerce"
+  DATABASE_NAME_REPLIC: "ecommerce"
+
   SYNCRONICE: "false"
   DB_RETRY_ATTEMPTS: "30"
   DB_RETRY_DELAY_MS: "3000"
   DB_CONNECT_TIMEOUT_MS: "10000"
 
-  # Google OAuth (optional; leave blank to disable)
   GOOGLE_CLIENT_ID: ""
   GOOGLE_CLIENT_SECRET: ""
   GOOGLE_CALLBACK_URL: "http://localhost:3101/auth/google/callback"
 
-  # LocalStack (in-cluster)
+  JWT_SECRET: "ecommerce-back-2026-central-shop-api-ecommerce"
+
   SQS_ENDPOINT: "http://localstack.localstack.svc.cluster.local:4566"
   AWS_REGION: "us-east-1"
   AWS_ACCESS_KEY_ID: "test"
   AWS_SECRET_ACCESS_KEY: "test"
   PAYMENTS_SQS_QUEUE_NAME: "payments-jobs"
   PAYMENTS_SQS_WORKER_ENABLED: "true"
+
+  IMAGE_STORAGE_PROVIDER: "s3"
+  IMAGE_S3_ENDPOINT: "http://localstack.localstack.svc.cluster.local:4566"
+  IMAGE_S3_BUCKET: "ecommerce-images"
+  IMAGE_S3_KEY_PREFIX: "banners"
+  IMAGE_S3_ENSURE_BUCKET: "true"
+  # Si el bucket es privado, el image-service redirige usando URLs firmadas (presigned).
+  IMAGE_S3_SIGNED_URLS: "true"
+  IMAGE_S3_SIGNED_URL_TTL_SECONDS: "300"
+  IMAGE_S3_EXTERNAL_BASE_URL: "http://s3.us-east-1.localhost.localstack.cloud:4566/ecommerce-images"
+  IMAGE_CDN_BASE_URL: ""

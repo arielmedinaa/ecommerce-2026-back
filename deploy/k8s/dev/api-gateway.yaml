@@ -18,8 +18,25 @@ spec:
       - name: api-gateway
         image: localhost/api-gateway:latest
         imagePullPolicy: Never # Usa imagenes locales en minikube
+        command: ["yarn", "start:dev:gateway"]
         ports:
         - containerPort: 3100
+        readinessProbe:
+          httpGet:
+            path: /api/docs
+            port: 3100
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 12
+        livenessProbe:
+          httpGet:
+            path: /api/docs
+            port: 3100
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 6
         envFrom:
         - configMapRef:
             name: ecommerce-config

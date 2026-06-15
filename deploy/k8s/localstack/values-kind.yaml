@@ -12,10 +12,39 @@ extraEnvVars:
     value: "us-east-1"
   - name: DEBUG
     value: "0"
+  # Persiste el estado de S3/SQS en disco para que las imágenes subidas y las
+  # colas sobrevivan a reinicios del pod de LocalStack.
   - name: PERSISTENCE
-    value: "0"
+    value: "1"
+
+# Monta un PVC en /var/lib/localstack (data dir de LocalStack) con la
+# StorageClass por defecto del cluster (en Kind: `standard`/local-path).
+persistence:
+  enabled: true
+  size: 8Gi
+
+# Monta startupScriptContent en /etc/localstack/init/ready.d (sin esto el chart
+# NO crea el ConfigMap del script → el bucket/cola no se auto-crean al arrancar).
+enableStartupScripts: true
 
 startupScriptContent: |
   #!/bin/bash
   set -euo pipefail
+  # Carpeta de backup en el PVC persistente (/var/lib/localstack sobrevive restarts).
+  # LocalStack Community no persiste S3 nativamente, así que respaldamos/restauramos
+  # el bucket contra esta carpeta del PVC.
+  BACKUP_DIR=/var/lib/localstack/backup/ecommerce-images
+  mkdir -p "$BACKUP_DIR"
+
+  # Infra base (idempotente)
   awslocal sqs create-queue --queue-name payments-jobs >/dev/null 2>&1 || true
+  awslocal s3 mb s3://ecommerce-images >/dev/null 2>&1 || true
+
+  # Restore: recarga los objetos respaldados en el PVC hacia el bucket recién creado.
+  # --content-type image/webp: aws s3 sync no preserva el content-type original (lo
+  # pondría binary/octet-stream); todos nuestros objetos son .webp, así se sirven bien.
+  awslocal s3 sync "$BACKUP_DIR" s3://ecommerce-images --content-type image/webp >/dev/null 2>&1 || true
+
+  # Backup periódico bucket -> PVC cada 120s. Guarda anti-wipe: solo sincroniza con
+  # --delete si el bucket tiene objetos (evita borrar el backup si el bucket está vacío).
+  setsid bash -c 'while true; do sleep 120; n=$(awslocal s3 ls s3://ecommerce-images --recursive 2>/dev/null | wc -l); if [ "$n" -gt 0 ]; then awslocal s3 sync s3://ecommerce-images /var/lib/localstack/backup/ecommerce-images --delete >/dev/null 2>&1 || true; fi; done' >/dev/null 2>&1 &

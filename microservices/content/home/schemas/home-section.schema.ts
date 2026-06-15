@@ -11,6 +11,7 @@ export type HomeSectionType =
   | 'HERO'
   | 'VERTICALES'
   | 'BANNERS'
+  | 'BANNERS2'
   | 'OFERTAS'
   | 'JOTA'
   | 'PRODUCTOS';

@@ -268,6 +268,40 @@ export class ContentController {
     return stats;
   }
 
+  // ==================== PROMOCIONES (para landings) ====================
+
+  @Get('promotions/active')
+  @SneakyThrows('ContentController', 'promocionesActivas')
+  async getActivePromotions() {
+    return await firstValueFrom(
+      this.contentClient.send({ cmd: 'promocionesActivas' }, {}),
+    );
+  }
+
+  @Get('promotions')
+  @SneakyThrows('ContentController', 'listarPromociones')
+  async listPromotions(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('filters') filters?: string,
+  ) {
+    const parsedFilters = filters ? JSON.parse(filters) : {};
+    return await firstValueFrom(
+      this.contentClient.send(
+        { cmd: 'listarPromociones' },
+        { page: page ?? 1, limit: limit ?? 50, filters: parsedFilters },
+      ),
+    );
+  }
+
+  @Get('promotions/:id/products')
+  @SneakyThrows('ContentController', 'productosDePromocion')
+  async getPromotionProducts(@Param('id') id: string) {
+    return await firstValueFrom(
+      this.contentClient.send({ cmd: 'productosDePromocion' }, { promoId: id }),
+    );
+  }
+
   @Post('vertical')
   @SneakyThrows('ContentController', 'createVertical')
   async createVertical(@Body() body: { vertical: any; userId: string }) {

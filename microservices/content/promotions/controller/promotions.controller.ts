@@ -118,6 +118,12 @@ export class PromotionsController {
     );
   }
 
+  @MessagePattern({ cmd: 'productosDePromocion' })
+  async getPromotionProducts(@Payload() payload: any) {
+    const promoId = this.promotionsService.parsePromoId(payload?.promoId);
+    return await this.promotionsService.getPromotionProducts(promoId);
+  }
+
   @MessagePattern({ cmd: 'productoMasVistoEnPromocion' })
   async mostViewedProduct(@Payload() payload: any) {
     const promoId = this.promotionsService.parsePromoId(payload?.promoId);

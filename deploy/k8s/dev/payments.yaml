@@ -23,6 +23,8 @@ spec:
         envFrom:
         - configMapRef:
             name: ecommerce-config
+        - secretRef:
+            name: econt-db
 ---
 apiVersion: v1
 kind: Service

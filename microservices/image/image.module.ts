@@ -5,6 +5,7 @@ import { BannerService } from './service/image.banners.service';
 import { BannerValidationService } from './service/errors/image.spec';
 import { BannerErrorService } from './service/errors/banner-error.service';
 import { MariaDbModule } from './config/mariadb.module';
+import { ImageStorageService } from '@shared/common/services/image-storage.service';
 
 @Module({
   imports: [
@@ -13,11 +14,13 @@ import { MariaDbModule } from './config/mariadb.module';
   controllers: [BannersController, ImageHttpController],
   providers: [
     BannerService,
+    ImageStorageService,
     BannerValidationService,
     BannerErrorService
   ],
   exports: [
     BannerService,
+    ImageStorageService,
     BannerValidationService,
     BannerErrorService
   ]

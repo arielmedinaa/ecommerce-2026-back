@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Inject, Get, UseGuards, UseInterceptors, UploadedFile, UploadedFiles, Param, Delete, Patch, BadRequestException, Res, NotFoundException } from '@nestjs/common';
+import { Body, Controller, Post, Inject, Get, UseGuards, UseInterceptors, UploadedFile, UploadedFiles, Param, Delete, Patch, BadRequestException, Res } from '@nestjs/common';
 import { ClientProxy, Payload } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { timeout, catchError } from 'rxjs/operators';
@@ -7,8 +7,6 @@ import { CreateComboDto } from '@products/schemas/dto/create-combo.dto';
 import { JwtAuthGuard } from '@gateway/common/guards/jwt-auth.guard';
 import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
 import { Response } from 'express';
-import * as fs from 'fs';
-import * as path from 'path';
 
 interface MulterFile {
   fieldname: string;
@@ -92,6 +90,32 @@ export class ProductsController {
         code: error.code,
       });
       throw new Error('Error al obtener los productos: ' + error.message);
+    }
+  }
+
+  @Get('/facets')
+  async getProductsFacets() {
+    try {
+      return await firstValueFrom(
+        this.productsClient
+          .send({ cmd: 'get_products_facets' }, {})
+          .pipe(timeout(40000)),
+      );
+    } catch (error) {
+      throw new Error('Error al obtener las facetas: ' + error.message);
+    }
+  }
+
+  @Get('/stats')
+  async getProductsStats() {
+    try {
+      return await firstValueFrom(
+        this.productsClient
+          .send({ cmd: 'get_products_stats' }, {})
+          .pipe(timeout(40000)),
+      );
+    } catch (error) {
+      throw new Error('Error al obtener las stats: ' + error.message);
     }
   }
 
@@ -199,6 +223,22 @@ export class ProductsController {
     return await firstValueFrom(
       this.productsClient.send({ cmd: 'get_ofertas' }, filters)
     )
+  }
+
+  @Get('/oferta/:id')
+  async getOfertaById(@Param('id') id: string) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_oferta_by_id' }, { id: Number(id) })
+    )
+  }
+
+  @Post('/by-codigos')
+  async getProductsByCodigos(
+    @Body() body: { codigos: string[]; limit?: number },
+  ) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_products_by_codigos' }, body),
+    );
   }
   
   @UseGuards(JwtAuthGuard)
@@ -401,36 +441,34 @@ export class ProductsController {
   async getImage(@Param('filename') filename: string, @Res() res: Response) {
     try {
       if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
-        throw new NotFoundException('Archivo no encontrado');
+        return res.status(404).json({ message: 'Archivo no encontrado' });
       }
 
       if (!filename.toLowerCase().endsWith('.webp')) {
-        throw new NotFoundException('Solo se permiten archivos .webp');
+        return res.status(404).json({ message: 'Solo se permiten archivos .webp' });
       }
 
-      const filePath = path.join('/home/appuser/Documents/projects/newEcommerce2026/imagesEcommerce/productos', filename);
+      const result = await firstValueFrom(
+        this.productsClient.send({ cmd: 'get_product_image_file' }, { filename }).pipe(
+          timeout(15000),
+        ),
+      );
 
-      if (!fs.existsSync(filePath)) {
-        throw new NotFoundException('Imagen no encontrada');
+      if (result && result.success && result.data && result.data.buffer) {
+        const raw = result.data.buffer as any;
+        const buf = Buffer.isBuffer(raw)
+          ? raw
+          : raw && Array.isArray(raw.data)
+            ? Buffer.from(raw.data)
+            : Buffer.from(raw);
+        res.setHeader('Content-Type', result.data.contentType || 'image/webp');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        return res.send(buf);
       }
 
-      const stats = fs.statSync(filePath);
-      if (!stats.isFile()) {
-        throw new NotFoundException('Imagen no encontrada');
-      }
-
-      res.sendFile(filePath, (err) => {
-        if (err) {
-          console.error('Error al enviar archivo:', err);
-          if (!res.headersSent) {
-            res.status(404).json({ message: 'Imagen no encontrada' });
-          }
-        }
-      });
+      return res.status(404).json({ message: result?.message || 'Imagen no encontrada' });
     } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
       console.error('Error en getImage:', error);
       if (!res.headersSent) {
         res.status(500).json({ message: 'Error interno del servidor' });

@@ -93,6 +93,13 @@ export class AuthService {
     success: boolean;
     token?: string;
   }> {
+    if (!email) {
+      return {
+        data: null,
+        message: 'email is required',
+        success: false,
+      };
+    }
     const user = await this.userRepository.findOne({
       where: {
         email,

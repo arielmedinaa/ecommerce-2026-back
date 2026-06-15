@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Get, Inject, Req, Res, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Post, Get, Inject, Req, Res, UseGuards } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { Request, Response } from 'express';
@@ -118,6 +118,9 @@ export class AuthController {
 
   @Post('validateBasicUser')
   async validateBasicUser(@Body() body: { email: string }, @Req() req: Request) {
+    if (!body?.email) {
+      throw new BadRequestException('email is required');
+    }
     const deviceInfo = req.headers['user-agent'];
     const payload = { ...body, deviceInfo };
     try {
@@ -143,6 +146,22 @@ export class AuthController {
     } catch (error) {
       console.error('Error in ultimoInicioSesion:', error);
       throw new Error('Error al actualizar último inicio de sesión: ' + error.message);
+    }
+  }
+
+  // Asigna un cupón a un cliente (expone la lógica existente del auth-service).
+  @Post('asignar-cupon')
+  async asignarCupon(
+    @Body() body: { userId: number; idCupon: number; descripcion: string; eventId?: string },
+  ) {
+    try {
+      const result = await firstValueFrom(
+        this.authClient.send({ cmd: 'createUserCoupon' }, body),
+      );
+      return result;
+    } catch (error) {
+      console.error('Error in asignarCupon:', error);
+      throw new Error('Error al asignar el cupón al cliente: ' + error.message);
     }
   }
 }

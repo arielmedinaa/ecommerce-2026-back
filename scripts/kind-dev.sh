@@ -134,7 +134,13 @@ show_logs() {
 }
 
 port_forward_gateway() {
-  kubectl port-forward -n "$KUBECTL_NAMESPACE" svc/api-gateway 3100:3100
+  kubectl port-forward -n "$KUBECTL_NAMESPACE" svc/api-gateway 3100:3100 &
+  
+  kubectl port-forward -n ingress-nginx \
+    svc/ingress-nginx-controller 8443:443 &
+  
+  kubectl port-forward -n "$KUBECTL_NAMESPACE" \
+    svc/mariadb 3306:3306 &
 }
 
 main() {
