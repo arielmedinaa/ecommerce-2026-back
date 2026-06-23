@@ -9,15 +9,11 @@ import { OrderItem } from '../schemas/order-item.schemas';
 import { CartError } from '../schemas/errors/cart-error.entity';
 import { MariaDbConnectionService } from './mariadb-connection.service';
 
+// Holder de las fábricas estáticas de conexión. Las conexiones reales se registran
+// UNA sola vez desde cart.module.ts (forWrite/forRead/forFeature/forFeatureRead);
+// no deben re-importarse aquí o TypeORM lanza DuplicateDataSourceException.
 @Module({
-  imports: [
-    MariaDbModule.forWrite(),
-    MariaDbModule.forRead(),
-    MariaDbModule.forFeature(),
-    MariaDbModule.forFeatureRead(),
-  ],
   providers: [MariaDbConnectionService],
-  exports: [TypeOrmModule],
 })
 export class MariaDbModule {
   static forWrite(): DynamicModule {

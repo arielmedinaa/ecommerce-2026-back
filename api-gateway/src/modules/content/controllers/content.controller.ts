@@ -329,6 +329,28 @@ export class ContentController {
     return verticales;
   }
 
+  @Put('vertical/:id')
+  @SneakyThrows('ContentController', 'updateVertical')
+  async updateVertical(
+    @Param('id') id: string,
+    @Body() body: { vertical: any; userId?: string },
+  ) {
+    return await firstValueFrom(
+      this.contentClient.send(
+        { cmd: 'updateVertical' },
+        { id, vertical: body?.vertical ?? body, userId: body?.userId },
+      ),
+    );
+  }
+
+  @Delete('vertical/:id')
+  @SneakyThrows('ContentController', 'deleteVertical')
+  async deleteVertical(@Param('id') id: string) {
+    return await firstValueFrom(
+      this.contentClient.send({ cmd: 'deleteVertical' }, { id }),
+    );
+  }
+
   @Post('cupon')
   @SneakyThrows('ContentController', 'crearCupon')
   @UseGuards(JwtAuthGuard)
@@ -364,6 +386,14 @@ export class ContentController {
       ),
     );
     return cupones;
+  }
+
+  @Get('cupon/:id')
+  @SneakyThrows('ContentController', 'obtenerCuponPorId')
+  async obtenerCuponPorId(@Param('id', ParseIntPipe) id: number) {
+    return await firstValueFrom(
+      this.contentClient.send({ cmd: 'obtener_cupon_por_id' }, { id }),
+    );
   }
 
   @Get('cuponesPorProducto')

@@ -22,7 +22,19 @@ export class VerticalController {
         const { id } = payload;
         return this.verticalesService.findOne(id);
     }
-    
+
+    @MessagePattern({ cmd: 'updateVertical' })
+    async updateVertical(@Payload() payload: any) {
+        const { id, vertical } = payload;
+        return this.verticalesService.update(Number(id), vertical);
+    }
+
+    @MessagePattern({ cmd: 'deleteVertical' })
+    async deleteVertical(@Payload() payload: any) {
+        const { id } = payload;
+        return this.verticalesService.remove(Number(id));
+    }
+
 }
 
 

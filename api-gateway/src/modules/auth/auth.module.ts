@@ -8,6 +8,7 @@ import { GoogleStrategy } from '../../strategies/google.strategy';
 @Module({
   imports: [
     MicroserviceModule.register('AUTH_SERVICE'),
+    MicroserviceModule.register('CART_SERVICE'),
     PassportModule,
   ],
   controllers: [AuthController, UserController],

@@ -84,6 +84,46 @@ export class CartController {
     return this.cartService.getCartWithoutToken(payload);
   }
 
+  @MessagePattern({ cmd: 'get_carts_by_user' })
+  async getCartsByUser(@Payload() payload: { userId: number | string; estado?: string }) {
+    return this.cartService.getCartsByUserId(payload?.userId, payload?.estado);
+  }
+
+  @MessagePattern({ cmd: 'get_compras_resumen' })
+  async getComprasResumen(@Payload() payload: { userIds: (number | string)[] }) {
+    return this.cartService.getComprasResumenByUsers(payload?.userIds || []);
+  }
+
+  @MessagePattern({ cmd: 'remove_cart_item' })
+  async removeCartItem(@Payload() payload: { token: string; productoCodigo: string | number; tipo?: 'contado' | 'credito' }) {
+    return this.cartService.removeCartItem(payload?.token, payload?.productoCodigo, payload?.tipo);
+  }
+
+  @MessagePattern({ cmd: 'remove_cart_items' })
+  async removeCartItems(@Payload() payload: { token: string; items: Array<{ codigo: string | number; tipo?: 'contado' | 'credito' }> }) {
+    return this.cartService.removeCartItems(payload?.token, payload?.items);
+  }
+
+  @MessagePattern({ cmd: 'clear_cart' })
+  async clearCart(@Payload() payload: { token: string }) {
+    return this.cartService.clearCart(payload?.token);
+  }
+
+  @MessagePattern({ cmd: 'set_cart_item_qty' })
+  async setCartItemQty(@Payload() payload: { token: string; productoCodigo: string | number; cantidad: number; tipo?: 'contado' | 'credito' }) {
+    return this.cartService.setCartItemQty(payload?.token, payload?.productoCodigo, payload?.cantidad, payload?.tipo);
+  }
+
+  @MessagePattern({ cmd: 'merge_guest_cart' })
+  async mergeGuestCart(@Payload() payload: { token: string; guestEmail: string }) {
+    return this.cartService.mergeGuestCart(payload?.token, payload?.guestEmail);
+  }
+
+  @MessagePattern({ cmd: 'user_has_movements' })
+  async userHasMovements(@Payload() payload: { userId: number | string }) {
+    return this.cartService.userHasMovements(payload?.userId);
+  }
+
   @MessagePattern({ cmd: 'finish_cart' })
   async finishCart(@Payload() payload: any) {
     const { token, cuenta, codigo, process } = payload;

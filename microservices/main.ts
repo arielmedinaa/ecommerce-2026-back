@@ -22,8 +22,6 @@ async function bootstrap() {
   app.use(requestIdMiddleware);
   app.useGlobalInterceptors(new HttpLoggingInterceptor());
 
-  // Auto-propagate requestId to all microservice calls via ClientProxy.send(...)
-  // This keeps controller code clean and enables end-to-end log correlation.
   const originalSend = ClientProxy.prototype.send;
   ClientProxy.prototype.send = function (pattern: any, data: any) {
     const ctx = RequestContext.get();

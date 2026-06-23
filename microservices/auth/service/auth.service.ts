@@ -327,6 +327,25 @@ export class AuthService {
         },
       };
 
+      // Bloquea asignar un cupón vencido/inactivo a un cliente.
+      try {
+        const cuponRes = await this.resilientService.sendWithResilience(
+          this.contentClient,
+          { cmd: 'obtener_cupon_por_id' },
+          { id: couponData.idCupon },
+          { retries: 2, delay: 800, fallback: async () => null, circuitBreaker: { failureThreshold: 3, resetTimeout: 30000 } },
+        ) as any;
+        const cupon = cuponRes?.data;
+        if (cupon && cupon.vigente === false) {
+          return {
+            success: false,
+            message: 'EL CUPÓN ESTÁ VENCIDO O INACTIVO Y NO PUEDE ASIGNARSE',
+          };
+        }
+      } catch (e) {
+        this.logger.warn('No se pudo verificar vigencia del cupón, se continúa', e);
+      }
+
       const limitePorUsuarioCupon = await this.resilientService.sendWithResilience(
         this.contentClient,
         { cmd: 'listarCuponId' },
@@ -366,5 +385,73 @@ export class AuthService {
         message: 'Error al crear cupón',
       };
     }
+  }
+
+  async asignarCuponMasivo(payload: {
+    idCupon: number;
+    userIds: (number | string)[];
+    descripcion?: string;
+  }): Promise<{ success: boolean; message: string; data?: any }> {
+    const idCupon = Number(payload?.idCupon);
+    const userIds = (Array.isArray(payload?.userIds) ? payload.userIds : [])
+      .map((x) => Number(x))
+      .filter((x) => Number.isFinite(x));
+    if (!idCupon || userIds.length === 0) {
+      return { success: false, message: 'FALTAN idCupon O userIds' };
+    }
+
+    try {
+      const cuponRes = (await this.resilientService.sendWithResilience(
+        this.contentClient,
+        { cmd: 'obtener_cupon_por_id' },
+        { id: idCupon },
+        { retries: 2, delay: 800, fallback: async () => null, circuitBreaker: { failureThreshold: 3, resetTimeout: 30000 } },
+      )) as any;
+      if (cuponRes?.data && cuponRes.data.vigente === false) {
+        return { success: false, message: 'EL CUPÓN ESTÁ VENCIDO O INACTIVO Y NO PUEDE ASIGNARSE' };
+      }
+    } catch (e) {
+      this.logger.warn('No se pudo verificar vigencia del cupón (masivo), se continúa', e);
+    }
+
+    let limite = 0;
+    try {
+      limite = (await this.resilientService.sendWithResilience(
+        this.contentClient,
+        { cmd: 'listarCuponId' },
+        { idCupon },
+        { retries: 2, delay: 800, fallback: async () => 0, circuitBreaker: { failureThreshold: 3, resetTimeout: 30000 } },
+      )) as number;
+    } catch {
+      limite = 0;
+    }
+
+    const asignados: number[] = [];
+    const omitidos: Array<{ userId: number; motivo: string }> = [];
+    // Umbral de "ya lo tiene": el límite por usuario, o 1 si es ilimitado (evita duplicar).
+    const threshold = limite > 0 ? limite : 1;
+    for (const uid of userIds) {
+      try {
+        const count = await this.userCouponService.getUserCouponsCount(uid, idCupon);
+        if (count >= threshold) {
+          omitidos.push({ userId: uid, motivo: count >= 1 ? 'ya tiene el cupón' : 'límite alcanzado' });
+          continue;
+        }
+        await this.userCouponService.createCouponForUser(uid, {
+          idCupon,
+          descripcion: payload?.descripcion || 'Asignación masiva',
+        });
+        asignados.push(uid);
+      } catch (e) {
+        this.logger.error(`Error asignando cupón ${idCupon} al usuario ${uid}`, e);
+        omitidos.push({ userId: uid, motivo: 'error' });
+      }
+    }
+
+    return {
+      success: true,
+      message: `Asignados ${asignados.length}, omitidos ${omitidos.length}`,
+      data: { asignados, omitidos },
+    };
   }
 }

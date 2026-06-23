@@ -149,7 +149,6 @@ export class AuthController {
     }
   }
 
-  // Asigna un cupón a un cliente (expone la lógica existente del auth-service).
   @Post('asignar-cupon')
   async asignarCupon(
     @Body() body: { userId: number; idCupon: number; descripcion: string; eventId?: string },
@@ -163,5 +162,30 @@ export class AuthController {
       console.error('Error in asignarCupon:', error);
       throw new Error('Error al asignar el cupón al cliente: ' + error.message);
     }
+  }
+
+  @Post('asignar-cupon-masivo')
+  async asignarCuponMasivo(
+    @Body() body: { idCupon: number; userIds: (number | string)[]; descripcion?: string },
+  ) {
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'createUserCouponBulk' }, body),
+    );
+  }
+
+  // Envía un código de verificación al email (simulado).
+  @Post('email-code')
+  async sendEmailCode(@Body() body: { email: string }) {
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'send_email_code' }, { email: body?.email }),
+    );
+  }
+
+  // Verifica el código enviado al email.
+  @Post('email-code/verify')
+  async verifyEmailCode(@Body() body: { email: string; code: string }) {
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'verify_email_code' }, { email: body?.email, code: body?.code }),
+    );
   }
 }

@@ -37,6 +37,16 @@ export class CuponesController {
     return await this.cuponesService.obtenerPorId(idCupon);
   }
 
+  @MessagePattern({ cmd: 'obtener_cupon_por_id' })
+  async obtenerCuponCompletoPorId(@Payload() payload: any) {
+    return await this.cuponesService.obtenerCuponCompletoPorId(Number(payload?.id));
+  }
+
+  @MessagePattern({ cmd: 'obtener_cupones_por_ids' })
+  async obtenerCuponesPorIds(@Payload() payload: any) {
+    return await this.cuponesService.obtenerCuponesPorIds(payload?.ids || []);
+  }
+
   @MessagePattern({ cmd: 'desactivarCupon' })
   async desactivarCupon(@Payload() payload: any) {
     const { id } = payload;

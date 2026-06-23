@@ -138,4 +138,14 @@ export class AuthController {
       throw error;
     }
   }
+
+  @MessagePattern({ cmd: 'createUserCouponBulk' })
+  async createUserCouponBulk(@Payload() payload: any) {
+    try {
+      return await this.authService.asignarCuponMasivo(payload);
+    } catch (error) {
+      this.logger.error('Error in createUserCouponBulk:', error);
+      throw error;
+    }
+  }
 }

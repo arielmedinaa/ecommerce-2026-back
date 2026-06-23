@@ -396,6 +396,183 @@ export class CartContadoService {
     };
   }
 
+  // ¿El usuario tuvo movimientos de carrito en los últimos 30 días?
+  // (cualquier carrito suyo actualizado en ese período: abierto, abandonado o finalizado).
+  async userHasMovements(userId: number | string): Promise<{ hasMovements: boolean; count: number; success: boolean }> {
+    try {
+      const count = await this.carritoRead
+        .createQueryBuilder('cart')
+        .where("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id", { id: String(userId) })
+        .andWhere('cart.updatedAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)')
+        .getCount();
+      return { hasMovements: count > 0, count, success: true };
+    } catch (error) {
+      this.logger.error('Error en userHasMovements:', error);
+      return { hasMovements: false, count: 0, success: false };
+    }
+  }
+
+  // Carrito activo (estado '1') del usuario del token. Helper para remove/clear.
+  private async getCarritoActivoDeToken(clienteToken: string): Promise<Cart | null> {
+    const decoded = this.jwtService.verify(clienteToken);
+    const usuario_id = parseInt(decoded.sub);
+    if (isNaN(usuario_id)) return null;
+    const ref = await this.carritoRead
+      .createQueryBuilder('cart')
+      .where("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id", { id: usuario_id })
+      .andWhere("cart.estado = '1'")
+      .orderBy('cart.codigo', 'DESC')
+      .getOne();
+    if (!ref) return null;
+    return this.carritoWrite.findOne({ where: { id: ref.id } });
+  }
+
+  // Quita un ítem del carrito activo (por código de producto; tipo opcional contado/credito).
+  async removeCartItem(
+    clienteToken: string,
+    productoCodigo: string | number,
+    tipo?: 'contado' | 'credito',
+  ): Promise<{ data: Cart[]; success: boolean; message: string }> {
+    try {
+      const carrito = await this.getCarritoActivoDeToken(clienteToken);
+      if (!carrito) return { data: [], success: false, message: 'NO HAY CARRITO ACTIVO' };
+      const art: any = carrito.articulos || { contado: [], credito: [] };
+      const tipos = tipo ? [tipo] : ['contado', 'credito'];
+      for (const t of tipos) {
+        art[t] = (art[t] || []).filter((i: any) => String(i.codigo) !== String(productoCodigo));
+      }
+      carrito.articulos = art;
+      await this.carritoWrite.save(carrito);
+      return { data: [carrito], success: true, message: 'ITEM REMOVIDO DEL CARRITO' };
+    } catch (error) {
+      this.logger.error('Error al remover ítem del carrito:', error);
+      return { data: [], success: false, message: 'ERROR AL REMOVER ÍTEM' };
+    }
+  }
+
+  // Quita varios ítems del carrito activo en UNA sola lectura-modificación-escritura.
+  // Evita la condición de carrera de disparar N removeCartItem en paralelo
+  // (cada uno leía el carrito completo y el último save pisaba a los demás).
+  async removeCartItems(
+    clienteToken: string,
+    items: Array<{ codigo: string | number; tipo?: 'contado' | 'credito' }>,
+  ): Promise<{ data: Cart[]; success: boolean; message: string }> {
+    try {
+      const carrito = await this.getCarritoActivoDeToken(clienteToken);
+      if (!carrito) return { data: [], success: false, message: 'NO HAY CARRITO ACTIVO' };
+      const art: any = carrito.articulos || { contado: [], credito: [] };
+      const lista = Array.isArray(items) ? items : [];
+      for (const it of lista) {
+        const tipos = it?.tipo ? [it.tipo] : ['contado', 'credito'];
+        for (const t of tipos) {
+          art[t] = (art[t] || []).filter((i: any) => String(i.codigo) !== String(it.codigo));
+        }
+      }
+      carrito.articulos = art;
+      await this.carritoWrite.save(carrito);
+      return { data: [carrito], success: true, message: 'ITEMS REMOVIDOS DEL CARRITO' };
+    } catch (error) {
+      this.logger.error('Error al remover ítems del carrito:', error);
+      return { data: [], success: false, message: 'ERROR AL REMOVER ÍTEMS' };
+    }
+  }
+
+  // Setea la cantidad de un ítem del carrito activo (si <=0, lo quita).
+  async setCartItemQty(
+    clienteToken: string,
+    productoCodigo: string | number,
+    cantidad: number,
+    tipo?: 'contado' | 'credito',
+  ): Promise<{ data: Cart[]; success: boolean; message: string }> {
+    try {
+      const carrito = await this.getCarritoActivoDeToken(clienteToken);
+      if (!carrito) return { data: [], success: false, message: 'NO HAY CARRITO ACTIVO' };
+      const qty = Number(cantidad);
+      const art: any = carrito.articulos || { contado: [], credito: [] };
+      const tipos = tipo ? [tipo] : ['contado', 'credito'];
+      for (const t of tipos) {
+        const list = Array.isArray(art[t]) ? art[t] : [];
+        if (qty <= 0) {
+          art[t] = list.filter((i: any) => String(i.codigo) !== String(productoCodigo));
+        } else {
+          art[t] = list.map((i: any) =>
+            String(i.codigo) === String(productoCodigo) ? { ...i, cantidad: qty } : i,
+          );
+        }
+      }
+      carrito.articulos = art;
+      await this.carritoWrite.save(carrito);
+      return { data: [carrito], success: true, message: 'CANTIDAD ACTUALIZADA' };
+    } catch (error) {
+      this.logger.error('Error al actualizar cantidad del ítem:', error);
+      return { data: [], success: false, message: 'ERROR AL ACTUALIZAR CANTIDAD' };
+    }
+  }
+
+  // Vacía el carrito activo del usuario (deja articulos en blanco, estado '1').
+  async clearCart(clienteToken: string): Promise<{ data: Cart[]; success: boolean; message: string }> {
+    try {
+      const carrito = await this.getCarritoActivoDeToken(clienteToken);
+      if (!carrito) return { data: [], success: false, message: 'NO HAY CARRITO ACTIVO' };
+      carrito.articulos = { contado: [], credito: [] } as any;
+      await this.carritoWrite.save(carrito);
+      return { data: [carrito], success: true, message: 'CARRITO VACIADO' };
+    } catch (error) {
+      this.logger.error('Error al vaciar el carrito:', error);
+      return { data: [], success: false, message: 'ERROR AL VACIAR CARRITO' };
+    }
+  }
+
+  // Mergea el carrito del invitado (por email) en el carrito activo del usuario logueado.
+  // Mueve los artículos y cierra el carrito del invitado para evitar duplicados.
+  async mergeGuestCart(
+    userToken: string,
+    guestEmail: string,
+  ): Promise<{ data: Cart[]; success: boolean; message: string }> {
+    try {
+      const destino = await this.getCarritoActivoDeToken(userToken);
+      const guestCartRef = await this.carritoRead
+        .createQueryBuilder('cart')
+        .where("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.correo')) = :correo", { correo: guestEmail })
+        .andWhere("cart.estado = '1'")
+        .orderBy('cart.codigo', 'DESC')
+        .getOne();
+      if (!guestCartRef) return { data: destino ? [destino] : [], success: true, message: 'SIN CARRITO INVITADO' };
+      const guestCart = await this.carritoWrite.findOne({ where: { id: guestCartRef.id } });
+      const gArt: any = guestCart?.articulos || { contado: [], credito: [] };
+
+      // Si el usuario no tiene carrito activo, simplemente reasignamos el del invitado.
+      const decoded = this.jwtService.verify(userToken);
+      const usuario_id = parseInt(decoded.sub);
+      if (!destino) {
+        guestCart.cliente = { ...(guestCart.cliente as any), id_usuario: usuario_id, equipo: userToken, correo: decoded.email };
+        await this.carritoWrite.save(guestCart);
+        return { data: [guestCart], success: true, message: 'CARRITO INVITADO REASIGNADO' };
+      }
+
+      // Fusionar artículos (sumando cantidades por codigo+tipo).
+      const dArt: any = destino.articulos || { contado: [], credito: [] };
+      for (const t of ['contado', 'credito']) {
+        const destList = Array.isArray(dArt[t]) ? dArt[t] : [];
+        for (const gi of gArt[t] || []) {
+          const ex = destList.find((x: any) => String(x.codigo) === String(gi.codigo));
+          if (ex) ex.cantidad = (Number(ex.cantidad) || 1) + (Number(gi.cantidad) || 1);
+          else destList.push(gi);
+        }
+        dArt[t] = destList;
+      }
+      destino.articulos = dArt;
+      await this.carritoWrite.save(destino);
+      // Cerrar el carrito del invitado.
+      guestCart.estado = '0';
+      await this.carritoWrite.save(guestCart);
+      return { data: [destino], success: true, message: 'CARRITO INVITADO FUSIONADO' };
+    } catch (error) {
+      this.logger.error('Error al mergear carrito de invitado:', error);
+      return { data: [], success: false, message: 'ERROR AL FUSIONAR CARRITO' };
+    }
+  }
+
   async getCart(
     clienteToken: string,
     cuenta?: string,
@@ -566,6 +743,80 @@ export class CartContadoService {
       success: true,
       message: 'Carritos recuperados',
     };
+  }
+
+  async getCartsByUserId(
+    userId: number | string,
+    estado?: string,
+  ): Promise<{ data: Cart[]; success: boolean; message: string }> {
+    try {
+      const qb = this.carritoRead
+        .createQueryBuilder('cart')
+        .where(
+          "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id_usuario",
+          { id_usuario: String(userId) },
+        )
+        // Antigüedad calculada con el reloj de la BD (evita desfases de timezone en JS).
+        .addSelect(
+          'TIMESTAMPDIFF(MINUTE, COALESCE(cart.updatedAt, cart.createdAt), NOW())',
+          'age_min',
+        );
+      if (estado !== undefined && estado !== null && estado !== '') {
+        qb.andWhere('cart.estado = :estado', { estado: String(estado) });
+      }
+      const { entities, raw } = await qb.orderBy('cart.codigo', 'DESC').getRawAndEntities();
+      const ABANDONO_MIN = 20; // un carrito no finalizado sin actividad > 20 min = abandonado
+      const enriched = (entities || []).map((c: any, i: number) => {
+        const ageMin = Number(raw?.[i]?.age_min ?? 0);
+        const finalizado = c?.estado === '0' || c?.finished === '1';
+        const abandonado = !finalizado && ageMin > ABANDONO_MIN;
+        const situacion = finalizado ? 'finalizado' : abandonado ? 'abandonado' : 'activo';
+        return { ...c, abandonado, situacion, ageMin };
+      });
+      return {
+        data: enriched,
+        success: true,
+        message: 'CARRITOS DEL CLIENTE RECUPERADOS',
+      };
+    } catch (error) {
+      this.logger.error('Error al obtener carritos por usuario:', error);
+      return { data: [], success: false, message: 'ERROR AL OBTENER CARRITOS DEL CLIENTE' };
+    }
+  }
+
+  async getComprasResumenByUsers(
+    userIds: (number | string)[],
+  ): Promise<{ data: Array<{ userId: string; compras: number; gastoTotal: number }>; success: boolean; message: string }> {
+    try {
+      const ids = (Array.isArray(userIds) ? userIds : [])
+        .map((x) => String(x))
+        .filter((x) => x && x !== 'null' && x !== 'undefined');
+      // ids vacío => resumen de TODOS los usuarios con compras finalizadas (para el filtro por tipo).
+
+      const qb = this.carritoRead
+        .createQueryBuilder('cart')
+        .select("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario'))", 'userId')
+        .addSelect('COUNT(*)', 'compras')
+        .addSelect(
+          "COALESCE(SUM(CAST(JSON_UNQUOTE(JSON_EXTRACT(cart.pago, '$.monto')) AS DECIMAL(14,2))), 0)",
+          'gasto',
+        )
+        .where('cart.estado = :estado', { estado: '0' });
+      if (ids.length > 0) {
+        qb.andWhere("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) IN (:...ids)", { ids });
+      }
+      const rows = await qb.groupBy('userId').getRawMany();
+
+      const data = (rows || []).map((r: any) => ({
+        userId: String(r.userId),
+        compras: Number(r.compras) || 0,
+        gastoTotal: Number(r.gasto) || 0,
+      }));
+      return { data, success: true, message: 'RESUMEN DE COMPRAS' };
+    } catch (error) {
+      this.logger.error('Error al obtener resumen de compras por usuario:', error);
+      return { data: [], success: false, message: 'ERROR AL OBTENER RESUMEN DE COMPRAS' };
+    }
   }
 
   async getMissingCart(
@@ -794,8 +1045,6 @@ export class CartContadoService {
   }> {
     const decoded = this.jwtService.verify(clienteToken);
     const usuario_id = parseInt(decoded.sub);
-    
-    // Validar que usuario_id sea un número válido
     if (isNaN(usuario_id) || !usuario_id) {
       this.logger.error('Invalid user ID from JWT token in finishCart', { sub: decoded.sub, parsed: usuario_id });
       return {

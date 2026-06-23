@@ -48,11 +48,55 @@ export class CuponesService {
     }
   }
 
+  async desactivarCuponesVencidos(): Promise<number> {
+    const res = await this.cuponRepository
+      .createQueryBuilder()
+      .update()
+      .set({ activo: false })
+      .where('activo = :a', { a: true })
+      .andWhere('fechaFin < NOW()')
+      .execute();
+    return res.affected || 0;
+  }
+
+  async obtenerCuponCompletoPorId(
+    id: number,
+  ): Promise<{ data: any; success: boolean; message: string }> {
+    await this.desactivarCuponesVencidos();
+    const cupon = await this.cuponRepositoryRead.findOne({ where: { id } });
+    if (!cupon) {
+      return { data: null, success: false, message: 'CUPÓN NO ENCONTRADO' };
+    }
+    const ahora = new Date();
+    const vigente =
+      !!cupon.activo &&
+      new Date(cupon.fechaInicio) <= ahora &&
+      ahora <= new Date(cupon.fechaFin);
+    return { data: { ...cupon, vigente }, success: true, message: 'CUPÓN OBTENIDO' };
+  }
+
+  // Varios cupones por ids (enriquecimiento en lote).
+  async obtenerCuponesPorIds(
+    ids: number[],
+  ): Promise<{ data: any[]; success: boolean; message: string }> {
+    await this.desactivarCuponesVencidos();
+    const limpios = (Array.isArray(ids) ? ids : []).map((x) => Number(x)).filter((x) => Number.isFinite(x));
+    if (limpios.length === 0) return { data: [], success: true, message: 'SIN IDS' };
+    const cupones = await this.cuponRepositoryRead.findByIds(limpios);
+    const ahora = new Date();
+    const data = cupones.map((c) => ({
+      ...c,
+      vigente: !!c.activo && new Date(c.fechaInicio) <= ahora && ahora <= new Date(c.fechaFin),
+    }));
+    return { data, success: true, message: 'CUPONES OBTENIDOS' };
+  }
+
   async obtenerTodos(
     page: number = 1,
     limit: number = 10,
     filters: any = {},
   ): Promise<{ cupones: Cupon[]; total: number; pages: number }> {
+    await this.desactivarCuponesVencidos();
     const skip = Math.max(0, (page - 1) * limit);
     const queryBuilder = this.cuponRepositoryRead.createQueryBuilder('cupon');
 
@@ -234,6 +278,23 @@ export class CuponesService {
         return {
           data: relacionesExistentes,
           message: `ALGUNAS RELACIONES YA EXISTEN: ${mensajesRelaciones.join(', ')}`,
+          success: false,
+        };
+      }
+
+      await this.desactivarCuponesVencidos();
+      const idsCupones = [...new Set(data.productos.map((p) => Number(p.cuponId)))];
+      const cuponesRef = await this.cuponRepositoryRead.findByIds(idsCupones);
+      const ahora = new Date();
+      const noVigentes = idsCupones.filter((id) => {
+        const c = cuponesRef.find((x) => x.id === id);
+        if (!c) return true;
+        return !c.activo || new Date(c.fechaInicio) > ahora || ahora > new Date(c.fechaFin);
+      });
+      if (noVigentes.length > 0) {
+        return {
+          data: noVigentes,
+          message: `NO SE PUEDEN ASIGNAR CUPONES VENCIDOS O INACTIVOS: ${noVigentes.join(', ')}`,
           success: false,
         };
       }
