@@ -1,0 +1,12 @@
+name: nats
+type: Backend Service
+
+image:
+  location: nats:2.10-alpine
+  port: 4222
+command: ["-js", "-m", "8222"]
+
+cpu: 256
+memory: 512
+count: 1
+exec: true

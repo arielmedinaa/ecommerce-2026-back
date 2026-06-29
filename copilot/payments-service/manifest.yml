@@ -1,0 +1,41 @@
+# payments-service — interno (NATS). Procesa pagos; usa SQS (worker async).
+name: payments-service
+type: Backend Service
+
+image:
+  build:
+    dockerfile: microservices/payments/container/Dockerfile.dev
+    context: .
+
+cpu: 256
+memory: 512
+exec: true
+
+count:
+  range: 1-5
+  cpu_percentage: 70
+
+variables:
+  NODE_ENV: production
+  LOG_FORMAT: json
+  NATS_URL: nats://nats.${COPILOT_ENVIRONMENT_NAME}.${COPILOT_APPLICATION_NAME}.local:4222
+  DATABASE_HOST: REPLACE-rds-endpoint
+  DATABASE_PORT: "3306"
+  DATABASE_USER: ecommerce
+  DATABASE_NAME: payments_db
+  DATABASE_HOST_REPLIC: REPLACE-rds-endpoint
+  DATABASE_PORT_REPLIC: "3306"
+  DATABASE_USER_REPLIC: ecommerce
+  DATABASE_NAME_REPLIC: payments_db
+  # SQS REAL de AWS (sin SQS_ENDPOINT → el SDK usa el endpoint nativo de la región).
+  AWS_REGION: us-east-1
+  PAYMENTS_SQS_QUEUE_NAME: payments-jobs
+  PAYMENTS_SQS_WORKER_ENABLED: "true"
+
+secrets:
+  DATABASE_PASSWORD: DATABASE_PASSWORD
+  DATABASE_PASSWORD_REPLIC: DATABASE_PASSWORD
+
+# Nota: la task necesita permisos IAM para SQS. Se otorgan con un addon de IAM
+# en copilot/payments-service/addons/ (ver README). Fargate usa el Task Role,
+# no claves AWS_ACCESS_KEY_ID (eso era solo para LocalStack en dev).

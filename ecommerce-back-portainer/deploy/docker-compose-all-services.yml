@@ -1,0 +1,288 @@
+services:
+  # Balanceador de Carga (Nginx)
+  nginx-lb:
+    image: nginx:latest
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - '3100:80'
+    depends_on:
+      - api-gateway
+    networks:
+      - app-network
+
+  # LocalStack (AWS emulation) - SQS
+  localstack:
+    image: localstack/localstack:3.5
+    environment:
+      - SERVICES=s3,sqs,cloudfront,iam,sts
+      - DEBUG=${LOCALSTACK_DEBUG:-0}
+    ports:
+      - '4566:4566'
+    networks:
+      - app-network
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3100
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:5173}
+      - IS_DOCKER=true
+      - RUN_MODE=all
+      # Service ports
+      - AUTH_PORT=3101
+      - CART_PORT=3102
+      - CONTENT_PORT=3103
+      - ORDERS_PORT=3104
+      - PAYMENTS_PORT=3105
+      - PRODUCTS_PORT=3106
+      - IMAGE_PORT=3107
+      # Service URLs (modo Docker)
+      - AUTH_SERVICE_URL=deploy-auth-1
+      - CART_SERVICE_URL=deploy-cart-1
+      - CONTENT_SERVICE_URL=deploy-content-1
+      - PAYMENTS_SERVICE_URL=deploy-payments-1
+      - PRODUCTS_SERVICE_URL=deploy-products-1
+      - IMAGE_SERVICE_URL=deploy-image-1
+      - SQS_ENDPOINT=${SQS_ENDPOINT:-http://localstack:4566}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+      - ../imagesEcommerce:/home/appuser/Documents/projects/newEcommerce2026/imagesEcommerce
+    command: yarn start:dev:gateway
+    depends_on:
+      - auth
+      - products
+      - cart
+      - content
+      - payments
+      - image
+      - localstack
+    networks:
+      - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # Auth Service
+  auth:
+    build:
+      context: ..
+      dockerfile: microservices/auth/container/Dockerfile.dev
+    env_file:
+      - ../.env
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3101
+      - AUTH_PORT=3101
+      - IS_DOCKER=true
+      - RUN_MODE=all
+      - SERVICE_NAME=AUTH_SERVICE
+      # URLs de otros servicios (comunicación Docker)
+      - AUTH_SERVICE_URL=deploy-auth-1
+      - CART_SERVICE_URL=deploy-cart-1
+      - CONTENT_SERVICE_URL=deploy-content-1
+      - PAYMENTS_SERVICE_URL=deploy-payments-1
+      - PRODUCTS_SERVICE_URL=deploy-products-1
+      - IMAGE_SERVICE_URL=deploy-image-1
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+      - /usr/src/app/microservices/auth/node_modules
+    command: yarn start:dev:auth
+    networks:
+      - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Products Service
+  products:
+    build:
+      context: ..
+      dockerfile: microservices/products/container/Dockerfile.dev
+    env_file:
+      - ../.env
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3106
+      - PRODUCTS_PORT=3106
+      - IS_DOCKER=true
+      - RUN_MODE=all
+      - SERVICE_NAME=PRODUCTS_SERVICE
+      # URLs de otros servicios (comunicación Docker)
+      - AUTH_SERVICE_URL=deploy-auth-1
+      - CART_SERVICE_URL=deploy-cart-1
+      - CONTENT_SERVICE_URL=deploy-content-1
+      - PAYMENTS_SERVICE_URL=deploy-payments-1
+      - PRODUCTS_SERVICE_URL=deploy-products-1
+      - IMAGE_SERVICE_URL=deploy-image-1
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+      - /usr/src/app/microservices/products/node_modules
+      - ../imagesEcommerce:/home/appuser/Documents/projects/newEcommerce2026/imagesEcommerce
+    command: yarn start:dev:products
+    networks:
+      - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Cart Service
+  cart:
+    build:
+      context: ..
+      dockerfile: microservices/cart/container/Dockerfile.dev
+    env_file:
+      - ../.env
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3102
+      - CART_PORT=3102
+      - IS_DOCKER=true
+      - RUN_MODE=all
+      - SERVICE_NAME=CART_SERVICE
+      # URLs de otros servicios (comunicación Docker)
+      - AUTH_SERVICE_URL=deploy-auth-1
+      - CART_SERVICE_URL=deploy-cart-1
+      - CONTENT_SERVICE_URL=deploy-content-1
+      - PAYMENTS_SERVICE_URL=deploy-payments-1
+      - PRODUCTS_SERVICE_URL=deploy-products-1
+      - IMAGE_SERVICE_URL=deploy-image-1
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+      - /usr/src/app/microservices/cart/node_modules
+    command: yarn start:dev:cart
+    networks:
+      - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Content Service
+  content:
+    build:
+      context: ..
+      dockerfile: microservices/content/container/Dockerfile.dev
+    env_file:
+      - ../.env
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3103
+      - CONTENT_PORT=3103
+      - IS_DOCKER=true
+      - RUN_MODE=all
+      - SERVICE_NAME=CONTENT_SERVICE
+      # URLs de otros servicios (comunicación Docker)
+      - AUTH_SERVICE_URL=deploy-auth-1
+      - CART_SERVICE_URL=deploy-cart-1
+      - CONTENT_SERVICE_URL=deploy-content-1
+      - PAYMENTS_SERVICE_URL=deploy-payments-1
+      - PRODUCTS_SERVICE_URL=deploy-products-1
+      - IMAGE_SERVICE_URL=deploy-image-1
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+      - /usr/src/app/microservices/content/node_modules
+    command: yarn start:dev:content
+    networks:
+      - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Payments Service
+  payments:
+    build:
+      context: ..
+      dockerfile: microservices/payments/container/Dockerfile.dev
+    env_file:
+      - ../.env
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3104
+      - PAYMENTS_PORT=3105
+      - IS_DOCKER=true
+      - RUN_MODE=all
+      - SERVICE_NAME=PAYMENTS_SERVICE
+      # URLs de otros servicios (comunicación Docker)
+      - AUTH_SERVICE_URL=deploy-auth-1
+      - CART_SERVICE_URL=deploy-cart-1
+      - CONTENT_SERVICE_URL=deploy-content-1
+      - PAYMENTS_SERVICE_URL=deploy-payments-1
+      - PRODUCTS_SERVICE_URL=deploy-products-1
+      - IMAGE_SERVICE_URL=deploy-image-1
+      - SQS_ENDPOINT=${SQS_ENDPOINT:-http://localstack:4566}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - PAYMENTS_SQS_QUEUE_NAME=${PAYMENTS_SQS_QUEUE_NAME:-payments-jobs}
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+      - /usr/src/app/microservices/payments/node_modules
+    command: yarn start:dev:payments
+    networks:
+      - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Image Service
+  image:
+    build:
+      context: ..
+      dockerfile: microservices/image/container/Dockerfile.dev
+    env_file:
+      - ../.env
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=4093
+      - IMAGE_PORT=3107
+      #- MONGO_URL=${MONGO_URL}
+      - IS_DOCKER=true
+      - IMAGE_STORAGE_PROVIDER=s3
+      - IMAGE_S3_ENDPOINT=${S3_ENDPOINT:-http://localstack:4566}
+      - IMAGE_S3_BUCKET=${IMAGE_S3_BUCKET:-ecommerce-images}
+      - IMAGE_S3_KEY_PREFIX=${IMAGE_S3_KEY_PREFIX:-banners}
+      - IMAGE_S3_ENSURE_BUCKET=${IMAGE_S3_ENSURE_BUCKET:-true}
+      - IMAGE_S3_EXTERNAL_BASE_URL=${IMAGE_S3_EXTERNAL_BASE_URL:-http://localhost:4566/ecommerce-images}
+      - IMAGE_CDN_BASE_URL=${IMAGE_CDN_BASE_URL:-}
+    # ports:
+    #   - "3107:3107"
+    volumes:
+      - ../:/usr/src/app
+      - ../imagesEcommerce:/home/appuser/Documents/projects/newEcommerce2026/imagesEcommerce
+      - /usr/src/app/node_modules
+      - /usr/src/app/microservices/image/node_modules
+    command: yarn start:dev:image
+    networks:
+      - app-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+#   mariadb:
+#     image: mariadb:latest
+#     container_name: ssss_ecommerce
+#     restart: always
+#     environment:
+#       MARIADB_ROOT_PASSWORD: classicS
+#       MARIADB_DATABASE: ssss_ecommerce
+#       MARIADB_USER: root
+#       MARIADB_PASSWORD: classicS
+#     ports:
+#       - '3306:3306'
+#     volumes:
+#       - mariadb_data:/var/lib/mysql
+
+# volumes:
+#   mariadb_data:
+
+networks:
+  app-network:
+    external: true

@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: products-service
+  labels:
+    app: products-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: products-service
+  template:
+    metadata:
+      labels:
+        app: products-service
+    spec:
+      containers:
+      - name: products-service
+        image: localhost/products-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3106
+        envFrom:
+        - configMapRef:
+            name: ecommerce-config
+        - secretRef:
+            name: econt-db
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: products-service
+spec:
+  selector:
+    app: products-service
+  ports:
+    - protocol: TCP
+      port: 3106
+      targetPort: 3106
+  type: ClusterIP

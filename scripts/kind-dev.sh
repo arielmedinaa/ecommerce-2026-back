@@ -141,6 +141,8 @@ port_forward_gateway() {
   
   kubectl port-forward -n "$KUBECTL_NAMESPACE" \
     svc/mariadb 3306:3306 &
+
+  kubectl port-forward --address 0.0.0.0 -n default svc/api-gateway 3100:3100 &
 }
 
 main() {

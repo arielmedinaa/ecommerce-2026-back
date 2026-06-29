@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-gateway-ingress
+  namespace: ecommerce-prod
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    # Configuración de SSL/TLS (Pre-requisito tener Cert-Manager)
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  # tls:
+  # - hosts:
+  #   - api.tu-ecommerce.com
+  #   secretName: api-ecommerce-tls
+  rules:
+  - host: api.tu-ecommerce.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 3100

@@ -1,0 +1,97 @@
+import { Controller } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
+import { Landing } from '@landings/schemas/landings.schemas';
+import { LandingsService } from '@landings/service/landings.service';
+import { Formato } from '@landings/schemas/formatos.schema';
+
+@Controller()
+export class LandingsController {
+  constructor(private readonly landingsService: LandingsService) {}
+
+  @MessagePattern({ cmd: 'crearLanding' })
+  async crearLanding(@Payload() payload: any): Promise<{
+    data: {};
+    message?: any;
+  }> {
+    const { createLandingDto, usuario, userId } = payload;
+    return this.landingsService.crearLanding(
+      createLandingDto,
+      usuario || userId || 'admin',
+    );
+  }
+
+  @MessagePattern({ cmd: 'getAllLandings' })
+  async getAllLandings(
+    @Payload() payload: any,
+  ): Promise<{ landings: Landing[]; total: number; pages: number }> {
+    const { page, limit, filters } = payload;
+    return this.landingsService.getAllLandings(page, limit, filters);
+  }
+
+  @MessagePattern({ cmd: 'getActiveLandings' })
+  async getActiveLandings(@Payload() payload: any): Promise<{
+    landings: Landing[];
+    total: number;
+    pages: number;
+    currentPage: number;
+  }> {
+    const { page, limit } = payload;
+    return this.landingsService.getActiveLandings(page, limit);
+  }
+
+  @MessagePattern({ cmd: 'getLandingById' })
+  async getLandingById(@Payload() payload: any): Promise<Landing> {
+    const { id } = payload;
+    return this.landingsService.getLandingById(id);
+  }
+
+  @MessagePattern({ cmd: 'getLandingBySlug' })
+  async getLandingBySlug(@Payload() payload: any): Promise<Landing> {
+    const { slug } = payload;
+    return this.landingsService.getLandingBySlug(slug);
+  }
+
+  @MessagePattern({ cmd: 'togglePublishLanding' })
+  async togglePublishLanding(@Payload() payload: any): Promise<Landing> {
+    const { id, userId } = payload;
+    return this.landingsService.togglePublishLanding(id, userId);
+  }
+
+  @MessagePattern({ cmd: 'getLandingStats' })
+  async getLandingStats(): Promise<any> {
+    return this.landingsService.getLandingsStats();
+  }
+
+  @MessagePattern({ cmd: 'updateLanding' })
+  async updateLanding(@Payload() payload: any): Promise<Landing> {
+    const { id, updateLandingDto, userId } = payload;
+    return this.landingsService.updateLanding(id, updateLandingDto, userId);
+  }
+
+  @MessagePattern({ cmd: 'deleteLanding' })
+  async deleteLanding(@Payload() payload: any): Promise<{ success: boolean }> {
+    const { id } = payload;
+    await this.landingsService.deleteLanding(id);
+    return { success: true };
+  }
+
+  @MessagePattern({ cmd: 'getAllFormatos' })
+  async getAllFormatos(
+    @Payload() payload: any,
+  ): Promise<{ formatos: Formato[]; total: number; pages: number }> {
+    const { page, limit, filters } = payload;
+    return this.landingsService.getAllFormatos(page, limit, filters);
+  }
+
+  @MessagePattern({ cmd: 'getFormatoById' })
+  async getFormatoById(@Payload() payload: any): Promise<Formato> {
+    const { id } = payload;
+    return this.landingsService.getFormatoById(id);
+  }
+
+
+  @MessagePattern({ cmd: 'getPredefinedTemplates' })
+  async getPredefinedTemplates(): Promise<any> {
+    return this.landingsService.getPredefinedTemplates();
+  }
+}

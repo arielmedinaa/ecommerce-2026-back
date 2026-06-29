@@ -1,0 +1,36 @@
+# cart-service — interno (NATS). Usa Redis (caché) y JWT.
+name: cart-service
+type: Backend Service
+
+image:
+  build:
+    dockerfile: microservices/cart/container/Dockerfile.dev
+    context: .
+
+cpu: 256
+memory: 512
+exec: true
+
+count:
+  range: 1-5
+  cpu_percentage: 70
+
+variables:
+  NODE_ENV: production
+  LOG_FORMAT: json
+  NATS_URL: nats://nats.${COPILOT_ENVIRONMENT_NAME}.${COPILOT_APPLICATION_NAME}.local:4222
+  # Redis gestionado (ElastiCache) — reemplaza al pod redis del cluster.
+  REDIS_URL: redis://REPLACE-elasticache-endpoint:6379
+  DATABASE_HOST: REPLACE-rds-endpoint
+  DATABASE_PORT: "3306"
+  DATABASE_USER: ecommerce
+  DATABASE_NAME: cart_db
+  DATABASE_HOST_REPLIC: REPLACE-rds-endpoint
+  DATABASE_PORT_REPLIC: "3306"
+  DATABASE_USER_REPLIC: ecommerce
+  DATABASE_NAME_REPLIC: cart_db
+
+secrets:
+  JWT_SECRET: JWT_SECRET
+  DATABASE_PASSWORD: DATABASE_PASSWORD
+  DATABASE_PASSWORD_REPLIC: DATABASE_PASSWORD

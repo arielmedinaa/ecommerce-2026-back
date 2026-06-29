@@ -1,0 +1,31 @@
+// This is your Prisma schema file for Image Service (Banners)
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Banner {
+  id            Int      @id @default(autoincrement())
+  nombre        String   @unique
+  imagen        String
+  variante      String
+  formato       String   @default("webp")
+  ruta          String
+  estado        String
+  creadoPor     String?
+  modificadoPor String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([creadoPor])
+  @@index([modificadoPor])
+  @@index([createdAt(sort: Desc)])
+  @@index([updatedAt(sort: Desc)])
+  @@map("banners")
+}

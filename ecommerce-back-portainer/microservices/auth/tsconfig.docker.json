@@ -1,0 +1,38 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@global/*": ["../api-gateway/src/common/global/*"],
+      "@auth/*": ["./*"],
+      "@content/*": ["../content/*"],
+      "@cart/*": ["cart/*"],
+      "@cart/schemas/*": ["cart/schemas/*"],
+      "@products/*": ["../products/*"],
+      "@image/*": ["../image/*"],
+      "@response/*": ["../api-gateway/src/common/response/*"],
+      "@shared/*": ["shared/*"],
+      "@shared/config/*": ["shared/config/*"],
+      "@shared/config/database/*": ["shared/config/database/*"],
+      "@shared/config/microservice/*": ["shared/config/microservice/*"],
+      "@shared/common/*": ["shared/common/*"],
+      "@shared/common/decorators/*": ["shared/common/decorators/*"],
+      "@shared/common/services/*": ["shared/common/services/*"],
+      "@shared/common/utils/*": ["shared/common/utils/*"],
+      "@shared/common/response/*": ["shared/common/response/*"],
+      "@shared/common/interceptors/*": ["shared/common/interceptors/*"],
+      "@shared/common/controllers/*": ["shared/common/controllers/*"],
+      "@shared/common/guards/*": ["shared/common/guards/*"],
+      "@shared/microservice/*": ["shared/microservice/*"],
+      "@gateway/*": ["../api-gateway/src/*"],
+      "@models/*": ["../api-gateway/src/common/models/*"],
+      "@utils/*": ["../api-gateway/src/common/utils/*"],
+      "@microservices/*": ["../microservices/*"],
+      "@config/*": ["shared/config/*"],
+      "@microservice-config/*": ["shared/config/microservice/*"],
+      "@home/*": ["../content/home/*"],
+      "@decorators/*": ["../api-gateway/src/common/decorators/*"],
+      "@landings/*": ["../content/landings/*"]
+    }
+  }
+}

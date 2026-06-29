@@ -1,6 +1,14 @@
+# Stack local CANÓNICO — espeja la arquitectura ECS Fargate (NATS + Redis + DB-per-service).
+# Levantar con: make compose-up   (o: docker compose -f deploy/docker-compose-all-services.yml up --build)
+#
+# Equivalencias con AWS:
+#   nginx-lb  ≈ ALB        | mariadb ≈ RDS        | redis ≈ ElastiCache
+#   nats      = el bus     | localstack ≈ S3+SQS  | cada service ≈ un ECS Service
+# ECONT (ERP on-prem, 192.168.100.100) es real → products lo usa vía .env.local.
+
 services:
-  # Balanceador de Carga (Nginx)
-  nginx-lb:
+  # --- Infra ---
+  nginx-lb:                              # ≈ ALB (entrada pública en :3100)
     image: nginx:latest
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
@@ -11,8 +19,41 @@ services:
     networks:
       - app-network
 
-  # LocalStack (AWS emulation) - SQS
-  localstack:
+  nats:                                  # bus de mensajería (RPC entre servicios)
+    image: nats:2.10-alpine
+    command: ["-js", "-m", "8222"]       # JetStream + endpoint de monitoreo
+    ports:
+      - '4222:4222'
+      - '8222:8222'                       # http://localhost:8222/connz
+    networks:
+      - app-network
+
+  redis:                                 # caché (cart, products)
+    image: redis:7-alpine
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru", "--save", "", "--appendonly", "no"]
+    ports:
+      - '6379:6379'
+    networks:
+      - app-network
+
+  mariadb:                               # DB de aplicación (schemas por servicio)
+    image: mariadb:10.11
+    command: ["--max_connections=500"]
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: ecommerce
+      MARIADB_USER: ecommerce
+      MARIADB_PASSWORD: ecommerce
+    ports:
+      - '3307:3306'   # host 3307 (3306 suele estar ocupado); interno sigue 3306
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      # Crea schemas (01-schemas.sql) y carga datos (02-seed.sql, si existe) en el primer boot.
+      - ./local/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - app-network
+
+  localstack:                            # ≈ S3 + SQS
     image: localstack/localstack:3.5
     environment:
       - SERVICES=s3,sqs,cloudfront,iam,sts
@@ -22,267 +63,277 @@ services:
     networks:
       - app-network
 
-  # API Gateway
+  # --- Microservicios (cada uno = un ECS Service) ---
   api-gateway:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.dev
     environment:
       - NODE_ENV=${NODE_ENV:-development}
+      - LOG_FORMAT=json
       - PORT=3100
+      - GATEWAY_PORT=3100
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:5173}
       - IS_DOCKER=true
       - RUN_MODE=all
-      # Service ports
-      - AUTH_PORT=3101
-      - CART_PORT=3102
-      - CONTENT_PORT=3103
-      - ORDERS_PORT=3104
-      - PAYMENTS_PORT=3105
-      - PRODUCTS_PORT=3106
-      - IMAGE_PORT=3107
-      # Service URLs (modo Docker)
-      - AUTH_SERVICE_URL=deploy-auth-1
-      - CART_SERVICE_URL=deploy-cart-1
-      - CONTENT_SERVICE_URL=deploy-content-1
-      - PAYMENTS_SERVICE_URL=deploy-payments-1
-      - PRODUCTS_SERVICE_URL=deploy-products-1
-      - IMAGE_SERVICE_URL=deploy-image-1
-      - SQS_ENDPOINT=${SQS_ENDPOINT:-http://localstack:4566}
-      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - JWT_SECRET=${JWT_SECRET:-ecommerce-back-2026-central-shop-api-ecommerce}
+      - NATS_URL=nats://nats:4222
     volumes:
       - ../:/usr/src/app
       - /usr/src/app/node_modules
-      - ../imagesEcommerce:/home/appuser/Documents/projects/newEcommerce2026/imagesEcommerce
     command: yarn start:dev:gateway
     depends_on:
+      - nats
       - auth
       - products
       - cart
       - content
       - payments
       - image
-      - localstack
     networks:
       - app-network
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 256M
 
-  # Auth Service
   auth:
     build:
       context: ..
       dockerfile: microservices/auth/container/Dockerfile.dev
-    env_file:
-      - ../.env
     environment:
       - NODE_ENV=${NODE_ENV:-development}
-      - PORT=3101
-      - AUTH_PORT=3101
+      - LOG_FORMAT=json
       - IS_DOCKER=true
       - RUN_MODE=all
-      - SERVICE_NAME=AUTH_SERVICE
-      # URLs de otros servicios (comunicación Docker)
-      - AUTH_SERVICE_URL=deploy-auth-1
-      - CART_SERVICE_URL=deploy-cart-1
-      - CONTENT_SERVICE_URL=deploy-content-1
-      - PAYMENTS_SERVICE_URL=deploy-payments-1
-      - PRODUCTS_SERVICE_URL=deploy-products-1
-      - IMAGE_SERVICE_URL=deploy-image-1
+      - JWT_SECRET=${JWT_SECRET:-ecommerce-back-2026-central-shop-api-ecommerce}
+      - NATS_URL=nats://nats:4222
+      - DATABASE_HOST=mariadb
+      - DATABASE_PORT=3306
+      - DATABASE_USER=ecommerce
+      - DATABASE_PASSWORD=ecommerce
+      - DATABASE_NAME=auth_db
+      - DATABASE_HOST_REPLIC=mariadb
+      - DATABASE_PORT_REPLIC=3306
+      - DATABASE_USER_REPLIC=ecommerce
+      - DATABASE_PASSWORD_REPLIC=ecommerce
+      - DATABASE_NAME_REPLIC=auth_db
     volumes:
       - ../:/usr/src/app
       - /usr/src/app/node_modules
       - /usr/src/app/microservices/auth/node_modules
     command: yarn start:dev:auth
+    depends_on:
+      - nats
+      - mariadb
     networks:
       - app-network
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  # Products Service
   products:
     build:
       context: ..
       dockerfile: microservices/products/container/Dockerfile.dev
     env_file:
-      - ../.env
+      - ./.env.local              # ECONT_DB_* (ERP on-prem real)
     environment:
       - NODE_ENV=${NODE_ENV:-development}
-      - PORT=3106
-      - PRODUCTS_PORT=3106
+      - LOG_FORMAT=json
       - IS_DOCKER=true
       - RUN_MODE=all
-      - SERVICE_NAME=PRODUCTS_SERVICE
-      # URLs de otros servicios (comunicación Docker)
-      - AUTH_SERVICE_URL=deploy-auth-1
-      - CART_SERVICE_URL=deploy-cart-1
-      - CONTENT_SERVICE_URL=deploy-content-1
-      - PAYMENTS_SERVICE_URL=deploy-payments-1
-      - PRODUCTS_SERVICE_URL=deploy-products-1
-      - IMAGE_SERVICE_URL=deploy-image-1
+      - NATS_URL=nats://nats:4222
+      - REDIS_URL=redis://redis:6379
+      # Conexión "ecommerce" (DB local): productos_imagenes / ofertas / producto_ofertas
+      - DATABASE_HOST=mariadb
+      - DATABASE_PORT=3306
+      - DATABASE_USER=ecommerce
+      - DATABASE_PASSWORD=ecommerce
+      - DATABASE_NAME=ecommerce
+      - DATABASE_HOST_REPLIC=mariadb
+      - DATABASE_PORT_REPLIC=3306
+      - DATABASE_USER_REPLIC=ecommerce
+      - DATABASE_PASSWORD_REPLIC=ecommerce
+      - DATABASE_NAME_REPLIC=ecommerce
+      # Imágenes en S3 (LocalStack)
+      - IMAGE_STORAGE_PROVIDER=s3
+      - IMAGE_S3_ENDPOINT=http://localstack:4566
+      - IMAGE_S3_BUCKET=${IMAGE_S3_BUCKET:-ecommerce-images}
+      - IMAGE_S3_ENSURE_BUCKET=true
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
     volumes:
       - ../:/usr/src/app
       - /usr/src/app/node_modules
       - /usr/src/app/microservices/products/node_modules
       - ../imagesEcommerce:/home/appuser/Documents/projects/newEcommerce2026/imagesEcommerce
     command: yarn start:dev:products
+    depends_on:
+      - nats
+      - redis
+      - mariadb
     networks:
       - app-network
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  # Cart Service
   cart:
     build:
       context: ..
       dockerfile: microservices/cart/container/Dockerfile.dev
-    env_file:
-      - ../.env
     environment:
       - NODE_ENV=${NODE_ENV:-development}
-      - PORT=3102
-      - CART_PORT=3102
+      - LOG_FORMAT=json
       - IS_DOCKER=true
       - RUN_MODE=all
-      - SERVICE_NAME=CART_SERVICE
-      # URLs de otros servicios (comunicación Docker)
-      - AUTH_SERVICE_URL=deploy-auth-1
-      - CART_SERVICE_URL=deploy-cart-1
-      - CONTENT_SERVICE_URL=deploy-content-1
-      - PAYMENTS_SERVICE_URL=deploy-payments-1
-      - PRODUCTS_SERVICE_URL=deploy-products-1
-      - IMAGE_SERVICE_URL=deploy-image-1
+      - JWT_SECRET=${JWT_SECRET:-ecommerce-back-2026-central-shop-api-ecommerce}
+      - NATS_URL=nats://nats:4222
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_HOST=mariadb
+      - DATABASE_PORT=3306
+      - DATABASE_USER=ecommerce
+      - DATABASE_PASSWORD=ecommerce
+      - DATABASE_NAME=cart_db
+      - DATABASE_HOST_REPLIC=mariadb
+      - DATABASE_PORT_REPLIC=3306
+      - DATABASE_USER_REPLIC=ecommerce
+      - DATABASE_PASSWORD_REPLIC=ecommerce
+      - DATABASE_NAME_REPLIC=cart_db
     volumes:
       - ../:/usr/src/app
       - /usr/src/app/node_modules
       - /usr/src/app/microservices/cart/node_modules
     command: yarn start:dev:cart
+    depends_on:
+      - nats
+      - redis
+      - mariadb
     networks:
       - app-network
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  # Content Service
   content:
     build:
       context: ..
       dockerfile: microservices/content/container/Dockerfile.dev
-    env_file:
-      - ../.env
     environment:
       - NODE_ENV=${NODE_ENV:-development}
-      - PORT=3103
-      - CONTENT_PORT=3103
+      - LOG_FORMAT=json
       - IS_DOCKER=true
       - RUN_MODE=all
-      - SERVICE_NAME=CONTENT_SERVICE
-      # URLs de otros servicios (comunicación Docker)
-      - AUTH_SERVICE_URL=deploy-auth-1
-      - CART_SERVICE_URL=deploy-cart-1
-      - CONTENT_SERVICE_URL=deploy-content-1
-      - PAYMENTS_SERVICE_URL=deploy-payments-1
-      - PRODUCTS_SERVICE_URL=deploy-products-1
-      - IMAGE_SERVICE_URL=deploy-image-1
+      - NATS_URL=nats://nats:4222
+      - DATABASE_HOST=mariadb
+      - DATABASE_PORT=3306
+      - DATABASE_USER=ecommerce
+      - DATABASE_PASSWORD=ecommerce
+      - DATABASE_NAME=content_db
+      - DATABASE_HOST_REPLIC=mariadb
+      - DATABASE_PORT_REPLIC=3306
+      - DATABASE_USER_REPLIC=ecommerce
+      - DATABASE_PASSWORD_REPLIC=ecommerce
+      - DATABASE_NAME_REPLIC=content_db
     volumes:
       - ../:/usr/src/app
       - /usr/src/app/node_modules
       - /usr/src/app/microservices/content/node_modules
     command: yarn start:dev:content
+    depends_on:
+      - nats
+      - mariadb
     networks:
       - app-network
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  # Payments Service
   payments:
     build:
       context: ..
       dockerfile: microservices/payments/container/Dockerfile.dev
-    env_file:
-      - ../.env
     environment:
       - NODE_ENV=${NODE_ENV:-development}
-      - PORT=3104
-      - PAYMENTS_PORT=3105
+      - LOG_FORMAT=json
       - IS_DOCKER=true
       - RUN_MODE=all
-      - SERVICE_NAME=PAYMENTS_SERVICE
-      # URLs de otros servicios (comunicación Docker)
-      - AUTH_SERVICE_URL=deploy-auth-1
-      - CART_SERVICE_URL=deploy-cart-1
-      - CONTENT_SERVICE_URL=deploy-content-1
-      - PAYMENTS_SERVICE_URL=deploy-payments-1
-      - PRODUCTS_SERVICE_URL=deploy-products-1
-      - IMAGE_SERVICE_URL=deploy-image-1
-      - SQS_ENDPOINT=${SQS_ENDPOINT:-http://localstack:4566}
+      - NATS_URL=nats://nats:4222
+      - DATABASE_HOST=mariadb
+      - DATABASE_PORT=3306
+      - DATABASE_USER=ecommerce
+      - DATABASE_PASSWORD=ecommerce
+      - DATABASE_NAME=payments_db
+      - DATABASE_HOST_REPLIC=mariadb
+      - DATABASE_PORT_REPLIC=3306
+      - DATABASE_USER_REPLIC=ecommerce
+      - DATABASE_PASSWORD_REPLIC=ecommerce
+      - DATABASE_NAME_REPLIC=payments_db
+      # SQS (LocalStack)
+      - SQS_ENDPOINT=http://localstack:4566
       - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
       - PAYMENTS_SQS_QUEUE_NAME=${PAYMENTS_SQS_QUEUE_NAME:-payments-jobs}
+      - PAYMENTS_SQS_WORKER_ENABLED=true
     volumes:
       - ../:/usr/src/app
       - /usr/src/app/node_modules
       - /usr/src/app/microservices/payments/node_modules
     command: yarn start:dev:payments
+    depends_on:
+      - nats
+      - mariadb
+      - localstack
     networks:
       - app-network
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  # Image Service
   image:
     build:
       context: ..
       dockerfile: microservices/image/container/Dockerfile.dev
-    env_file:
-      - ../.env
     environment:
       - NODE_ENV=${NODE_ENV:-development}
-      - PORT=4093
-      - IMAGE_PORT=3107
-      #- MONGO_URL=${MONGO_URL}
+      - LOG_FORMAT=json
       - IS_DOCKER=true
+      - RUN_MODE=all
+      - NATS_URL=nats://nats:4222
+      - DATABASE_HOST=mariadb
+      - DATABASE_PORT=3306
+      - DATABASE_USER=ecommerce
+      - DATABASE_PASSWORD=ecommerce
+      - DATABASE_NAME=image_db
+      - DATABASE_HOST_REPLIC=mariadb
+      - DATABASE_PORT_REPLIC=3306
+      - DATABASE_USER_REPLIC=ecommerce
+      - DATABASE_PASSWORD_REPLIC=ecommerce
+      - DATABASE_NAME_REPLIC=image_db
+      # Imágenes en S3 (LocalStack)
       - IMAGE_STORAGE_PROVIDER=s3
-      - IMAGE_S3_ENDPOINT=${S3_ENDPOINT:-http://localstack:4566}
+      - IMAGE_S3_ENDPOINT=http://localstack:4566
       - IMAGE_S3_BUCKET=${IMAGE_S3_BUCKET:-ecommerce-images}
       - IMAGE_S3_KEY_PREFIX=${IMAGE_S3_KEY_PREFIX:-banners}
-      - IMAGE_S3_ENSURE_BUCKET=${IMAGE_S3_ENSURE_BUCKET:-true}
+      - IMAGE_S3_ENSURE_BUCKET=true
       - IMAGE_S3_EXTERNAL_BASE_URL=${IMAGE_S3_EXTERNAL_BASE_URL:-http://localhost:4566/ecommerce-images}
-      - IMAGE_CDN_BASE_URL=${IMAGE_CDN_BASE_URL:-}
-    # ports:
-    #   - "3107:3107"
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
     volumes:
       - ../:/usr/src/app
       - ../imagesEcommerce:/home/appuser/Documents/projects/newEcommerce2026/imagesEcommerce
       - /usr/src/app/node_modules
       - /usr/src/app/microservices/image/node_modules
     command: yarn start:dev:image
+    depends_on:
+      - nats
+      - mariadb
+      - localstack
     networks:
       - app-network
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-#   mariadb:
-#     image: mariadb:latest
-#     container_name: ssss_ecommerce
-#     restart: always
-#     environment:
-#       MARIADB_ROOT_PASSWORD: classicS
-#       MARIADB_DATABASE: ssss_ecommerce
-#       MARIADB_USER: root
-#       MARIADB_PASSWORD: classicS
-#     ports:
-#       - '3306:3306'
-#     volumes:
-#       - mariadb_data:/var/lib/mysql
-
-# volumes:
-#   mariadb_data:
+volumes:
+  mariadb_data:
 
 networks:
   app-network:
-    external: true
+    driver: bridge

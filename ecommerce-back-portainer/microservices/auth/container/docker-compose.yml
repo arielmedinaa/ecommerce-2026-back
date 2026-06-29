@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  auth:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    ports:
+      - "3101:3101"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3101
+      - AUTH_PORT=3101
+      - IS_DOCKER=true
+      - MONGO_URL=${MONGO_URL}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+    command: yarn start:dev:auth
+    networks:
+      - auth-network
+
+networks:
+  auth-network:
+    driver: bridge

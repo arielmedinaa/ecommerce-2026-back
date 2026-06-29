@@ -39,6 +39,27 @@ export class ProductsController {
     }
   }
 
+  // Catálogo completo (proc v2, ~41k) para el panel "Analizar Artículos" del admin.
+  @MessagePattern({ cmd: 'get_catalogo_v2' })
+  async getCatalogoV2(@Body() filters: any = {}) {
+    try {
+      return await this.productsService.getCatalogoV2(filters);
+    } catch (error) {
+      this.logger.error('Error in get_catalogo_v2:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'get_product_suggestions' })
+  async getProductSuggestions(@Body() payload: { q: string; limit?: number }) {
+    try {
+      return await this.productsService.getSuggestions(payload?.q, payload?.limit);
+    } catch (error) {
+      this.logger.error('Error in get_product_suggestions:', error);
+      throw error;
+    }
+  }
+
   @MessagePattern({ cmd: 'get_products_facets' })
   async getProductsFacets() {
     try {

@@ -47,6 +47,13 @@ export class User {
   @Column({ type: 'json', nullable: true })
   infoDispositivo?: any;
 
+  // Direcciones de envío guardadas por el usuario (array). Cada item:
+  // { id, etiqueta, callePrincipal, calleSecundaria, numerocasa, ciudad?, ciudadId?,
+  //   barrio?, referencia?, ubicacion?: {lat,lng}, predeterminada? }
+  // El shape es compatible con el `envio` del carrito para prefilear el checkout.
+  @Column({ type: 'json', nullable: true })
+  direcciones?: any[];
+
   @Column({ type: 'datetime', nullable: true })
   fechaExpiracion?: Date;
 

@@ -1,0 +1,16 @@
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: default
+spec:
+  amiFamily: AL2 # Amazon Linux 2
+  # Reemplazar por el rol IAM de los nodos que Karpenter puede usar (o usar instanceProfile)
+  role: "KarpenterNodeRole-MiClusterEcommerce"
+  subnetSelectorTerms:
+    - tags:
+        # Se configura en las VPC/Subnets del cluster EKS
+        karpenter.sh/discovery: "mi-cluster-ecommerce"
+  securityGroupSelectorTerms:
+    - tags:
+        # Se configura en los SecurityGroups del cluster EKS
+        karpenter.sh/discovery: "mi-cluster-ecommerce"

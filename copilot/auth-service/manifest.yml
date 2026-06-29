@@ -1,0 +1,38 @@
+# auth-service — microservicio interno. NO recibe HTTP de otros (habla por NATS),
+# por eso NO lleva `port`: solo corre, se conecta a NATS y atiende su queue group.
+name: auth-service
+type: Backend Service
+
+image:
+  build:
+    dockerfile: microservices/auth/container/Dockerfile.dev   # TODO prod: build transpilado
+    context: .                                                # contexto = raíz del repo
+
+cpu: 256
+memory: 512
+exec: true
+
+# Autoscaling independiente (reemplaza al HPA). Escala SOLO este servicio.
+count:
+  range: 1-5
+  cpu_percentage: 70
+
+variables:
+  NODE_ENV: production
+  LOG_FORMAT: json
+  NATS_URL: nats://nats.${COPILOT_ENVIRONMENT_NAME}.${COPILOT_APPLICATION_NAME}.local:4222
+  # --- DB: su propio schema (database-per-service) en RDS ---
+  DATABASE_HOST: REPLACE-rds-endpoint
+  DATABASE_PORT: "3306"
+  DATABASE_USER: ecommerce
+  DATABASE_NAME: auth_db
+  DATABASE_HOST_REPLIC: REPLACE-rds-endpoint
+  DATABASE_PORT_REPLIC: "3306"
+  DATABASE_USER_REPLIC: ecommerce
+  DATABASE_NAME_REPLIC: auth_db
+
+secrets:
+  # Valores sensibles → SSM Parameter Store (copilot secret init --name <NOMBRE>)
+  JWT_SECRET: JWT_SECRET
+  DATABASE_PASSWORD: DATABASE_PASSWORD
+  DATABASE_PASSWORD_REPLIC: DATABASE_PASSWORD

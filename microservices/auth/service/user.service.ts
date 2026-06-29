@@ -290,6 +290,131 @@ export class UserService {
     };
   }
 
+  // ============================ PERFIL (datos personales) ============================
+  // Devuelve los datos personales guardados del usuario, para prefilear el checkout.
+  async getProfile(userId: number): Promise<{ data: any; success: boolean; message: string }> {
+    const id = Number(userId);
+    if (!Number.isFinite(id)) return { data: null, success: false, message: 'USUARIO INVÁLIDO' };
+    const u = await this.userRepository.findOne({ where: { id } });
+    if (!u) return { data: null, success: false, message: 'USUARIO NO ENCONTRADO' };
+    return {
+      data: {
+        nombre: u.nombre || '',
+        email: u.email || '',
+        numeroCelular: u.numeroCelular || '',
+        numeroDocumento: u.numeroDocumento || '',
+      },
+      success: true,
+      message: 'PERFIL DEL USUARIO',
+    };
+  }
+
+  // Actualiza SOLO datos personales seguros (no email/identidad). userId viene del token.
+  async updateProfile(
+    userId: number,
+    patch: { nombre?: string; numeroCelular?: string; numeroDocumento?: string },
+  ): Promise<{ data: any; success: boolean; message: string }> {
+    const id = Number(userId);
+    if (!Number.isFinite(id)) return { data: null, success: false, message: 'USUARIO INVÁLIDO' };
+    const updates: any = {};
+    if (patch?.nombre != null) updates.nombre = String(patch.nombre).trim();
+    if (patch?.numeroCelular != null) updates.numeroCelular = String(patch.numeroCelular).trim();
+    if (patch?.numeroDocumento != null) updates.numeroDocumento = String(patch.numeroDocumento).trim();
+    if (Object.keys(updates).length === 0) return { data: null, success: false, message: 'NADA QUE ACTUALIZAR' };
+    await this.userRepository.update(id, updates);
+    return { data: updates, success: true, message: 'PERFIL ACTUALIZADO' };
+  }
+
+  // ============================ DIRECCIONES ============================
+  // Direcciones de envío guardadas por usuario (columna JSON `direcciones`).
+  // Read-modify-write: leemos el array actual, lo mutamos y lo guardamos completo.
+
+  private genDireccionId(): string {
+    return `dir_${Date.now().toString(36)}_${Math.floor(Math.random() * 1e6).toString(36)}`;
+  }
+
+  // Normaliza una dirección que llega del front al shape canónico (compatible con el envio del carrito).
+  private normalizarDireccion(input: any = {}): any {
+    const ubic = input.ubicacion || {};
+    return {
+      etiqueta: String(input.etiqueta ?? '').trim() || 'Mi dirección',
+      callePrincipal: String(input.callePrincipal ?? '').trim(),
+      calleSecundaria: String(input.calleSecundaria ?? '').trim(),
+      numerocasa: String(input.numerocasa ?? '').trim(),
+      ciudad: String(input.ciudad ?? '').trim(),
+      ciudadId: input.ciudadId != null ? Number(input.ciudadId) : null,
+      barrio: String(input.barrio ?? '').trim(),
+      referencia: String(input.referencia ?? '').trim(),
+      ubicacion: {
+        lat: ubic.lat != null ? Number(ubic.lat) : null,
+        lng: ubic.lng != null ? Number(ubic.lng) : null,
+      },
+      predeterminada: !!input.predeterminada,
+    };
+  }
+
+  async getUserAddresses(userId: number): Promise<{ data: any[]; success: boolean; message: string }> {
+    const id = Number(userId);
+    if (!Number.isFinite(id)) return { data: [], success: false, message: 'USUARIO INVÁLIDO' };
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) return { data: [], success: false, message: 'USUARIO NO ENCONTRADO' };
+    return { data: Array.isArray(user.direcciones) ? user.direcciones : [], success: true, message: 'DIRECCIONES DEL USUARIO' };
+  }
+
+  async addUserAddress(userId: number, address: any): Promise<{ data: any[]; nueva?: any; success: boolean; message: string }> {
+    const id = Number(userId);
+    if (!Number.isFinite(id)) return { data: [], success: false, message: 'USUARIO INVÁLIDO' };
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) return { data: [], success: false, message: 'USUARIO NO ENCONTRADO' };
+
+    const lista = Array.isArray(user.direcciones) ? [...user.direcciones] : [];
+    const nueva = { id: this.genDireccionId(), ...this.normalizarDireccion(address) };
+    // Si es la primera, o se pidió predeterminada, marcarla como tal y desmarcar el resto.
+    if (nueva.predeterminada || lista.length === 0) {
+      lista.forEach((d) => (d.predeterminada = false));
+      nueva.predeterminada = true;
+    }
+    lista.push(nueva);
+    await this.userRepository.update(id, { direcciones: lista });
+    return { data: lista, nueva, success: true, message: 'DIRECCIÓN GUARDADA' };
+  }
+
+  async updateUserAddress(userId: number, addressId: string, patch: any): Promise<{ data: any[]; success: boolean; message: string }> {
+    const id = Number(userId);
+    if (!Number.isFinite(id)) return { data: [], success: false, message: 'USUARIO INVÁLIDO' };
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) return { data: [], success: false, message: 'USUARIO NO ENCONTRADO' };
+
+    const lista = Array.isArray(user.direcciones) ? [...user.direcciones] : [];
+    const idx = lista.findIndex((d) => d.id === addressId);
+    if (idx === -1) return { data: lista, success: false, message: 'DIRECCIÓN NO ENCONTRADA' };
+
+    const actualizada = { ...lista[idx], ...this.normalizarDireccion({ ...lista[idx], ...patch }), id: addressId };
+    lista[idx] = actualizada;
+    if (actualizada.predeterminada) {
+      lista.forEach((d, i) => { if (i !== idx) d.predeterminada = false; });
+    }
+    await this.userRepository.update(id, { direcciones: lista });
+    return { data: lista, success: true, message: 'DIRECCIÓN ACTUALIZADA' };
+  }
+
+  async deleteUserAddress(userId: number, addressId: string): Promise<{ data: any[]; success: boolean; message: string }> {
+    const id = Number(userId);
+    if (!Number.isFinite(id)) return { data: [], success: false, message: 'USUARIO INVÁLIDO' };
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) return { data: [], success: false, message: 'USUARIO NO ENCONTRADO' };
+
+    let lista = Array.isArray(user.direcciones) ? [...user.direcciones] : [];
+    const tenia = lista.some((d) => d.id === addressId);
+    lista = lista.filter((d) => d.id !== addressId);
+    // Si borramos la predeterminada y quedan otras, promover la primera.
+    if (tenia && lista.length > 0 && !lista.some((d) => d.predeterminada)) {
+      lista[0].predeterminada = true;
+    }
+    await this.userRepository.update(id, { direcciones: lista });
+    return { data: lista, success: true, message: tenia ? 'DIRECCIÓN ELIMINADA' : 'NO EXISTÍA LA DIRECCIÓN' };
+  }
+
   async updateUsers(filters: any, updates: any): Promise<{
     data: any;
     total: number;

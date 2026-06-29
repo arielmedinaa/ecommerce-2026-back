@@ -15,6 +15,7 @@ import { ProductsImage } from '../schemas/products-image.schema';
 import { ProductsImagesService } from './products-images.service';
 
 import { ProductsUtils } from '@products/utils/utils-products';
+import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
 //import { Promo } from '../schemas/promo.schemas';
 
 interface CartResponse {
@@ -44,25 +45,24 @@ export class ProductsService {
     private readonly productsImagesService: ProductsImagesService,
     @Inject('CART_SERVICE') private readonly cartClient: ClientProxy,
     private readonly resilientService: ResilientService,
+    private readonly cache: CachePersistenteService,
   ) {}
 
-  private productosCache = new Map<
-    string,
-    { data: any[]; total: number; timestamp: number }
-  >();
-  private productoPorCodigoCache = new Map<
-    string,
-    { data: any; timestamp: number }
-  >();
-  private productosJotaCache = new Map<
-    string,
-    { data: any[]; total: number; timestamp: number }
-  >();
-  private facetsCache: { data: any; timestamp: number } | null = null;
-  private statsCache: { data: any; timestamp: number } | null = null;
+  // Cachés ahora en Redis (vía CachePersistenteService) para que el servicio sea
+  // stateless y escale horizontalmente. Las claves se namespacean por dominio.
   private readonly CACHE_TTL = 5 * 60 * 1000;
-  private readonly MAX_CACHE_ENTRIES = 100;
   private readonly PRODUCT_CACHE_TTL = 10 * 60 * 1000;
+
+  // Definición "óptimo para web" — debe espejar EXACTAMENTE las condiciones de
+  // proc_obtener_articulos_ecommerce_web para que el total/stats/facets coincidan
+  // con el listado (el proc SIEMPRE exige stock>0 en depósitos válidos).
+  private readonly WEB_BASE_WHERE = `a.baja = 0 AND (a.websc = 1 OR a.web = 1)`;
+  private readonly STOCK_EXISTS = `EXISTS (
+    SELECT 1 FROM tbl_stock_actual sa
+      JOIN deposito d ON d.codigo = sa.deposito
+     WHERE sa.codigo_articulo = a.codigo_articulo
+       AND d.habilitado_reserva = 1 AND d.codigo <> 33
+       AND sa.cantidad_actual > 0)`;
 
   private getCacheKey(filters: any): string {
     return JSON.stringify({
@@ -105,32 +105,15 @@ export class ProductsService {
   }
 
   invalidateCache(): void {
-    this.productosCache.clear();
-    this.productoPorCodigoCache.clear();
-    this.productosJotaCache.clear();
-    this.facetsCache = null;
-    this.statsCache = null;
+    void this.cache.delByPrefix('products:');
   }
 
-  private async getCachedPrismaProductos(
-    filters: any = {},
-  ): Promise<{ data: any[]; total: number }> {
-    const cacheKey = this.getCacheKey(filters);
-    const now = Date.now();
-    const cached = this.productosCache.get(cacheKey);
-    if (cached && now - cached.timestamp <= this.CACHE_TTL) {
-      return { data: cached.data, total: cached.total };
-    }
-
-    const limit = Number(filters.limit) || 0;
-    const offset = Number(filters.offset) || 0;
-    const f = this.buildProcFilters(filters);
-    const result = await this.productReadRepository.query(
-      'CALL proc_obtener_listado_articulos_ecommerce_v2(?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [limit, offset, f.marca, f.categoria, f.proveedor, f.precioMin, f.precioMax, f.soloStock, f.busqueda],
-    );
-
-    const productos = result[0] || [];
+  /**
+   * Enriquece las filas de un proc (web o v2) con imágenes activas, trim de campos
+   * y cálculo de cuotas. Ambos procs devuelven las mismas columnas, así que comparten
+   * este post-procesamiento.
+   */
+  private async enrichProductRows(productos: any[]): Promise<any[]> {
     const codigosProductos = productos.map((item: any) =>
       item.codigo_articulo.trim(),
     );
@@ -165,37 +148,48 @@ export class ProductsService {
       imagenes: imagenesMap.get(item.codigo_articulo.trim()) || [],
     }));
 
-    const data = dataWithTrimmedNames || [];
-    const dataConCuotas =
-      await this.productsUtils.calculoCreditoProductos(data);
-    const total = await this.contarProductos(filters);
-
-    if (this.productosCache.size >= this.MAX_CACHE_ENTRIES) {
-      const oldestKey = this.productosCache.keys().next().value;
-      this.productosCache.delete(oldestKey);
-    }
-
-    this.productosCache.set(cacheKey, {
-      data: dataConCuotas as any[],
-      total,
-      timestamp: now,
-    });
-
-    return { data: dataConCuotas as any[], total };
+    return this.productsUtils.calculoCreditoProductos(dataWithTrimmedNames || []);
   }
 
-  private normFiltro(value: any): string | null {
-    if (value === undefined || value === null) return null;
-    const s = String(value).trim();
-    return s === '' ? null : s;
+  /**
+   * Catálogo COMPLETO (proc v2): ~41k artículos habilitados para web, con stock
+   * OPCIONAL. Pensado para el panel "Analizar Artículos" del admin — paginado y
+   * buscable server-side (NUNCA traer los 41k de una; el proc con limit 0 tarda ~15s).
+   */
+  async getCatalogoV2(
+    filters: any = {},
+  ): Promise<{ data: any[]; total: number }> {
+    const cacheKey = `products:v2:${this.getCacheKey(filters)}`;
+    const cached = await this.cache.get<{ data: any[]; total: number }>(cacheKey);
+    if (cached) return cached;
+
+    const limit = Number(filters.limit) || 50;
+    const offset = Number(filters.offset) || 0;
+    const f = this.buildProcFilters(filters);
+    const result = await this.productReadRepository.query(
+      'CALL proc_obtener_listado_articulos_ecommerce_v2(?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [limit, offset, f.marca, f.categoria, f.proveedor, f.precioMin, f.precioMax, f.soloStock, f.busqueda],
+    );
+
+    const dataConCuotas = await this.enrichProductRows(result[0] || []);
+    const total = await this.contarProductosV2(filters);
+
+    const payload = { data: dataConCuotas as any[], total };
+    await this.cache.set(cacheKey, payload, this.CACHE_TTL);
+    return payload;
   }
 
-  private async contarProductos(filters: any = {}): Promise<number> {
+  /**
+   * Conteo para el catálogo v2: base web (baja=0, web/websc=1) + filtros, con stock
+   * OPCIONAL (solo lo exige si el filtro soloConStock está activo). COUNT liviano,
+   * sin tmp tables, para que la paginación de los 41k sea barata.
+   */
+  private async contarProductosV2(filters: any = {}): Promise<number> {
     const f = this.buildProcFilters(filters);
     const rows = await this.productReadRepository.query(
       `SELECT COUNT(*) AS total
          FROM articulo a
-        WHERE a.baja = 0 AND (a.websc = 1 OR a.web = 1)
+        WHERE ${this.WEB_BASE_WHERE}
           AND (? IS NULL OR a.marca = CAST(? AS UNSIGNED))
           AND (? IS NULL OR a.familia = CAST(? AS UNSIGNED))
           AND (? IS NULL OR a.proveedor = CAST(? AS UNSIGNED))
@@ -205,12 +199,7 @@ export class ProductsService {
                OR TRIM(a.codigo) = ?
                OR a.codigodebarra = ?
                OR a.nombre LIKE CONCAT('%', REPLACE(?, ' ', '%'), '%'))
-          AND (? IS NULL OR ? = 0
-               OR EXISTS (SELECT 1 FROM tbl_stock_actual sa
-                          JOIN deposito d ON d.codigo = sa.deposito
-                          WHERE sa.codigo_articulo = a.codigo_articulo
-                            AND d.habilitado_reserva = 1 AND d.codigo <> 33
-                            AND sa.cantidad_actual > 0))`,
+          AND (? IS NULL OR ? = 0 OR ${this.STOCK_EXISTS})`,
       [
         f.marca, f.marca,
         f.categoria, f.categoria,
@@ -224,13 +213,78 @@ export class ProductsService {
     return Number(rows?.[0]?.total || 0);
   }
 
-  /** Facetas para los filtros del admin (categorías, marcas, proveedores, rango de precio). Cacheado. */
-  async getFacets(): Promise<any> {
-    const now = Date.now();
-    if (this.facetsCache && now - this.facetsCache.timestamp <= this.CACHE_TTL) {
-      return this.facetsCache.data;
+  private async getCachedPrismaProductos(
+    filters: any = {},
+  ): Promise<{ data: any[]; total: number }> {
+    const cacheKey = `products:list:${this.getCacheKey(filters)}`;
+    const cached = await this.cache.get<{ data: any[]; total: number }>(cacheKey);
+    if (cached) {
+      return { data: cached.data, total: cached.total };
     }
-    const baseWhere = `a.baja = 0 AND (a.websc = 1 OR a.web = 1)`;
+
+    const limit = Number(filters.limit) || 0;
+    const offset = Number(filters.offset) || 0;
+    const f = this.buildProcFilters(filters);
+    const result = await this.productReadRepository.query(
+      'CALL proc_obtener_articulos_ecommerce_web(?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [limit, offset, f.marca, f.categoria, f.proveedor, f.precioMin, f.precioMax, f.soloStock, f.busqueda],
+    );
+
+    const productos = result[0] || [];
+    const dataConCuotas = await this.enrichProductRows(productos);
+    const total = await this.contarProductos(filters);
+
+    await this.cache.set(
+      cacheKey,
+      { data: dataConCuotas as any[], total },
+      this.CACHE_TTL,
+    );
+
+    return { data: dataConCuotas as any[], total };
+  }
+
+  private normFiltro(value: any): string | null {
+    if (value === undefined || value === null) return null;
+    const s = String(value).trim();
+    return s === '' ? null : s;
+  }
+
+  private async contarProductos(filters: any = {}): Promise<number> {
+    const f = this.buildProcFilters(filters);
+    // Mismas condiciones que proc_obtener_articulos_ecommerce_web: el stock>0 es
+    // OBLIGATORIO siempre (el proc ignora p_solo_con_stock), por eso el total coincide
+    // con las filas que devuelve el listado (~1524 sin filtros).
+    const rows = await this.productReadRepository.query(
+      `SELECT COUNT(*) AS total
+         FROM articulo a
+        WHERE ${this.WEB_BASE_WHERE}
+          AND (? IS NULL OR a.marca = CAST(? AS UNSIGNED))
+          AND (? IS NULL OR a.familia = CAST(? AS UNSIGNED))
+          AND (? IS NULL OR a.proveedor = CAST(? AS UNSIGNED))
+          AND (? IS NULL OR a.precioventa >= ?)
+          AND (? IS NULL OR a.precioventa <= ?)
+          AND (? IS NULL
+               OR TRIM(a.codigo) = ?
+               OR a.codigodebarra = ?
+               OR a.nombre LIKE CONCAT('%', REPLACE(?, ' ', '%'), '%'))
+          AND ${this.STOCK_EXISTS}`,
+      [
+        f.marca, f.marca,
+        f.categoria, f.categoria,
+        f.proveedor, f.proveedor,
+        f.precioMin, f.precioMin,
+        f.precioMax, f.precioMax,
+        f.busqueda, f.busqueda, f.busqueda, f.busqueda,
+      ],
+    );
+    return Number(rows?.[0]?.total || 0);
+  }
+
+  async getFacets(): Promise<any> {
+    const cached = await this.cache.get('products:facets');
+    if (cached) return cached;
+    // Facetas sobre el mismo conjunto óptimo-web (con stock) que muestra el listado.
+    const baseWhere = `${this.WEB_BASE_WHERE} AND ${this.STOCK_EXISTS}`;
     const [categorias, marcas, proveedores, precio] = await Promise.all([
       this.productReadRepository.query(
         `SELECT a.familia AS codigo, f.nombre AS nombre, COUNT(*) AS total
@@ -267,48 +321,49 @@ export class ProductsService {
         max: Number(precio?.[0]?.max || 0),
       },
     };
-    this.facetsCache = { data, timestamp: now };
+    await this.cache.set('products:facets', data, this.CACHE_TTL);
     return data;
   }
 
   async getStats(): Promise<any> {
-    const now = Date.now();
-    if (this.statsCache && now - this.statsCache.timestamp <= this.CACHE_TTL) {
-      return this.statsCache.data;
-    }
-    const baseWhere = `a.baja = 0 AND (a.websc = 1 OR a.web = 1)`;
-    const [base, stock] = await Promise.all([
+    const cached = await this.cache.get('products:stats');
+    if (cached) return cached;
+    const [base, stock, webEnabled] = await Promise.all([
+      // Conjunto óptimo-web (con stock>0): coincide con el listado (~1524).
       this.productReadRepository.query(
         `SELECT COUNT(*) AS total_web, SUM(a.web = 1) AS activos,
                 COUNT(DISTINCT a.familia) AS categorias_totales,
                 COUNT(DISTINCT a.subfamilia) AS subcategorias_totales
-           FROM articulo a WHERE ${baseWhere}`,
+           FROM articulo a WHERE ${this.WEB_BASE_WHERE} AND ${this.STOCK_EXISTS}`,
       ),
       this.productReadRepository.query(
-        `SELECT SUM(st > 0) AS con_stock,
-                SUM(st > 0 AND st <= 5) AS stock_critico
+        `SELECT SUM(st > 0 AND st <= 5) AS stock_critico
            FROM (
             SELECT sa.codigo_articulo, SUM(sa.cantidad_actual) AS st
               FROM tbl_stock_actual sa
               JOIN deposito d ON d.codigo = sa.deposito
               JOIN articulo a ON a.codigo_articulo = sa.codigo_articulo
-             WHERE d.habilitado_reserva = 1 AND d.codigo <> 33 AND ${baseWhere}
+             WHERE d.habilitado_reserva = 1 AND d.codigo <> 33 AND ${this.WEB_BASE_WHERE}
              GROUP BY sa.codigo_articulo
           ) t`,
       ),
+      // Todos los habilitados para web (con o sin stock) → para derivar sin_stock.
+      this.productReadRepository.query(
+        `SELECT COUNT(*) AS web_total FROM articulo a WHERE ${this.WEB_BASE_WHERE}`,
+      ),
     ]);
     const totalWeb = Number(base?.[0]?.total_web || 0);
-    const conStock = Number(stock?.[0]?.con_stock || 0);
+    const webTotal = Number(webEnabled?.[0]?.web_total || 0);
     const data = {
       total_web: totalWeb,
       activos: Number(base?.[0]?.activos || 0),
       categorias_totales: Number(base?.[0]?.categorias_totales || 0),
       subcategorias_totales: Number(base?.[0]?.subcategorias_totales || 0),
-      con_stock: conStock,
-      sin_stock: Math.max(0, totalWeb - conStock),
+      con_stock: totalWeb,
+      sin_stock: Math.max(0, webTotal - totalWeb),
       stock_critico: Number(stock?.[0]?.stock_critico || 0),
     };
-    this.statsCache = { data, timestamp: now };
+    await this.cache.set('products:stats', data, this.CACHE_TTL);
     return data;
   }
 
@@ -316,6 +371,52 @@ export class ProductsService {
     // La búsqueda (nombre/código/código de barra) ahora la resuelve el proc vía
     // p_busqueda → paginación y total reales sobre todo el catálogo (sin filtrado en memoria).
     return this.getCachedPrismaProductos(filters);
+  }
+
+  /**
+   * Sugerencias de búsqueda para el buscador del storefront (autocomplete).
+   * Reutiliza la búsqueda real del catálogo y deriva, data-driven:
+   *  - productos: top N coincidencias por nombre (autocomplete) → {codigo, nombre, precio, imagen}
+   *  - terminos:  refinamientos (subcategoría + marca) más frecuentes entre las coincidencias,
+   *               para ofrecer chips "+ término" (búsqueda multi-término).
+   * No hay cross-sell semántico real (no existen datos de co-compra/complementos): eso es Fase 2.
+   */
+  async getSuggestions(
+    q: string,
+    limit = 6,
+  ): Promise<{ data: { productos: any[]; terminos: string[] }; success: boolean; message: string }> {
+    const termino = this.normFiltro(q);
+    if (!termino) {
+      return { data: { productos: [], terminos: [] }, success: true, message: 'SIN TÉRMINO' };
+    }
+
+    const { data } = await this.findAll({ search: termino, limit: 15, offset: 0, soloConStock: true });
+    const rows = Array.isArray(data) ? data : [];
+
+    const productos = rows.slice(0, limit).map((p: any) => ({
+      codigo: p.codigo_articulo,
+      nombre: p.nombre_articulo,
+      precio: p.precio ?? p.precioventa ?? p.precio_venta ?? null,
+      imagen: Array.isArray(p.imagenes) ? p.imagenes[0] ?? null : null,
+    }));
+
+    // Refinamientos: subcategorías + marcas distintas, rankeadas por frecuencia.
+    const qLower = termino.toLowerCase();
+    const freq = new Map<string, number>();
+    for (const p of rows) {
+      for (const t of [p.nombre_subcategoria, p.nombre_marca]) {
+        const val = String(t || '').trim();
+        if (!val) continue;
+        if (val.toLowerCase() === qLower) continue;
+        freq.set(val, (freq.get(val) || 0) + 1);
+      }
+    }
+    const terminos = [...freq.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([t]) => t);
+
+    return { data: { productos, terminos }, success: true, message: 'SUGERENCIAS' };
   }
 
   async prefetchfindAll(
@@ -467,7 +568,6 @@ export class ProductsService {
 
   async findManyByIds(ids: string[], fields?: string, filters: any = {}) {
     if (!ids || ids.length === 0) return [];
-    const now = Date.now();
 
     let select: any = {
       codigo: true,
@@ -483,14 +583,15 @@ export class ProductsService {
     const productosEnCache: any[] = [];
     const codigosFaltantes: string[] = [];
 
-    for (const codigo of ids) {
-      const cached = this.productoPorCodigoCache.get(codigo);
-      if (cached && now - cached.timestamp <= this.PRODUCT_CACHE_TTL) {
-        productosEnCache.push(cached.data);
-      } else {
-        codigosFaltantes.push(codigo);
-      }
-    }
+    // Lecturas de caché en paralelo (una clave Redis por código).
+    const cacheHits = await Promise.all(
+      ids.map((codigo) => this.cache.get<any>(`products:codigo:${codigo}`)),
+    );
+    ids.forEach((codigo, i) => {
+      const hit = cacheHits[i];
+      if (hit) productosEnCache.push(hit);
+      else codigosFaltantes.push(codigo);
+    });
 
     let productosDB: any[] = [];
     if (codigosFaltantes.length > 0) {
@@ -502,14 +603,17 @@ export class ProductsService {
         order: { codigo_articulo: 'asc' },
       });
 
-      for (const prod of productosDB) {
-        if (prod && prod.codigo) {
-          this.productoPorCodigoCache.set(prod.codigo, {
-            data: prod,
-            timestamp: now,
-          });
-        }
-      }
+      await Promise.all(
+        productosDB.map((prod) =>
+          prod && prod.codigo
+            ? this.cache.set(
+                `products:codigo:${prod.codigo}`,
+                prod,
+                this.PRODUCT_CACHE_TTL,
+              )
+            : Promise.resolve(),
+        ),
+      );
     }
 
     const productosPorCodigo: Record<string, any> = {};
@@ -525,8 +629,6 @@ export class ProductsService {
     return productosFinal.slice(offset, offset + limit);
   }
 
-  // Trae productos por una lista de codigos (codigo_articulo) y los enriquece con
-  // imagenes + cuotas, igual que el listado principal, para el carrusel de landings.
   async getProductsByCodigos(
     codigos: string[],
     limit = 24,
@@ -593,32 +695,12 @@ export class ProductsService {
     return this.findManyByIds(codigos, filters.fields, filters);
   }
 
-  async findManyComboByCodigo(codigo: string) {
-    const where: any = {
-      codigo,
-      estado: 1,
-      precio: { gt: 9000 },
-      web: 1,
-      AND: [
-        {
-          OR: [
-            { cantidad: { gt: 0 }, dias_ultimo_movimiento: { lte: 30 } },
-            { cantidad: 0, dias_ultimo_movimiento: { lt: 30 } },
-          ],
-        },
-      ],
-    };
-
-    return this.comboReadRepository.findOne({ where });
-  }
-
   async getProductsJota(
     filters: any = {},
   ): Promise<{ data: any[]; total: number }> {
-    const cacheKey = this.getCacheKey({ ...filters, type: 'jota' });
-    const now = Date.now();
-    const cached = this.productosJotaCache.get(cacheKey);
-    if (cached && now - cached.timestamp <= this.CACHE_TTL) {
+    const cacheKey = `products:jota:${this.getCacheKey({ ...filters, type: 'jota' })}`;
+    const cached = await this.cache.get<{ data: any[]; total: number }>(cacheKey);
+    if (cached) {
       return { data: cached.data, total: cached.total };
     }
     const limit = Number(filters.limit) || 0;
@@ -668,16 +750,11 @@ export class ProductsService {
       await this.productsUtils.calculoCreditoProductos(data);
     const total = result[1]?.[0]?.total_registros || dataConCuotas.length;
 
-    if (this.productosJotaCache.size >= this.MAX_CACHE_ENTRIES) {
-      const oldestKey = this.productosJotaCache.keys().next().value;
-      this.productosJotaCache.delete(oldestKey);
-    }
-
-    this.productosJotaCache.set(cacheKey, {
-      data: dataConCuotas as any[],
-      total,
-      timestamp: now,
-    });
+    await this.cache.set(
+      cacheKey,
+      { data: dataConCuotas as any[], total },
+      this.CACHE_TTL,
+    );
 
     return { data: dataConCuotas as any[], total };
   }

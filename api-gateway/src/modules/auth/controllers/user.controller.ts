@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Param, Post, Put, Query, Inject } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Delete, Query, Inject, Req, UnauthorizedException } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import { Request } from 'express';
 
 @Controller('users')
 export class UserController {
@@ -8,6 +9,21 @@ export class UserController {
     @Inject('AUTH_SERVICE') private readonly authClient: ClientProxy,
     @Inject('CART_SERVICE') private readonly cartClient: ClientProxy,
   ) {}
+
+  // Resuelve el id del usuario autenticado a partir del JWT (cookie o Authorization),
+  // reutilizando el mismo cmd que /auth/me. Lanza 401 si no hay token válido.
+  private async resolverUserId(req: Request): Promise<number> {
+    const token =
+      (req as any).cookies?.access_token ||
+      req.headers.authorization?.replace('Bearer ', '');
+    if (!token) throw new UnauthorizedException('NO AUTENTICADO');
+    const perfil: any = await firstValueFrom(
+      this.authClient.send({ cmd: 'get_user_profile' }, { token }),
+    );
+    const id = Number(perfil?.user?.id);
+    if (!Number.isFinite(id)) throw new UnauthorizedException('TOKEN INVÁLIDO');
+    return id;
+  }
 
   // Estado de un email: si existe (en otra cuenta) y si tuvo movimientos (carritos) en 30d.
   @Get('email-status')
@@ -86,6 +102,57 @@ export class UserController {
       console.error('Error in searchUsers:', error);
       throw new Error('Error al buscar usuarios: ' + error.message);
     }
+  }
+
+  // ----------------------------- Perfil (datos personales) del usuario autenticado -----------------------------
+  @Get('me/perfil')
+  async getMiPerfil(@Req() req: Request) {
+    const userId = await this.resolverUserId(req);
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'get_user_profile_db' }, { userId }),
+    );
+  }
+
+  @Put('me/perfil')
+  async updateMiPerfil(@Req() req: Request, @Body() patch: { nombre?: string; numeroCelular?: string; numeroDocumento?: string }) {
+    const userId = await this.resolverUserId(req);
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'update_user_personal' }, { userId, patch }),
+    );
+  }
+
+  // ----------------------------- Direcciones del usuario autenticado -----------------------------
+  // El userId SIEMPRE se resuelve del token (no se confía en un id del cliente).
+  @Get('me/direcciones')
+  async getMisDirecciones(@Req() req: Request) {
+    const userId = await this.resolverUserId(req);
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'get_user_addresses' }, { userId }),
+    );
+  }
+
+  @Post('me/direcciones')
+  async addMiDireccion(@Req() req: Request, @Body() address: any) {
+    const userId = await this.resolverUserId(req);
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'add_user_address' }, { userId, address }),
+    );
+  }
+
+  @Put('me/direcciones/:addressId')
+  async updateMiDireccion(@Req() req: Request, @Param('addressId') addressId: string, @Body() patch: any) {
+    const userId = await this.resolverUserId(req);
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'update_user_address' }, { userId, addressId, patch }),
+    );
+  }
+
+  @Delete('me/direcciones/:addressId')
+  async deleteMiDireccion(@Req() req: Request, @Param('addressId') addressId: string) {
+    const userId = await this.resolverUserId(req);
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'delete_user_address' }, { userId, addressId }),
+    );
   }
 
   @Put()

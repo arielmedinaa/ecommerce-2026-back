@@ -1,0 +1,146 @@
+import { Cart } from '@cart/schemas/cart.schemas';
+import * as moment from 'moment-timezone';
+
+export const DEFAULT_CART: Partial<Cart> = {
+  proceso: '',
+  cliente: {
+    equipo: '',
+    razonsocial: '',
+    documento: '',
+    correo: '',
+    telefono: '',
+    id_usuario: 0
+  },
+  tiempo: moment().tz('America/Asuncion').format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
+  transaccion: [],
+  seguimiento: [],
+  envio: {
+    callePrincipal: "",
+    calleSecundaria: "",
+    direccion: '',
+    numerocasa: '',
+    ciudad: '',
+    ciudadId: 1,
+    barrio: '',
+    observacion: '',
+    ubicacion: {},
+    agendamiento: moment().tz('America/Asuncion').format('YYYY-MM-DDTHH'),
+    horaAgendamiento: '',
+    retirar: 0
+  },
+  pago: {
+    tipo: '',
+    monto: '',
+    moneda: '',
+    condicion: '',
+    periodicidad: '',
+    entregainicial: 0,
+    cantidadcuotas: '',
+    cuotas: [],
+  },
+  articulos: {
+    contado: [],
+    credito: [],
+  },
+  estado: '1',
+};
+
+export const DEFAULT_SOLICITUD: Partial<Cart> = {
+  codigo: 1,
+  cliente: {
+    equipo: '',
+    razonsocial: '',
+    documento: '',
+    correo: '',
+    telefono: '',
+    tipodocumento: '',
+    id_usuario: 0
+  },
+  tiempo: moment().tz('America/Asuncion').format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
+  envio: {
+    callePrincipal: '',
+    calleSecundaria: '',
+    numerocasa: '',
+    ciudad: '',
+    ciudadId: 1,
+    barrio: '',
+    observacion: '',
+    ubicacion: {
+      lat: -25.31287,
+      lng: -57.578178
+    },
+    agendamiento: '',
+    horaAgendamiento: '',
+    retirar: 0
+  },
+  pago: {
+    tipo: '',
+    monto: '',
+    moneda: '',
+    condicion: '',
+    periodicidad: '',
+    entregainicial: 0,
+    cantidadcuotas: '',
+    cuotas: []
+  },
+  articulos: {
+    contado: [],
+    credito: []
+  },
+  estado: '1',
+  seguimiento: [],
+  transaccion: []
+}
+
+export const NEW_CART_INITIAL_STATE = (
+  codigo: number,
+  clienteToken: string,
+  cuenta: string,
+  id_usuario?: number,
+  clienteData?: Partial<Cart['cliente']>,
+): Partial<Cart> => ({
+  ...DEFAULT_CART,
+  codigo,
+  cliente: {
+    ...DEFAULT_CART.cliente!,
+    ...clienteData,
+    equipo: clienteToken,
+    correo:
+      clienteData?.correo ||
+      (cuenta === 'undefined' ? '' : cuenta),
+    id_usuario: id_usuario || 0,
+  },
+});
+
+export const NEW_SOLICITUD_INITIAL_STATE = (
+  codigo: number,
+  clienteToken: string,
+  cuenta: string,
+  id_usuario?: number,
+  clienteData?: Partial<Cart['cliente']>,
+): Partial<Cart> => ({
+  ...DEFAULT_SOLICITUD,
+  codigo,
+  cliente: {
+    ...DEFAULT_SOLICITUD.cliente!,
+    ...clienteData,
+    equipo: clienteToken,
+    correo:
+      clienteData?.correo ||
+      (cuenta === 'undefined' ? '' : cuenta),
+    id_usuario: id_usuario || 0,
+  },
+});
+
+export const ESTADO_SOLICITUD_MAP = {
+  '01': 'Solicitud en análisis de crédito',
+  '02': 'Solicitud en análisis de crédito', 
+  '04': 'Solicitud en análisis de crédito',
+  '07': 'El pedido se está procesando',
+  '10': 'El pedido se está procesando',
+  '13': 'El pedido se está procesando',
+  '22': 'El pedido se está procesando',
+  '23': 'El pedido se está procesando',
+  '05': 'El pedido se está procesando',
+  '16': 'Su solicitud está lista para despacharse',
+};

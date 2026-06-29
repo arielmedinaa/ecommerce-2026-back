@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Inject, Get, UseGuards, UseInterceptors, UploadedFile, UploadedFiles, Param, Delete, Patch, BadRequestException, Res } from '@nestjs/common';
+import { Body, Controller, Post, Inject, Get, UseGuards, UseInterceptors, UploadedFile, UploadedFiles, Param, Delete, Patch, BadRequestException, Res, Query } from '@nestjs/common';
 import { ClientProxy, Payload } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { timeout, catchError } from 'rxjs/operators';
@@ -90,6 +90,39 @@ export class ProductsController {
         code: error.code,
       });
       throw new Error('Error al obtener los productos: ' + error.message);
+    }
+  }
+
+  // Catálogo completo (~41k, proc v2) para el panel "Analizar Artículos" del admin.
+  // Paginado + buscable server-side (limit/offset/search/categoria/marca/proveedor/precio).
+  @Post('/v2')
+  async getCatalogoV2(@Body() filters: any = {}) {
+    try {
+      return await firstValueFrom(
+        this.productsClient.send({ cmd: 'get_catalogo_v2' }, filters).pipe(
+          timeout(40000),
+          catchError((error) => {
+            console.error('Error in get_catalogo_v2:', error?.message);
+            throw error;
+          }),
+        ),
+      );
+    } catch (error) {
+      throw new Error('Error al obtener el catálogo completo: ' + error.message);
+    }
+  }
+
+  // Sugerencias de búsqueda (autocomplete + términos de refinamiento) para el storefront.
+  @Get('/suggestions')
+  async getProductSuggestions(@Query('q') q: string, @Query('limit') limit?: string) {
+    try {
+      return await firstValueFrom(
+        this.productsClient
+          .send({ cmd: 'get_product_suggestions' }, { q, limit: limit ? Number(limit) : undefined })
+          .pipe(timeout(40000)),
+      );
+    } catch (error) {
+      throw new Error('Error al obtener sugerencias: ' + error.message);
     }
   }
 

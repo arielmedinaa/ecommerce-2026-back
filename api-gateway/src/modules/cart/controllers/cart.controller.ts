@@ -163,10 +163,13 @@ export class CartController {
   @UsePipes(new ValidationPipe())
   @SneakyThrows('CartService', 'getCartWithoutToken')
   async getCartWithoutToken(@Body() body: {
-    limit: number;
-    skip: number;
-    sort: string;
-    order: string;
+    limit?: number;
+    offset?: number;
+    skip?: number;
+    search?: string;
+    situacion?: 'en_proceso' | 'abandonado' | 'finalizado';
+    desde?: string;
+    hasta?: string;
   }){
     return await firstValueFrom(
       this.cartClient.send({

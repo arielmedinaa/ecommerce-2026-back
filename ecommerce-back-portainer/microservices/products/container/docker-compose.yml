@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  products:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    ports:
+      - "3106:3106"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3106
+      - PRODUCTS_PORT=3106
+      - IS_DOCKER=true
+      - MONGO_URL=${MONGO_URL}
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+    command: yarn start:dev:products
+    networks:
+      - products-network
+
+networks:
+  products-network:
+    driver: bridge

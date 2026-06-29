@@ -1,0 +1,41 @@
+# API Gateway — único servicio público (detrás de un ALB).
+# Es el punto de entrada HTTP; internamente habla con los microservicios por NATS.
+name: api-gateway
+type: Load Balanced Web Service
+
+http:
+  path: '/'
+  # El gateway expone Swagger en /api/docs (devuelve 200) — sirve de healthcheck.
+  healthcheck:
+    path: '/api/docs'
+    healthy_threshold: 2
+    interval: 15s
+    timeout: 10s
+    grace_period: 60s
+
+image:
+  build:
+    dockerfile: api-gateway/container/Dockerfile
+    context: .
+  port: 3100
+
+cpu: 256
+memory: 512
+exec: true            # habilita `copilot svc exec` (shell en la task)
+
+# Reemplaza al HPA: autoscaling por CPU.
+count:
+  range: 2-10
+  cpu_percentage: 70
+
+variables:
+  NODE_ENV: production
+  LOG_FORMAT: json
+  PORT: "3100"
+  GATEWAY_PORT: "3100"
+  # NATS por service discovery de Cloud Map: <servicio>.<env>.<app>.local
+  NATS_URL: nats://nats.${COPILOT_ENVIRONMENT_NAME}.${COPILOT_APPLICATION_NAME}.local:4222
+
+secrets:
+  # Crear con: copilot secret init --name JWT_SECRET
+  JWT_SECRET: JWT_SECRET

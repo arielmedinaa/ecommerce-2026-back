@@ -65,4 +65,36 @@ export class UserController {
   async updateUsers(data: { filters: any; updates: any }) {
     return this.userService.updateUsers(data.filters, data.updates);
   }
+
+  // ----------------------------- Perfil (datos personales) -----------------------------
+  @MessagePattern({ cmd: 'get_user_profile_db' })
+  async getProfile(@Payload() payload: { userId: number }) {
+    return this.userService.getProfile(Number(payload?.userId));
+  }
+
+  @MessagePattern({ cmd: 'update_user_personal' })
+  async updateUserPersonal(@Payload() payload: { userId: number; patch: any }) {
+    return this.userService.updateProfile(Number(payload?.userId), payload?.patch || {});
+  }
+
+  // ----------------------------- Direcciones -----------------------------
+  @MessagePattern({ cmd: 'get_user_addresses' })
+  async getUserAddresses(@Payload() payload: { userId: number }) {
+    return this.userService.getUserAddresses(Number(payload?.userId));
+  }
+
+  @MessagePattern({ cmd: 'add_user_address' })
+  async addUserAddress(@Payload() payload: { userId: number; address: any }) {
+    return this.userService.addUserAddress(Number(payload?.userId), payload?.address);
+  }
+
+  @MessagePattern({ cmd: 'update_user_address' })
+  async updateUserAddress(@Payload() payload: { userId: number; addressId: string; patch: any }) {
+    return this.userService.updateUserAddress(Number(payload?.userId), payload?.addressId, payload?.patch);
+  }
+
+  @MessagePattern({ cmd: 'delete_user_address' })
+  async deleteUserAddress(@Payload() payload: { userId: number; addressId: string }) {
+    return this.userService.deleteUserAddress(Number(payload?.userId), payload?.addressId);
+  }
 }

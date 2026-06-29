@@ -412,6 +412,24 @@ export class CartContadoService {
     }
   }
 
+  // Cuenta órdenes de un cliente por estado. Expuesto vía RPC para que content
+  // (eventos "solo nuevos usuarios") no lea la tabla `ordenes` directamente:
+  // database-per-service → cada servicio sólo toca sus propias tablas.
+  async countUserOrders(
+    clienteDocumento: string,
+    estado = 1,
+  ): Promise<{ count: number; success: boolean }> {
+    try {
+      const count = await this.orderRead.count({
+        where: { cliente_documento: clienteDocumento, estado },
+      });
+      return { count, success: true };
+    } catch (error) {
+      this.logger.error('Error en countUserOrders:', error);
+      return { count: 0, success: false };
+    }
+  }
+
   // Carrito activo (estado '1') del usuario del token. Helper para remove/clear.
   private async getCarritoActivoDeToken(clienteToken: string): Promise<Cart | null> {
     const decoded = this.jwtService.verify(clienteToken);
@@ -961,75 +979,131 @@ export class CartContadoService {
     }
   }
 
+  // Listado de carritos para el panel de administración (sin token de cliente).
+  // Devuelve una lista UNIFICADA donde cada carrito trae su `situacion` calculada
+  // server-side (fuente de verdad) + métricas para gestión:
+  //   - situacion: 'en_proceso' (<=20min sin actividad) | 'abandonado' (>20min) | 'finalizado'
+  //   - ageMin: minutos desde la última actividad (updatedAt, o createdAt si nunca se tocó)
+  //   - metodoPago / entrega ('retiro'|'delivery') / tiempoFinalizacionMin / total (sólo finalizados)
+  // Orden: abandonados primero (los que hay que contactar), luego en proceso, luego finalizados.
+  // Filtros: `search` (código o datos del cliente), `situacion`, rango `desde/hasta`.
   async getCartWithoutToken(
     filters: any,
   ): Promise<{
-    data: any;
+    data: { carritos: any[] };
     message: string;
     success: boolean;
     totalCarritos: number;
-    totalCarritosFinalizados: number;
+    totalEnProceso: number;
     totalAbandonados: number;
+    totalFinalizados: number;
+    totalFiltrado: number;
+    promedioFinalizacionMin: number;
   }> {
-    const limit = Number(filters?.limit ?? 10);
-    const offset = Number(filters?.offset ?? 0);
+    const ABANDONO_MIN = 20; // sin actividad > 20 min y no finalizado = abandonado
+    const limit = Math.max(1, Number(filters?.limit ?? 10));
+    const offset = Math.max(0, Number(filters?.offset ?? filters?.skip ?? 0));
+    const search = String(filters?.search ?? '').trim().toLowerCase();
+    const situacionFiltro = String(filters?.situacion ?? '').trim();
 
-    const where: any = {};
-    const desdeRaw = filters?.desde;
-    const hastaRaw = filters?.hasta;
-
+    const desdeRaw = filters?.desde ?? filters?.fechaDesde;
+    const hastaRaw = filters?.hasta ?? filters?.fechaHasta;
     const desde = desdeRaw ? new Date(desdeRaw) : null;
     const hasta = hastaRaw ? new Date(hastaRaw) : null;
-
     const hasDesde = !!(desde && !Number.isNaN(desde.getTime()));
     const hasHasta = !!(hasta && !Number.isNaN(hasta.getTime()));
 
-    if (hasDesde && hasHasta) where.createdAt = Between(desde as Date, hasta as Date);
-    else if (hasDesde) where.createdAt = MoreThanOrEqual(desde as Date);
-    else if (hasHasta) where.createdAt = LessThanOrEqual(hasta as Date);
+    // Expresiones SQL reutilizables (MariaDB).
+    const ageExpr = `TIMESTAMPDIFF(MINUTE, COALESCE(c.updatedAt, c.createdAt), NOW())`;
+    // OJO: `finished` puede ser NULL. Sin COALESCE, `(false OR NULL)=NULL` y `NOT NULL=NULL`
+    // (lógica de 3 valores de SQL) → los carritos no finalizados quedarían sin clasificar.
+    const finalizadoExpr = `(c.estado = '0' OR COALESCE(c.finished, '') = '1')`;
+    const abandonadoExpr = `(NOT ${finalizadoExpr} AND ${ageExpr} > ${ABANDONO_MIN})`;
+    const enProcesoExpr = `(NOT ${finalizadoExpr} AND ${ageExpr} <= ${ABANDONO_MIN})`;
+    const situacionExpr = `CASE WHEN ${finalizadoExpr} THEN 'finalizado' WHEN ${abandonadoExpr} THEN 'abandonado' ELSE 'en_proceso' END`;
+    const prioridadExpr = `CASE WHEN ${abandonadoExpr} THEN 0 WHEN ${enProcesoExpr} THEN 1 ELSE 2 END`;
 
-    const carritos = await this.carritoRead.find({
-      where,
-      order: {
-        createdAt: 'DESC',
-      },
-      take: limit,
-      skip: offset,
+    // Base con los filtros comunes (fecha + búsqueda); se clona para cada conteo/consulta.
+    const base = () => {
+      const qb = this.carritoRead.createQueryBuilder('c');
+      if (hasDesde && hasHasta) qb.andWhere('c.createdAt BETWEEN :desde AND :hasta', { desde, hasta });
+      else if (hasDesde) qb.andWhere('c.createdAt >= :desde', { desde });
+      else if (hasHasta) qb.andWhere('c.createdAt <= :hasta', { hasta });
+      if (search) {
+        qb.andWhere(
+          `(CAST(c.codigo AS CHAR) LIKE :s OR LOWER(CAST(c.cliente AS CHAR)) LIKE :s)`,
+          { s: `%${search}%` },
+        );
+      }
+      return qb;
+    };
+
+    const applySituacion = (qb: ReturnType<typeof base>) => {
+      if (situacionFiltro === 'finalizado') qb.andWhere(finalizadoExpr);
+      else if (situacionFiltro === 'abandonado') qb.andWhere(abandonadoExpr);
+      else if (situacionFiltro === 'en_proceso') qb.andWhere(enProcesoExpr);
+      return qb;
+    };
+
+    // Totales reales (sobre todo el set filtrado por fecha/búsqueda, sin paginar).
+    const [totalEnProceso, totalAbandonados, totalFinalizados] = await Promise.all([
+      base().andWhere(enProcesoExpr).getCount(),
+      base().andWhere(abandonadoExpr).getCount(),
+      base().andWhere(finalizadoExpr).getCount(),
+    ]);
+
+    // Promedio de tiempo en finalizar (minutos) — métrica de gestión.
+    const avgRow = await base()
+      .andWhere(finalizadoExpr)
+      .select(`AVG(TIMESTAMPDIFF(MINUTE, c.createdAt, COALESCE(c.updatedAt, c.createdAt)))`, 'avg')
+      .getRawOne();
+    const promedioFinalizacionMin = Math.round(Number(avgRow?.avg ?? 0));
+
+    // Página: aplica filtro de situación + orden abandonados-primero.
+    const pageQb = applySituacion(base())
+      .addSelect(situacionExpr, 'situacion_calc')
+      .addSelect(ageExpr, 'age_min')
+      .orderBy(prioridadExpr, 'ASC')
+      .addOrderBy(ageExpr, 'DESC')
+      .addOrderBy('c.createdAt', 'DESC')
+      .take(limit)
+      .skip(offset);
+
+    const { entities, raw } = await pageQb.getRawAndEntities();
+    const totalFiltrado = await applySituacion(base()).getCount();
+
+    const carritos = entities.map((c: any, i: number) => {
+      const situacion = raw?.[i]?.situacion_calc ?? 'en_proceso';
+      const ageMin = Number(raw?.[i]?.age_min ?? 0);
+      const finalizado = situacion === 'finalizado';
+      const retirar = Number(c?.envio?.retirar ?? 0);
+      const creado = c?.createdAt ? new Date(c.createdAt).getTime() : null;
+      const actualizado = c?.updatedAt ? new Date(c.updatedAt).getTime() : null;
+      return {
+        ...c,
+        situacion,
+        ageMin,
+        abandonado: situacion === 'abandonado',
+        metodoPago: c?.pago?.tipo ?? null,
+        entrega: finalizado ? (retirar === 1 ? 'retiro' : 'delivery') : null,
+        tiempoFinalizacionMin:
+          finalizado && creado && actualizado
+            ? Math.max(0, Math.round((actualizado - creado) / 60000))
+            : null,
+        total: c?.pago?.monto ?? null,
+      };
     });
 
-    const carritosFinalizados = await this.carritoRead.find({
-      where: {
-        estado: '0',
-        finished: '1',
-      },
-      order: {
-        createdAt: 'DESC',
-      },
-      take: limit,
-      skip: offset,
-    });
-
-    const carritosAbandonados = await this.carritoRead.find({
-      where: {
-        estado: '1',
-      },
-      order: {
-        createdAt: 'DESC',
-      },
-      take: limit,
-      skip: offset,
-    });
     return {
-      data: {
-        carritos,
-        carritosAbandonados,
-        carritosFinalizados
-      },
+      data: { carritos },
       message: 'Carrito obtenido exitosamente',
       success: true,
-      totalCarritos: carritos.length,
-      totalCarritosFinalizados: carritosFinalizados.length,
-      totalAbandonados: carritosAbandonados.length,
+      totalCarritos: totalEnProceso + totalAbandonados + totalFinalizados,
+      totalEnProceso,
+      totalAbandonados,
+      totalFinalizados,
+      totalFiltrado,
+      promedioFinalizacionMin,
     };
   }
 

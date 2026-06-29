@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  image:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    ports:
+      - "4093:4093"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=4093
+      - IMAGE_PORT=3107
+      - IS_DOCKER=true
+      - MONGO_URL=${MONGO_URL}
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+      - ../../imagesEcommerce:/home/appuser/Documents/projects/newEcommerce2026/imagesEcommerce
+    command: yarn start:dev:image
+    networks:
+      - image-network
+
+networks:
+  image-network:
+    driver: bridge

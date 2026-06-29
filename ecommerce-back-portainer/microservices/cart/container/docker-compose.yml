@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  cart:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.dev
+    ports:
+      - "3102:3102"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3102
+      - CART_PORT=3102
+      - IS_DOCKER=true
+      - MONGO_URL=${MONGO_URL}
+    volumes:
+      - ../:/usr/src/app
+      - /usr/src/app/node_modules
+    command: yarn start:dev:cart
+    networks:
+      - cart-network
+
+networks:
+  cart-network:
+    driver: bridge
