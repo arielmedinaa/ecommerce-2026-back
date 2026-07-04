@@ -126,6 +126,80 @@ export class ProductsController {
     }
   }
 
+  // Complementos en dos niveles (cercanos/lejanos) de un producto → grid "Agrega más productos".
+  @Post('/complementos')
+  async getComplementosProducto(@Body() body: { codigo: string }) {
+    try {
+      return await firstValueFrom(
+        this.productsClient
+          .send({ cmd: 'get_complementos_producto' }, { codigo: body?.codigo })
+          .pipe(timeout(40000)),
+      );
+    } catch (error) {
+      throw new Error('Error al obtener complementos: ' + error.message);
+    }
+  }
+
+  // Registrar búsqueda (agregado "lo más buscado"). Fire-and-forget desde el front.
+  @Post('/search-log')
+  async logSearch(@Body() body: { termino: string; resultados?: number }) {
+    try {
+      return await firstValueFrom(
+        this.productsClient.send({ cmd: 'log_search' }, body || {}).pipe(timeout(15000)),
+      );
+    } catch {
+      return { success: false };
+    }
+  }
+
+  // Términos más buscados.
+  @Get('/mas-buscado')
+  async getMasBuscado(@Query('limit') limit?: string) {
+    try {
+      return await firstValueFrom(
+        this.productsClient.send({ cmd: 'get_mas_buscado' }, { limit: limit ? Number(limit) : undefined }).pipe(timeout(15000)),
+      );
+    } catch (error) {
+      throw new Error('Error al obtener más buscado: ' + error.message);
+    }
+  }
+
+  // Horarios de agendamiento (ERP, en vivo) para el checkout.
+  @Get('/horarios-agendamiento')
+  async getHorariosAgendamiento() {
+    try {
+      return await firstValueFrom(
+        this.productsClient.send({ cmd: 'get_horarios_agendamiento' }, {}).pipe(timeout(40000)),
+      );
+    } catch (error) {
+      throw new Error('Error al obtener horarios: ' + error.message);
+    }
+  }
+
+  // Stock real por códigos (validación en checkout).
+  @Post('/stock')
+  async getProductsStock(@Body() body: { codigos: string[] }) {
+    try {
+      return await firstValueFrom(
+        this.productsClient.send({ cmd: 'get_products_stock' }, body || { codigos: [] }).pipe(timeout(40000)),
+      );
+    } catch (error) {
+      throw new Error('Error al obtener stock: ' + error.message);
+    }
+  }
+
+  // Fechas/horas de entrega válidas según stock + horarios + ciudad.
+  @Post('/agendamiento/slots')
+  async getAgendamientoSlots(@Body() body: { codigos: string[]; ciudadId?: number; retirar?: boolean }) {
+    try {
+      return await firstValueFrom(
+        this.productsClient.send({ cmd: 'get_agendamiento_slots' }, body || { codigos: [] }).pipe(timeout(40000)),
+      );
+    } catch (error) {
+      throw new Error('Error al calcular agendamiento: ' + error.message);
+    }
+  }
+
   @Get('/facets')
   async getProductsFacets() {
     try {

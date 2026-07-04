@@ -309,10 +309,11 @@ export class UserService {
     };
   }
 
-  // Actualiza SOLO datos personales seguros (no email/identidad). userId viene del token.
+  // Actualiza datos personales del cliente (nombre, teléfono, documento, email).
+  // userId viene del token.
   async updateProfile(
     userId: number,
-    patch: { nombre?: string; numeroCelular?: string; numeroDocumento?: string },
+    patch: { nombre?: string; numeroCelular?: string; numeroDocumento?: string; email?: string; parentescos?: string },
   ): Promise<{ data: any; success: boolean; message: string }> {
     const id = Number(userId);
     if (!Number.isFinite(id)) return { data: null, success: false, message: 'USUARIO INVÁLIDO' };
@@ -320,6 +321,12 @@ export class UserService {
     if (patch?.nombre != null) updates.nombre = String(patch.nombre).trim();
     if (patch?.numeroCelular != null) updates.numeroCelular = String(patch.numeroCelular).trim();
     if (patch?.numeroDocumento != null) updates.numeroDocumento = String(patch.numeroDocumento).trim();
+    if (patch?.email != null) {
+      const email = String(patch.email).trim().toLowerCase();
+      if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) updates.email = email;
+    }
+    // Referencias/parentescos (JSON serializado). Acepta string ya serializado.
+    if (patch?.parentescos != null) updates.parentescos = String(patch.parentescos);
     if (Object.keys(updates).length === 0) return { data: null, success: false, message: 'NADA QUE ACTUALIZAR' };
     await this.userRepository.update(id, updates);
     return { data: updates, success: true, message: 'PERFIL ACTUALIZADO' };

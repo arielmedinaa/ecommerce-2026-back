@@ -12,6 +12,12 @@ import { CreateComboDto } from '@products/schemas/dto/create-combo.dto';
 import { Product } from '../schemas/product.schemas';
 import { Combo } from '../schemas/combo.schemas';
 import { ProductsImage } from '../schemas/products-image.schema';
+import { SearchTerm } from '../schemas/search-term.schema';
+import {
+  complementosPara,
+  complementosNiveles,
+  type ComplementoNiveles,
+} from '../utils/complementos';
 import { ProductsImagesService } from './products-images.service';
 
 import { ProductsUtils } from '@products/utils/utils-products';
@@ -46,16 +52,14 @@ export class ProductsService {
     @Inject('CART_SERVICE') private readonly cartClient: ClientProxy,
     private readonly resilientService: ResilientService,
     private readonly cache: CachePersistenteService,
+    @InjectRepository(SearchTerm, 'WRITE_ECOMMERCE_PRODUCTS_CONNECTION')
+    private readonly searchTermWrite: Repository<SearchTerm>,
+    @InjectRepository(SearchTerm, 'READ_ECOMMERCE_PRODUCTS_CONNECTION')
+    private readonly searchTermRead: Repository<SearchTerm>,
   ) {}
 
-  // Cachés ahora en Redis (vía CachePersistenteService) para que el servicio sea
-  // stateless y escale horizontalmente. Las claves se namespacean por dominio.
   private readonly CACHE_TTL = 5 * 60 * 1000;
   private readonly PRODUCT_CACHE_TTL = 10 * 60 * 1000;
-
-  // Definición "óptimo para web" — debe espejar EXACTAMENTE las condiciones de
-  // proc_obtener_articulos_ecommerce_web para que el total/stats/facets coincidan
-  // con el listado (el proc SIEMPRE exige stock>0 en depósitos válidos).
   private readonly WEB_BASE_WHERE = `a.baja = 0 AND (a.websc = 1 OR a.web = 1)`;
   private readonly STOCK_EXISTS = `EXISTS (
     SELECT 1 FROM tbl_stock_actual sa
@@ -100,7 +104,7 @@ export class ProductsService {
       precioMin: num(filters.precioMin),
       precioMax: num(filters.precioMax),
       soloStock: soloStock ? 1 : null,
-      busqueda: this.normFiltro(filters.busqueda ?? filters.search),
+      busqueda: this.normBusqueda(filters.busqueda ?? filters.search),
     };
   }
 
@@ -108,11 +112,6 @@ export class ProductsService {
     void this.cache.delByPrefix('products:');
   }
 
-  /**
-   * Enriquece las filas de un proc (web o v2) con imágenes activas, trim de campos
-   * y cálculo de cuotas. Ambos procs devuelven las mismas columnas, así que comparten
-   * este post-procesamiento.
-   */
   private async enrichProductRows(productos: any[]): Promise<any[]> {
     const codigosProductos = productos.map((item: any) =>
       item.codigo_articulo.trim(),
@@ -148,7 +147,9 @@ export class ProductsService {
       imagenes: imagenesMap.get(item.codigo_articulo.trim()) || [],
     }));
 
-    return this.productsUtils.calculoCreditoProductos(dataWithTrimmedNames || []);
+    return this.productsUtils.calculoCreditoProductos(
+      dataWithTrimmedNames || [],
+    );
   }
 
   /**
@@ -160,7 +161,9 @@ export class ProductsService {
     filters: any = {},
   ): Promise<{ data: any[]; total: number }> {
     const cacheKey = `products:v2:${this.getCacheKey(filters)}`;
-    const cached = await this.cache.get<{ data: any[]; total: number }>(cacheKey);
+    const cached = await this.cache.get<{ data: any[]; total: number }>(
+      cacheKey,
+    );
     if (cached) return cached;
 
     const limit = Number(filters.limit) || 50;
@@ -168,7 +171,17 @@ export class ProductsService {
     const f = this.buildProcFilters(filters);
     const result = await this.productReadRepository.query(
       'CALL proc_obtener_listado_articulos_ecommerce_v2(?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [limit, offset, f.marca, f.categoria, f.proveedor, f.precioMin, f.precioMax, f.soloStock, f.busqueda],
+      [
+        limit,
+        offset,
+        f.marca,
+        f.categoria,
+        f.proveedor,
+        f.precioMin,
+        f.precioMax,
+        f.soloStock,
+        f.busqueda,
+      ],
     );
 
     const dataConCuotas = await this.enrichProductRows(result[0] || []);
@@ -201,13 +214,22 @@ export class ProductsService {
                OR a.nombre LIKE CONCAT('%', REPLACE(?, ' ', '%'), '%'))
           AND (? IS NULL OR ? = 0 OR ${this.STOCK_EXISTS})`,
       [
-        f.marca, f.marca,
-        f.categoria, f.categoria,
-        f.proveedor, f.proveedor,
-        f.precioMin, f.precioMin,
-        f.precioMax, f.precioMax,
-        f.busqueda, f.busqueda, f.busqueda, f.busqueda,
-        f.soloStock, f.soloStock,
+        f.marca,
+        f.marca,
+        f.categoria,
+        f.categoria,
+        f.proveedor,
+        f.proveedor,
+        f.precioMin,
+        f.precioMin,
+        f.precioMax,
+        f.precioMax,
+        f.busqueda,
+        f.busqueda,
+        f.busqueda,
+        f.busqueda,
+        f.soloStock,
+        f.soloStock,
       ],
     );
     return Number(rows?.[0]?.total || 0);
@@ -217,7 +239,9 @@ export class ProductsService {
     filters: any = {},
   ): Promise<{ data: any[]; total: number }> {
     const cacheKey = `products:list:${this.getCacheKey(filters)}`;
-    const cached = await this.cache.get<{ data: any[]; total: number }>(cacheKey);
+    const cached = await this.cache.get<{ data: any[]; total: number }>(
+      cacheKey,
+    );
     if (cached) {
       return { data: cached.data, total: cached.total };
     }
@@ -227,7 +251,17 @@ export class ProductsService {
     const f = this.buildProcFilters(filters);
     const result = await this.productReadRepository.query(
       'CALL proc_obtener_articulos_ecommerce_web(?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [limit, offset, f.marca, f.categoria, f.proveedor, f.precioMin, f.precioMax, f.soloStock, f.busqueda],
+      [
+        limit,
+        offset,
+        f.marca,
+        f.categoria,
+        f.proveedor,
+        f.precioMin,
+        f.precioMax,
+        f.soloStock,
+        f.busqueda,
+      ],
     );
 
     const productos = result[0] || [];
@@ -247,6 +281,32 @@ export class ProductsService {
     if (value === undefined || value === null) return null;
     const s = String(value).trim();
     return s === '' ? null : s;
+  }
+
+  // Normaliza el término de búsqueda a su forma singular (español) por token, para
+  // que "celulares" matchee productos cuyo nombre dice "celular". Conservador: no
+  // toca palabras cortas y solo aplica reglas de plural comunes (-es / -s).
+  private normBusqueda(value: any): string | null {
+    const s = this.normFiltro(value);
+    if (!s) return s;
+    const singular = s
+      .split(/\s+/)
+      .map((tok) => this.singularizarToken(tok))
+      .join(' ')
+      .trim();
+    return singular === '' ? null : singular;
+  }
+
+  private singularizarToken(tok: string): string {
+    if (tok.length <= 4) return tok; // "gas", "mes", "web"... no tocar
+    // Consonante + "es" → quitar "es": celulares→celular, televisores→televisor.
+    if (/[bcdfghjklmnpqrstvwxyz]es$/i.test(tok)) {
+      const base = tok.slice(0, -2);
+      if (base.length >= 4) return base;
+    }
+    // Vocal + "s" → quitar "s": fundas→funda, zapatillas→zapatilla, mesas→mesa.
+    if (/[aeiou]s$/i.test(tok)) return tok.slice(0, -1);
+    return tok;
   }
 
   private async contarProductos(filters: any = {}): Promise<number> {
@@ -269,12 +329,20 @@ export class ProductsService {
                OR a.nombre LIKE CONCAT('%', REPLACE(?, ' ', '%'), '%'))
           AND ${this.STOCK_EXISTS}`,
       [
-        f.marca, f.marca,
-        f.categoria, f.categoria,
-        f.proveedor, f.proveedor,
-        f.precioMin, f.precioMin,
-        f.precioMax, f.precioMax,
-        f.busqueda, f.busqueda, f.busqueda, f.busqueda,
+        f.marca,
+        f.marca,
+        f.categoria,
+        f.categoria,
+        f.proveedor,
+        f.proveedor,
+        f.precioMin,
+        f.precioMin,
+        f.precioMax,
+        f.precioMax,
+        f.busqueda,
+        f.busqueda,
+        f.busqueda,
+        f.busqueda,
       ],
     );
     return Number(rows?.[0]?.total || 0);
@@ -368,39 +436,121 @@ export class ProductsService {
   }
 
   async findAll(filters: any = {}): Promise<{ data: any[]; total: number }> {
-    // La búsqueda (nombre/código/código de barra) ahora la resuelve el proc vía
-    // p_busqueda → paginación y total reales sobre todo el catálogo (sin filtrado en memoria).
-    return this.getCachedPrismaProductos(filters);
+    const res = await this.getCachedPrismaProductos(filters);
+    return this.aplicarPrioridadJota(res, filters);
   }
 
-  /**
-   * Sugerencias de búsqueda para el buscador del storefront (autocomplete).
-   * Reutiliza la búsqueda real del catálogo y deriva, data-driven:
-   *  - productos: top N coincidencias por nombre (autocomplete) → {codigo, nombre, precio, imagen}
-   *  - terminos:  refinamientos (subcategoría + marca) más frecuentes entre las coincidencias,
-   *               para ofrecer chips "+ término" (búsqueda multi-término).
-   * No hay cross-sell semántico real (no existen datos de co-compra/complementos): eso es Fase 2.
-   */
+  // Familias donde JOTA (marca 257) es prioritaria: 4 Refrigeración, 5 Climatización,
+  // 6 Cocinas y anafes, 7 Lavado.
+  private static readonly JOTA_MARCA = 257;
+  private static readonly JOTA_FAMILIAS = new Set([4, 5, 6, 7]);
+  private static readonly JOTA_KEYWORDS =
+    /(cocina|anafe|heladera|refriger|freezer|climatiz|aire|lavarrop|lavado|lavasecarropas)/i;
+
+  private esJotaRow(r: any): boolean {
+    return (
+      Number(r?.codigo_marca) === ProductsService.JOTA_MARCA ||
+      /jota/i.test(String(r?.nombre_marca ?? ''))
+    );
+  }
+
+  // ¿La consulta apunta a familias JOTA? (por categoria, keyword de búsqueda, o porque
+  // la mayoría de las filas pertenecen a esas familias).
+  private esConsultaJota(rows: any[], filters: any = {}): boolean {
+    const categoria = Number(filters?.categoria);
+    if (Number.isFinite(categoria) && ProductsService.JOTA_FAMILIAS.has(categoria)) return true;
+    const search = String(filters?.search ?? '').trim();
+    if (search && ProductsService.JOTA_KEYWORDS.test(search)) return true;
+    if (Array.isArray(rows) && rows.length) {
+      const enFam = rows.filter((r) =>
+        ProductsService.JOTA_FAMILIAS.has(Number(r?.codigo_categoria)),
+      );
+      if (enFam.length * 2 >= rows.length) return true;
+    }
+    return false;
+  }
+
+  // Hace que JOTA lidere el listado en familias JOTA: en la primera página (offset 0)
+  // trae los artículos JOTA de la misma consulta y los antepone (dedup); en páginas
+  // siguientes solo reordena los JOTA ya presentes. No aplica si el usuario filtró por
+  // otra marca.
+  private async aplicarPrioridadJota(
+    res: { data: any[]; total: number },
+    filters: any = {},
+  ): Promise<{ data: any[]; total: number }> {
+    const rows = Array.isArray(res.data) ? res.data : [];
+    const marcaFiltro = this.normFiltro(filters?.marca);
+    if (marcaFiltro || rows.length === 0) return res;
+    if (!this.esConsultaJota(rows, filters)) return res;
+
+    const offset = Number(filters?.offset) || 0;
+    const limit = Number(filters?.limit) || rows.length;
+
+    const dedupPrepend = (jota: any[], resto: any[]) => {
+      const cods = new Set(jota.map((r) => String(r?.codigo_articulo)));
+      return [...jota, ...resto.filter((r) => !cods.has(String(r?.codigo_articulo)))];
+    };
+
+    if (offset > 0) {
+      const jota = rows.filter((r) => this.esJotaRow(r));
+      if (!jota.length || jota.length === rows.length) return res;
+      return {
+        ...res,
+        data: dedupPrepend(jota, rows.filter((r) => !this.esJotaRow(r))),
+      };
+    }
+
+    // Página 0: traer JOTA de la misma consulta y anteponerlos.
+    try {
+      const jotaRes = await this.getCachedPrismaProductos({
+        ...filters,
+        marca: ProductsService.JOTA_MARCA,
+        offset: 0,
+        limit: Math.max(limit, 12),
+      });
+      const jota = Array.isArray(jotaRes.data) ? jotaRes.data : [];
+      if (!jota.length) return res;
+      const merged = dedupPrepend(jota, rows);
+      const data = limit > 0 ? merged.slice(0, limit) : merged;
+      return { ...res, data };
+    } catch (e) {
+      this.logger.warn(`aplicarPrioridadJota falló: ${(e as any)?.message ?? e}`);
+      return res;
+    }
+  }
+
   async getSuggestions(
     q: string,
     limit = 6,
-  ): Promise<{ data: { productos: any[]; terminos: string[] }; success: boolean; message: string }> {
+  ): Promise<{
+    data: { productos: any[]; terminos: string[]; complementos: string[] };
+    success: boolean;
+    message: string;
+  }> {
     const termino = this.normFiltro(q);
     if (!termino) {
-      return { data: { productos: [], terminos: [] }, success: true, message: 'SIN TÉRMINO' };
+      return {
+        data: { productos: [], terminos: [], complementos: [] },
+        success: true,
+        message: 'SIN TÉRMINO',
+      };
     }
 
-    const { data } = await this.findAll({ search: termino, limit: 15, offset: 0, soloConStock: true });
+    const { data } = await this.findAll({
+      search: termino,
+      limit: 15,
+      offset: 0,
+      soloConStock: true,
+    });
     const rows = Array.isArray(data) ? data : [];
 
     const productos = rows.slice(0, limit).map((p: any) => ({
       codigo: p.codigo_articulo,
       nombre: p.nombre_articulo,
       precio: p.precio ?? p.precioventa ?? p.precio_venta ?? null,
-      imagen: Array.isArray(p.imagenes) ? p.imagenes[0] ?? null : null,
+      imagen: Array.isArray(p.imagenes) ? (p.imagenes[0] ?? null) : null,
     }));
 
-    // Refinamientos: subcategorías + marcas distintas, rankeadas por frecuencia.
     const qLower = termino.toLowerCase();
     const freq = new Map<string, number>();
     for (const p of rows) {
@@ -416,12 +566,340 @@ export class ProductsService {
       .slice(0, 6)
       .map(([t]) => t);
 
-    return { data: { productos, terminos }, success: true, message: 'SUGERENCIAS' };
+    const haystack = [
+      qLower,
+      ...rows.map((p: any) =>
+        String(p.nombre_subcategoria || '').toLowerCase(),
+      ),
+      ...rows.map((p: any) => String(p.nombre_articulo || '').toLowerCase()),
+    ];
+    const complementos = complementosPara(qLower, haystack, 6);
+
+    return {
+      data: { productos, terminos, complementos },
+      success: true,
+      message: 'SUGERENCIAS',
+    };
   }
 
-  async prefetchfindAll(
-    filters: any = {},
+  async getComplementosProducto(
+    codigo: string,
+  ): Promise<{ data: ComplementoNiveles; success: boolean; message: string }> {
+    const cod = String(codigo ?? '').trim();
+    if (!cod)
+      return {
+        data: { cercanos: [], lejanos: [] },
+        success: true,
+        message: 'SIN CODIGO',
+      };
+    try {
+      // findAll (proc) trae nombre_subcategoria/nombre_categoria; el proc matchea por código.
+      const { data } = await this.findAll({ search: cod, limit: 1, offset: 0 });
+      const p: any = Array.isArray(data) ? data[0] : null;
+      if (!p)
+        return {
+          data: { cercanos: [], lejanos: [] },
+          success: true,
+          message: 'NO ENCONTRADO',
+        };
+      const haystack = [
+        String(p.nombre_subcategoria || '').toLowerCase(),
+        String(p.nombre_categoria || '').toLowerCase(),
+        String(p.nombre_articulo || p.nombre || '').toLowerCase(),
+      ];
+      const niveles = complementosNiveles(haystack);
+      return { data: niveles, success: true, message: 'COMPLEMENTOS' };
+    } catch (e) {
+      this.logger.error('Error in getComplementosProducto:', e);
+      return {
+        data: { cercanos: [], lejanos: [] },
+        success: true,
+        message: 'ERROR',
+      };
+    }
+  }
+
+  async logSearch(
+    termino: string,
+    resultados = 0,
+  ): Promise<{ success: boolean }> {
+    const t = this.normFiltro(termino);
+    if (!t) return { success: false };
+    // Saneo: minúsculas, colapsar espacios, máx 4 palabras, dedupe de tokens
+    // repetidos consecutivos y tope 40 chars → evita basura tipo
+    // "amoladora makita varios herramientas makita varios makita...".
+    const tokens = String(t)
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .trim()
+      .split(' ')
+      .filter((w, i, arr) => w && w !== arr[i - 1])
+      .slice(0, 4);
+    const norm = tokens.join(' ').slice(0, 40).trim();
+    if (!norm) return { success: false };
+    try {
+      await this.searchTermWrite.query(
+        `INSERT INTO search_terms (termino, total, ultimo_resultados, ultima_vez)
+         VALUES (?, 1, ?, NOW())
+         ON DUPLICATE KEY UPDATE total = total + 1, ultimo_resultados = VALUES(ultimo_resultados), ultima_vez = NOW()`,
+        [norm, Number(resultados) || 0],
+      );
+      return { success: true };
+    } catch (e) {
+      this.logger.error('logSearch error', e as any);
+      return { success: false };
+    }
+  }
+
+  async getMasBuscado(
+    limit = 8,
+  ): Promise<{ data: string[]; success: boolean }> {
+    try {
+      // Solo términos "sanos": <=40 chars, con resultados, y máx ~4 palabras
+      // (NOT LIKE '% % % % %' descarta 5+ palabras). Devuelve un pool para rotar.
+      const rows = await this.searchTermRead.query(
+        `SELECT termino FROM search_terms
+          WHERE CHAR_LENGTH(termino) <= 40
+            AND ultimo_resultados > 0
+            AND termino NOT LIKE '% % % % %'
+          ORDER BY total DESC, ultima_vez DESC
+          LIMIT ?`,
+        [Math.max(1, Math.min(20, Number(limit) || 8))],
+      );
+      return { data: (rows || []).map((r: any) => r.termino), success: true };
+    } catch (e) {
+      this.logger.error('getMasBuscado error', e as any);
+      return { data: [], success: false };
+    }
+  }
+
+  // ===================== AGENDAMIENTO + STOCK (checkout) =====================
+
+  // Hora actual en Paraguay (America/Asuncion) sin depender de la TZ del server.
+  private nowAsuncion(): { ymd: string; minutes: number; dow: number } {
+    const tz = 'America/Asuncion';
+    const parts = Object.fromEntries(
+      new Intl.DateTimeFormat('en-CA', {
+        timeZone: tz,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      })
+        .formatToParts(new Date())
+        .map((p) => [p.type, p.value]),
+    );
+    const hh = parts.hour === '24' ? '00' : parts.hour;
+    const ymd = `${parts.year}-${parts.month}-${parts.day}`;
+    const minutes = Number(hh) * 60 + Number(parts.minute);
+    const dow = new Date(`${ymd}T12:00:00Z`).getUTCDay(); // 0=Dom..6=Sab
+    return { ymd, minutes, dow };
+  }
+
+  private hmsToMin(t: any): number | null {
+    if (!t) return null;
+    const [h, m] = String(t).split(':');
+    const n = Number(h) * 60 + Number(m || 0);
+    return Number.isFinite(n) ? n : null;
+  }
+  private minToHm = (min: number) =>
+    `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+  private addDaysYmd(ymd: string, days: number): string {
+    const d = new Date(`${ymd}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+
+  async getHorariosAgendamiento(): Promise<{ data: any[]; success: boolean }> {
+    const rows = await this.productReadRepository.query(
+      `SELECT numero_dia_semana AS dia, nombre_dia, horario_inicial, horario_final,
+              horario_maximo, horario_corte, estado, regla_interior
+         FROM tbl_horarios_agendamiento`,
+    );
+    const data = (rows || []).map((r: any) => ({
+      dia: Number(r.dia),
+      nombreDia: r.nombre_dia,
+      inicial: String(r.horario_inicial || '').slice(0, 5),
+      final: String(r.horario_final || '').slice(0, 5),
+      maximo: r.horario_maximo ? String(r.horario_maximo).slice(0, 5) : null,
+      corte: r.horario_corte ? String(r.horario_corte).slice(0, 5) : null,
+      estado: Number(r.estado),
+      reglaInterior:
+        r.regla_interior == null
+          ? false
+          : Buffer.isBuffer(r.regla_interior)
+            ? r.regla_interior[0] === 1
+            : !!Number(r.regla_interior),
+    }));
+    return { data, success: true };
+  }
+
+  // Stock real por código (reusa la misma definición que el catálogo).
+  async getStockByCodigos(
+    codigos: string[],
   ): Promise<{
+    data: { codigo: string; enStock: boolean }[];
+    success: boolean;
+  }> {
+    const list = (codigos || []).map((c) => String(c).trim()).filter(Boolean);
+    if (!list.length) return { data: [], success: true };
+    const placeholders = list.map(() => '?').join(',');
+    const rows = await this.productReadRepository.query(
+      `SELECT a.codigo_articulo AS codigo, (${this.STOCK_EXISTS}) AS en_stock
+         FROM articulo a
+        WHERE a.codigo_articulo IN (${placeholders})`,
+      list,
+    );
+    const found = new Map<string, boolean>();
+    for (const r of rows || [])
+      found.set(String(r.codigo).trim(), Number(r.en_stock) === 1);
+    // Código no encontrado => sin stock (conservador).
+    const data = list.map((codigo) => ({
+      codigo,
+      enStock: found.get(codigo) ?? false,
+    }));
+    return { data, success: true };
+  }
+
+  async getAgendamientoSlots(payload: {
+    codigos: string[];
+    ciudadId?: number;
+    retirar?: boolean;
+  }): Promise<{
+    data: {
+      allInStock: boolean;
+      interior: boolean;
+      retiro: boolean;
+      slots: { fecha: string; dia: number; horas: string[] }[];
+      avisos: string[];
+    };
+    success: boolean;
+  }> {
+    const retiro = !!payload?.retirar;
+    const [{ data: stock }, { data: horarios }] = await Promise.all([
+      this.getStockByCodigos(payload?.codigos || []),
+      this.getHorariosAgendamiento(),
+    ]);
+    const allInStock = stock.length > 0 ? stock.every((s) => s.enStock) : true;
+
+    // Interior de la ciudad
+    let interior = false;
+    const ciudadId = Number(payload?.ciudadId);
+    if (Number.isFinite(ciudadId) && ciudadId > 0) {
+      const cr = await this.productReadRepository.query(
+        'SELECT interior FROM ciudad WHERE codigo = ? LIMIT 1',
+        [ciudadId],
+      );
+      interior = Number(cr?.[0]?.interior) === 1;
+    }
+
+    const byDow = new Map<number, any>();
+    for (const h of horarios) byDow.set(h.dia, h);
+
+    const { ymd, minutes: nowMin, dow } = this.nowAsuncion();
+    const avisos: string[] = [];
+    const SLOT_STEP = 60; // slots por hora
+
+    const horasEntre = (desdeMin: number, hastaMin: number): string[] => {
+      const out: string[] = [];
+      let start = Math.ceil(desdeMin / SLOT_STEP) * SLOT_STEP;
+      for (let m = start; m <= hastaMin; m += SLOT_STEP)
+        out.push(this.minToHm(m));
+      return out;
+    };
+
+    const slots: { fecha: string; dia: number; horas: string[] }[] = [];
+
+    if (retiro) {
+      // Retiro en local: hoy desde ahora (dentro de ventana) + próximos días completos.
+      for (let i = 0; i < 7 && slots.length < 5; i++) {
+        const fecha = this.addDaysYmd(ymd, i);
+        const ddow = new Date(`${fecha}T12:00:00Z`).getUTCDay();
+        const h = byDow.get(ddow);
+        if (!h || h.estado !== 1) continue;
+        const ini = this.hmsToMin(h.inicial)!;
+        const fin = this.hmsToMin(h.final)!;
+        const desde = i === 0 ? Math.max(ini, nowMin) : ini;
+        if (i === 0 && nowMin > fin) continue;
+        const horas = horasEntre(desde, fin);
+        if (horas.length) slots.push({ fecha, dia: ddow, horas });
+      }
+      return {
+        data: { allInStock, interior, retiro, slots, avisos },
+        success: true,
+      };
+    }
+
+    // -------- Delivery --------
+    if (interior) {
+      avisos.push(
+        'Tu ciudad es del interior: la entrega se agenda para el día siguiente o posterior.',
+      );
+      // Sólo días con regla_interior=1; entrega desde el día siguiente.
+      for (let i = 1; i <= 9 && slots.length < 5; i++) {
+        const fecha = this.addDaysYmd(ymd, i);
+        const ddow = new Date(`${fecha}T12:00:00Z`).getUTCDay();
+        const h = byDow.get(ddow);
+        if (!h || h.estado !== 1 || !h.reglaInterior) continue;
+        const ini = this.hmsToMin(h.inicial)!;
+        const max = this.hmsToMin(h.maximo) ?? this.hmsToMin(h.final)!;
+        const horas = horasEntre(ini, max);
+        if (horas.length) slots.push({ fecha, dia: ddow, horas });
+      }
+      return {
+        data: { allInStock, interior, retiro, slots, avisos },
+        success: true,
+      };
+    }
+
+    // Capital
+    const hoy = byDow.get(dow);
+    if (hoy && hoy.estado === 1) {
+      const ini = this.hmsToMin(hoy.inicial)!;
+      const fin = this.hmsToMin(hoy.final)!;
+      const max = this.hmsToMin(hoy.maximo) ?? fin;
+      const corte = this.hmsToMin(hoy.corte);
+      if (nowMin < ini)
+        avisos.push(`Los pedidos se reciben desde las ${hoy.inicial}.`);
+      const earliest = Math.max(nowMin + 240, ini); // +4h de preparación
+      let hoyPosible = false;
+      if (nowMin <= fin) {
+        if (allInStock) hoyPosible = earliest <= max;
+        else hoyPosible = corte != null && nowMin <= corte && earliest <= max;
+      }
+      if (hoyPosible) {
+        const horas = horasEntre(earliest, max);
+        if (horas.length) slots.push({ fecha: ymd, dia: dow, horas });
+      } else if (!allInStock) {
+        avisos.push(
+          'Hay artículos sin stock: la entrega se agenda para el día siguiente desde las 10:00.',
+        );
+      }
+    }
+
+    // Días siguientes
+    const startNext = this.hmsToMin('10:00')!; // sin stock o tras el corte: arranca 10:00
+    for (let i = 1; i <= 9 && slots.length < 5; i++) {
+      const fecha = this.addDaysYmd(ymd, i);
+      const ddow = new Date(`${fecha}T12:00:00Z`).getUTCDay();
+      const h = byDow.get(ddow);
+      if (!h || h.estado !== 1) continue;
+      const ini = this.hmsToMin(h.inicial)!;
+      const max = this.hmsToMin(h.maximo) ?? this.hmsToMin(h.final)!;
+      const desde = allInStock ? ini : Math.max(startNext, ini);
+      const horas = horasEntre(desde, max);
+      if (horas.length) slots.push({ fecha, dia: ddow, horas });
+    }
+
+    return {
+      data: { allInStock, interior, retiro, slots, avisos },
+      success: true,
+    };
+  }
+
+  async prefetchfindAll(filters: any = {}): Promise<{
     data: { carritos: any[]; promociones: any[] };
     message: string;
     success: boolean;
@@ -438,7 +916,6 @@ export class ProductsService {
       );
 
       const carritosProductosId = [];
-      const productosRelacionados = [];
       const resilientOptions: ResilientOptions = {
         retries: 3,
         delay: 1000,
@@ -520,7 +997,7 @@ export class ProductsService {
     }
   }
 
-  async create(createPrismaProductDto: CreateProductDto): Promise<any> {  
+  async create(createPrismaProductDto: CreateProductDto): Promise<any> {
     const data: any = { ...createPrismaProductDto };
     if (typeof data.web === 'number') {
       data.web = data.web === 1;
@@ -699,7 +1176,9 @@ export class ProductsService {
     filters: any = {},
   ): Promise<{ data: any[]; total: number }> {
     const cacheKey = `products:jota:${this.getCacheKey({ ...filters, type: 'jota' })}`;
-    const cached = await this.cache.get<{ data: any[]; total: number }>(cacheKey);
+    const cached = await this.cache.get<{ data: any[]; total: number }>(
+      cacheKey,
+    );
     if (cached) {
       return { data: cached.data, total: cached.total };
     }

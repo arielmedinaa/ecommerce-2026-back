@@ -94,6 +94,13 @@ export class CartController {
     return this.cartService.getComprasResumenByUsers(payload?.userIds || []);
   }
 
+  @MessagePattern({ cmd: 'sync_cart_cliente' })
+  async syncCartCliente(
+    @Payload() payload: { userId: number | string; cliente: { razonsocial?: string; correo?: string; telefono?: string; documento?: string } },
+  ) {
+    return this.cartService.syncClienteByUser(payload?.userId, payload?.cliente || {});
+  }
+
   @MessagePattern({ cmd: 'remove_cart_item' })
   async removeCartItem(@Payload() payload: { token: string; productoCodigo: string | number; tipo?: 'contado' | 'credito' }) {
     return this.cartService.removeCartItem(payload?.token, payload?.productoCodigo, payload?.tipo);

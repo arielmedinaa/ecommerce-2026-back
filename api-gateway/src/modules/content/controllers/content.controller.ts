@@ -69,6 +69,14 @@ export class ContentController {
     );
   }
 
+  @Delete('home/sections/:key')
+  @SneakyThrows()
+  async deleteHomeSection(@Param('key') key: string) {
+    return await firstValueFrom(
+      this.contentClient.send({ cmd: 'delete_home_section' }, { key }),
+    );
+  }
+
   @Post('landing')
   @SneakyThrows('ContentService', 'createLanding')
   async createLanding(@Body() body: { createLandingDto: any; userId: string }) {

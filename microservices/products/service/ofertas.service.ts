@@ -55,6 +55,8 @@ export class OfertasService {
         existingOferta.descripcion = createData.descripcion || existingOferta.descripcion;
         existingOferta.tiempoActivo = createData.tiempoActivo || existingOferta.tiempoActivo;
         existingOferta.activo = createData.activo !== undefined ? createData.activo : existingOferta.activo;
+        existingOferta.combosHabilitado = createData.combosHabilitado !== undefined ? !!createData.combosHabilitado : existingOferta.combosHabilitado;
+        existingOferta.comboDescuento = createData.comboDescuento !== undefined ? Number(createData.comboDescuento) || 0 : existingOferta.comboDescuento;
         existingOferta.updatedBy = createData.updatedBy;
 
         await this.productoOfertaWriteRepository.remove(existingOferta.productos);
@@ -85,6 +87,8 @@ export class OfertasService {
           tiempoActivo: createData.tiempoActivo,
           createdBy: createData.createdBy,
           activo: createData.activo !== undefined ? createData.activo : true,
+          combosHabilitado: !!createData.combosHabilitado,
+          comboDescuento: Number(createData.comboDescuento) || 0,
         });
 
         const savedOferta = await this.ofertaWriteRepository.save(newOferta);

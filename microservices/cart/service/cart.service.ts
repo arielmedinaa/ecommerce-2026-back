@@ -563,7 +563,14 @@ export class CartContadoService {
       const decoded = this.jwtService.verify(userToken);
       const usuario_id = parseInt(decoded.sub);
       if (!destino) {
-        guestCart.cliente = { ...(guestCart.cliente as any), id_usuario: usuario_id, equipo: userToken, correo: decoded.email };
+        // Reconstruye el `cliente` con los datos reales del usuario (nombre, documento,
+        // teléfono, correo) en vez de conservar el "Usuario Invitado" previo.
+        guestCart.cliente = this.utilsCart.buildClienteFromToken(
+          decoded,
+          userToken,
+          decoded.email,
+          guestCart.cliente as any,
+        );
         await this.carritoWrite.save(guestCart);
         return { data: [guestCart], success: true, message: 'CARRITO INVITADO REASIGNADO' };
       }
@@ -799,6 +806,40 @@ export class CartContadoService {
     } catch (error) {
       this.logger.error('Error al obtener carritos por usuario:', error);
       return { data: [], success: false, message: 'ERROR AL OBTENER CARRITOS DEL CLIENTE' };
+    }
+  }
+
+  // Propaga los datos del cliente (nombre/correo/teléfono/documento) al objeto JSON
+  // `cliente` de TODOS los carritos del usuario. Se llama cuando el cliente actualiza
+  // su perfil, para que los carritos dejen de mostrar datos viejos ("Usuario Invitado").
+  async syncClienteByUser(
+    userId: number | string,
+    patch: { razonsocial?: string; correo?: string; telefono?: string; documento?: string },
+  ): Promise<{ data: { actualizados: number }; success: boolean; message: string }> {
+    try {
+      const carritos = await this.carritoWrite
+        .createQueryBuilder('cart')
+        .where(
+          "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id_usuario",
+          { id_usuario: String(userId) },
+        )
+        .getMany();
+
+      let actualizados = 0;
+      for (const cart of carritos) {
+        const cliente: any = { ...(cart.cliente as any) };
+        if (patch.razonsocial != null && patch.razonsocial !== '') cliente.razonsocial = patch.razonsocial;
+        if (patch.correo != null && patch.correo !== '') cliente.correo = patch.correo;
+        if (patch.telefono != null && patch.telefono !== '') cliente.telefono = patch.telefono;
+        if (patch.documento != null && patch.documento !== '') cliente.documento = patch.documento;
+        cart.cliente = cliente;
+        await this.carritoWrite.save(cart);
+        actualizados++;
+      }
+      return { data: { actualizados }, success: true, message: 'CLIENTE SINCRONIZADO EN CARRITOS' };
+    } catch (error) {
+      this.logger.error('Error al sincronizar cliente en carritos:', error);
+      return { data: { actualizados: 0 }, success: false, message: 'ERROR AL SINCRONIZAR CLIENTE' };
     }
   }
 

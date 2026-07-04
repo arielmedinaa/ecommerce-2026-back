@@ -60,6 +60,56 @@ export class ProductsController {
     }
   }
 
+  @MessagePattern({ cmd: 'get_complementos_producto' })
+  async getComplementosProducto(@Body() payload: { codigo: string }) {
+    try {
+      return await this.productsService.getComplementosProducto(payload?.codigo);
+    } catch (error) {
+      this.logger.error('Error in get_complementos_producto:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'log_search' })
+  async logSearch(@Body() payload: { termino: string; resultados?: number }) {
+    return await this.productsService.logSearch(payload?.termino, payload?.resultados);
+  }
+
+  @MessagePattern({ cmd: 'get_mas_buscado' })
+  async getMasBuscado(@Body() payload: { limit?: number }) {
+    return await this.productsService.getMasBuscado(payload?.limit);
+  }
+
+  @MessagePattern({ cmd: 'get_horarios_agendamiento' })
+  async getHorariosAgendamiento() {
+    try {
+      return await this.productsService.getHorariosAgendamiento();
+    } catch (error) {
+      this.logger.error('Error in get_horarios_agendamiento:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'get_products_stock' })
+  async getProductsStock(@Body() payload: { codigos: string[] }) {
+    try {
+      return await this.productsService.getStockByCodigos(payload?.codigos || []);
+    } catch (error) {
+      this.logger.error('Error in get_products_stock:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'get_agendamiento_slots' })
+  async getAgendamientoSlots(@Body() payload: { codigos: string[]; ciudadId?: number; retirar?: boolean }) {
+    try {
+      return await this.productsService.getAgendamientoSlots(payload || { codigos: [] });
+    } catch (error) {
+      this.logger.error('Error in get_agendamiento_slots:', error);
+      throw error;
+    }
+  }
+
   @MessagePattern({ cmd: 'get_products_facets' })
   async getProductsFacets() {
     try {

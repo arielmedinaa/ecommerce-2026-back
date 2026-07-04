@@ -54,6 +54,11 @@ export class User {
   @Column({ type: 'json', nullable: true })
   direcciones?: any[];
 
+  // Referencias familiares (parentescos) del cliente para solicitudes a crédito.
+  // JSON serializado: [{ nombre, parentesco, celular }] (hasta 3, sin duplicados).
+  @Column({ type: 'longtext', nullable: true })
+  parentescos?: string;
+
   @Column({ type: 'datetime', nullable: true })
   fechaExpiracion?: Date;
 

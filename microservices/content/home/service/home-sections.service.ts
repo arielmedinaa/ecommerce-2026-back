@@ -65,4 +65,14 @@ export class HomeSectionsService {
       return null;
     }
   }
+
+  async deleteByKey(key: string): Promise<boolean> {
+    try {
+      const result = await this.homeSectionRepoWrite.delete({ key });
+      return !!result.affected && result.affected > 0;
+    } catch (error) {
+      this.logger.error('Error al eliminar home section', error);
+      return false;
+    }
+  }
 }

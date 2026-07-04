@@ -23,6 +23,9 @@ spec:
         envFrom:
         - configMapRef:
             name: ecommerce-config
+        # Credenciales del ERP Econt (para autocompletar clientes por documento/RUC).
+        - secretRef:
+            name: econt-db
         # database-per-service: auth usa su propio schema (override sobre el configmap).
         env:
         - name: DATABASE_NAME

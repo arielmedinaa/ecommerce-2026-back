@@ -9,6 +9,8 @@ import { GoogleStrategy } from '../../strategies/google.strategy';
   imports: [
     MicroserviceModule.register('AUTH_SERVICE'),
     MicroserviceModule.register('CART_SERVICE'),
+    MicroserviceModule.register('CONTENT_SERVICE'),
+    MicroserviceModule.register('PRODUCTS_SERVICE'),
     PassportModule,
   ],
   controllers: [AuthController, UserController],

@@ -7,6 +7,7 @@ import { Promo } from '../schemas/promo.schemas';
 import { Oferta } from '../schemas/oferta.schemas';
 import { ProductoOferta } from '../schemas/producto-oferta.schemas';
 import { ProductsImage } from '../schemas/products-image.schema';
+import { SearchTerm } from '../schemas/search-term.schema';
 
 @Module({
   imports: [],
@@ -49,7 +50,7 @@ export class MariaDbModule {
         username: configService.get<string>('DATABASE_USER'),
         password: configService.get<string>('DATABASE_PASSWORD'),
         database: configService.get<string>('DATABASE_NAME'),
-        entities: [ProductsImage],
+        entities: [ProductsImage, SearchTerm],
         synchronize: process.env.SYNCRONICE === 'true',
         logging: process.env.SYNCRONICE === 'true',
         keepConnectionAlive: true,
@@ -74,7 +75,7 @@ export class MariaDbModule {
         username: configService.get<string>('DATABASE_USER'),
         password: configService.get<string>('DATABASE_PASSWORD'),
         database: configService.get<string>('DATABASE_NAME'),
-        entities: [ProductsImage],
+        entities: [ProductsImage, SearchTerm],
         synchronize: process.env.SYNCRONICE === 'true',
         logging: process.env.SYNCRONICE === 'true',
         keepConnectionAlive: true,
@@ -168,11 +169,11 @@ export class MariaDbModule {
   }
   
   static forEcommerceProductsFeature(): DynamicModule {
-    return TypeOrmModule.forFeature([ProductsImage], 'WRITE_ECOMMERCE_PRODUCTS_CONNECTION');
+    return TypeOrmModule.forFeature([ProductsImage, SearchTerm], 'WRITE_ECOMMERCE_PRODUCTS_CONNECTION');
   }
   
   static forEcommerceProductsFeatureRead(): DynamicModule {
-    return TypeOrmModule.forFeature([ProductsImage], 'READ_ECOMMERCE_PRODUCTS_CONNECTION');
+    return TypeOrmModule.forFeature([ProductsImage, SearchTerm], 'READ_ECOMMERCE_PRODUCTS_CONNECTION');
   }
   
   static forOfertasFeature(): DynamicModule {

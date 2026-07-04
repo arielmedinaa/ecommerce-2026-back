@@ -353,16 +353,21 @@ export class AuthService {
         resilientOptions,
       ) as number;
 
-      const cantidadCuponesUsuario =
-        await this.userCouponService.getUserCouponsCount(
-          couponData.userId,
-          couponData.idCupon,
-        );
-      if (cantidadCuponesUsuario >= limitePorUsuarioCupon) {
-        return {
-          success: false,
-          message: 'Usuario ya tiene un cupón de este tipo'.toUpperCase(),
-        };
+      // Semántica (igual que el admin): limite<=0 ⇒ ilimitado por usuario; N>0 ⇒ máximo N.
+      const limiteRaw = Number(limitePorUsuarioCupon);
+      const limite = Number.isFinite(limiteRaw) ? limiteRaw : 1;
+      if (limite > 0) {
+        const cantidadCuponesUsuario =
+          await this.userCouponService.getUserCouponsCount(
+            couponData.userId,
+            couponData.idCupon,
+          );
+        if (cantidadCuponesUsuario >= limite) {
+          return {
+            success: false,
+            message: 'USUARIO YA TIENE EL MÁXIMO DE ESTE CUPÓN',
+          };
+        }
       }
       const coupon = await this.userCouponService.createCouponForUser(
         couponData.userId,
@@ -372,6 +377,14 @@ export class AuthService {
           eventId: couponData.eventId,
         },
       );
+
+      // createCouponForUser devuelve null si el índice UNIQUE rechazó el duplicado.
+      if (!coupon) {
+        return {
+          success: false,
+          message: 'USUARIO YA TIENE ESTE CUPÓN',
+        };
+      }
 
       return {
         success: true,
@@ -428,20 +441,24 @@ export class AuthService {
 
     const asignados: number[] = [];
     const omitidos: Array<{ userId: number; motivo: string }> = [];
-    // Umbral de "ya lo tiene": el límite por usuario, o 1 si es ilimitado (evita duplicar).
-    const threshold = limite > 0 ? limite : 1;
+    // Semántica: limite<=0 ⇒ ilimitado por usuario (el índice UNIQUE evita el duplicado
+    // exacto igual); limite>0 ⇒ máximo N por usuario.
+    const limiteNorm = Number.isFinite(limite) ? limite : 1;
     for (const uid of userIds) {
       try {
-        const count = await this.userCouponService.getUserCouponsCount(uid, idCupon);
-        if (count >= threshold) {
-          omitidos.push({ userId: uid, motivo: count >= 1 ? 'ya tiene el cupón' : 'límite alcanzado' });
-          continue;
+        if (limiteNorm > 0) {
+          const count = await this.userCouponService.getUserCouponsCount(uid, idCupon);
+          if (count >= limiteNorm) {
+            omitidos.push({ userId: uid, motivo: 'ya tiene el máximo del cupón' });
+            continue;
+          }
         }
-        await this.userCouponService.createCouponForUser(uid, {
+        const created = await this.userCouponService.createCouponForUser(uid, {
           idCupon,
           descripcion: payload?.descripcion || 'Asignación masiva',
         });
-        asignados.push(uid);
+        if (created) asignados.push(uid);
+        else omitidos.push({ userId: uid, motivo: 'ya tiene el cupón' });
       } catch (e) {
         this.logger.error(`Error asignando cupón ${idCupon} al usuario ${uid}`, e);
         omitidos.push({ userId: uid, motivo: 'error' });

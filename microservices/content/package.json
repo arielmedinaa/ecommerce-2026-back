@@ -28,6 +28,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
     "compression": "^1.8.1",
+    "ioredis": "^5.4.1",
     "moment-timezone": "^0.6.0",
     "mysql2": "^3.16.3",
     "nats": "^2.28.0",

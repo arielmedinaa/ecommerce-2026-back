@@ -14,7 +14,9 @@ export type HomeSectionType =
   | 'BANNERS2'
   | 'OFERTAS'
   | 'JOTA'
-  | 'PRODUCTOS';
+  | 'PRODUCTOS'
+  | 'IMAGE_GRID'
+  | 'PRODUCT_CAROUSEL';
 
 @Entity('home_sections')
 @Index(['activo', 'orden'])

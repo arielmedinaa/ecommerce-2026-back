@@ -1,14 +1,30 @@
 import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { MessagePattern, EventPattern, Payload } from '@nestjs/microservices';
 import { UserService } from '../service/user.service';
 import { UserCouponService } from '../service/user-coupon.service';
+import { ErpClienteService } from '../service/erp-cliente.service';
+import { UserTrackService, TrackEventInput } from '../service/user-track.service';
 
 @Controller()
 export class UserController {
   constructor(
     private readonly userService: UserService,
     private readonly userCouponService: UserCouponService,
+    private readonly erpClienteService: ErpClienteService,
+    private readonly userTrackService: UserTrackService,
   ) {}
+
+  // Autocompletado de cliente del ERP por documento/RUC (checkout).
+  @MessagePattern({ cmd: 'get_cliente_erp' })
+  async getClienteErp(@Payload() payload: { documento: string }) {
+    return this.erpClienteService.getClienteErpByDocumento(String(payload?.documento ?? ''));
+  }
+
+  // Catálogos de Cargo y Rubro del ERP para los selects del checkout de crédito.
+  @MessagePattern({ cmd: 'get_cargos_rubros' })
+  async getCargosRubros() {
+    return this.erpClienteService.getCatalogos();
+  }
 
   @MessagePattern({ cmd: 'get_all_users' })
   async getAllUsers(data: { filters: any }) {
@@ -96,5 +112,17 @@ export class UserController {
   @MessagePattern({ cmd: 'delete_user_address' })
   async deleteUserAddress(@Payload() payload: { userId: number; addressId: string }) {
     return this.userService.deleteUserAddress(Number(payload?.userId), payload?.addressId);
+  }
+
+  // Ingesta de eventos de tracking (fire-and-forget vía NATS emit → sin respuesta).
+  @EventPattern('track_user_event')
+  handleTrackEvent(@Payload() payload: TrackEventInput | TrackEventInput[]) {
+    this.userTrackService.track(payload);
+  }
+
+  // Resumen de seguimiento del usuario (30 días) para el admin.
+  @MessagePattern({ cmd: 'get_user_track' })
+  async getUserTrack(@Payload() payload: { userId: string }) {
+    return this.userTrackService.getUserTrack(String(payload?.userId ?? ''));
   }
 }

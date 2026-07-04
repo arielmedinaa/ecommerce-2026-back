@@ -7,12 +7,14 @@ import { MariaDbModule } from './config/mariadb.module';
 import { CuponesModule } from './cupones/cupones.module';
 import { EventsModule } from './events/events.module';
 import { PromotionsModule } from './promotions/promotions.module';
+import { RedisModule } from '@shared/common/cache/redis.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    RedisModule,
     HomeModule,
     LandingsModule,
     VerticalesModule,

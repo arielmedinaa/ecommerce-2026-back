@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { User } from '../schemas/user.schemas';
 import { MariaDbConnectionService } from './mariadb-connection.service';
 import { UserCoupon } from '@auth/schemas/user-coupon.schema';
+import { UserTrack } from '../schemas/user-track.schema';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { UserCoupon } from '@auth/schemas/user-coupon.schema';
         username: configService.get<string>('DATABASE_USER'),
         password: configService.get<string>('DATABASE_PASSWORD'),
         database: configService.get<string>('DATABASE_NAME'),
-        entities: [User, UserCoupon],
+        entities: [User, UserCoupon, UserTrack],
         synchronize: process.env.SYNCRONICE === 'true',
         logging: process.env.SYNCRONICE === 'true',
         keepConnectionAlive: true,
@@ -28,7 +29,7 @@ import { UserCoupon } from '@auth/schemas/user-coupon.schema';
       }),
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([User, UserCoupon]),
+    TypeOrmModule.forFeature([User, UserCoupon, UserTrack]),
   ],
   providers: [MariaDbConnectionService],
   exports: [TypeOrmModule],

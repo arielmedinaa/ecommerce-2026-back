@@ -45,13 +45,15 @@ export class UserCouponService {
 
   async getUserCouponsCount(userId: number, idCupon: number): Promise<number> {
     try {
-      return await this.userCouponRepository.count({
-        where: { 
-          userId: { id: userId },
-          idCupon: idCupon,
-          isActive: true,
-        },
-      });
+      // Conteo explícito por la FK (uc.userId) para evitar el pitfall de count()
+      // con where sobre relación anidada, que puede no aplicar el join y devolver
+      // un conteo incorrecto → el límite por usuario nunca frenaba.
+      return await this.userCouponRepository
+        .createQueryBuilder('uc')
+        .where('uc.userId = :uid', { uid: Number(userId) })
+        .andWhere('uc.idCupon = :idCupon', { idCupon: Number(idCupon) })
+        .andWhere('uc.isActive = :active', { active: true })
+        .getCount();
     } catch (error) {
       this.logger.error('Error al obtener cantidad de cupones del usuario', error);
       return 0;
@@ -99,10 +101,10 @@ export class UserCouponService {
     }
   }
 
-  async createCouponForUser(userId: number, couponData: { idCupon: number; descripcion: string; eventId?: string }): Promise<UserCoupon> {
+  async createCouponForUser(userId: number, couponData: { idCupon: number; descripcion: string; eventId?: string }): Promise<UserCoupon | null> {
     try {
       const user = { id: userId } as User;
-      
+
       const newCoupon = this.userCouponRepository.create({
         userId: user,
         idCupon: couponData.idCupon,
@@ -112,7 +114,13 @@ export class UserCouponService {
       });
 
       return await this.userCouponRepository.save(newCoupon);
-    } catch (error) {
+    } catch (error: any) {
+      // El índice UNIQUE (uq_user_cupon) rechaza el duplicado: lo tratamos como
+      // "ya asignado" (null) en vez de romper.
+      if (error?.code === 'ER_DUP_ENTRY' || error?.errno === 1062) {
+        this.logger.warn(`Cupón ${couponData.idCupon} ya asignado al usuario ${userId} (duplicado bloqueado)`);
+        return null;
+      }
       this.logger.error('Error al crear cupón para usuario', error);
       throw error;
     }

@@ -1,5 +1,7 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger, OnModuleInit } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import type { Redis } from 'ioredis';
+import { REDIS_CLIENT } from '@shared/common/cache/redis.module';
 import { firstValueFrom } from 'rxjs';
 import { FilterHomeDto } from '@content/home/dto/filter.home';
 import { HomeData, HomeCategoriaFamilia } from '@content/home/interfaces/home.interface';
@@ -30,7 +32,7 @@ type HomeBuildInput = {
 };
 
 @Injectable()
-export class HomeService {
+export class HomeService implements OnModuleInit {
   private readonly logger = new Logger(HomeService.name);
   private fieldsImage = ['nombre', 'imagen', 'variante', 'estado', 'meta'];
   constructor(
@@ -40,26 +42,76 @@ export class HomeService {
     @Inject('IMAGE_SERVICE') private readonly imageClient: ClientProxy,
     private readonly verticalesService: VerticalesService,
     private readonly homeSectionsService: HomeSectionsService,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
-  private homeDataCache: Map<
-    string,
-    { data: ResponseData<HomeData>; timestamp: number }
-  > = new Map();
-  private readonly HOME_TTL = 30 * 1000;
+
+  private readonly FRESH_MS = 60 * 1000;
+  private readonly REDIS_TTL_S = 60 * 60;
+  private readonly revalidating = new Set<string>();
+
+  private redisKey(category: string, limit: number, offset: number): string {
+    return `home:v1:${category}:${limit}:${offset}`;
+  }
+
+  async onModuleInit(): Promise<void> {
+    setTimeout(() => {
+      this.getHomeData({ limit: 10, offset: 0 } as FilterHomeDto).catch((e) =>
+        this.logger.warn(`Pre-warm del home falló: ${e?.message ?? e}`),
+      );
+    }, 0);
+  }
 
   async getHomeData(filter: FilterHomeDto): Promise<ResponseData<HomeData>> {
     const limit = filter.limit || 6;
     const offset = filter.offset || 0;
     const category = filter.category || 'all';
-
-    const cacheKey = `home_${category}_${limit}_${offset}`;
+    const key = this.redisKey(category, limit, offset);
     const now = Date.now();
 
-    const cached = this.homeDataCache.get(cacheKey);
-    if (cached && now - cached.timestamp < this.HOME_TTL) {
-      return cached.data;
+    try {
+      const raw = await this.redis.get(key);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { ts: number; data: ResponseData<HomeData> };
+        const age = now - (parsed.ts || 0);
+        if (age < this.FRESH_MS) return parsed.data;
+        this.revalidateInBackground(filter, key);
+        return parsed.data;
+      }
+    } catch (e) {
+      this.logger.warn(`Redis get falló para ${key}: ${(e as any)?.message ?? e}`);
     }
+
+    const data = await this.buildHomeData(filter);
+    await this.writeCache(key, data);
+    return data;
+  }
+
+  private revalidateInBackground(filter: FilterHomeDto, key: string): void {
+    if (this.revalidating.has(key)) return;
+    this.revalidating.add(key);
+    this.buildHomeData(filter)
+      .then((fresh) => this.writeCache(key, fresh))
+      .catch((e) => this.logger.warn(`Revalidación de ${key} falló: ${e?.message ?? e}`))
+      .finally(() => this.revalidating.delete(key));
+  }
+
+  private async writeCache(key: string, data: ResponseData<HomeData>): Promise<void> {
+    try {
+      await this.redis.set(
+        key,
+        JSON.stringify({ ts: Date.now(), data }),
+        'EX',
+        this.REDIS_TTL_S,
+      );
+    } catch (e) {
+      this.logger.warn(`Redis set falló para ${key}: ${(e as any)?.message ?? e}`);
+    }
+  }
+
+  private async buildHomeData(filter: FilterHomeDto): Promise<ResponseData<HomeData>> {
+    const limit = filter.limit || 6;
+    const offset = filter.offset || 0;
 
     try {
       const resilientOptions: ResilientOptions = {
@@ -78,21 +130,20 @@ export class HomeService {
         },
       };
 
-      const verticales = await this.verticalesService.findAll({page: 1, limit: 5});
       const bannerOptions: ResilientOptions = {
         retries: 3,
         delay: 1000,
         fallback: async () => ({ data: [], message: 'fallback banners', success: true }),
         circuitBreaker: { failureThreshold: 3, resetTimeout: 30000 },
       };
-      const banners = await this.resilientService.sendWithResilience(
-        this.imageClient,
-        { cmd: 'get_all_banners' },
-        { fields: this.fieldsImage },
-        bannerOptions,
-      ) as BannerResponse;
-      this.logger.log(`[home] get_all_banners → ${Array.isArray((banners as any)?.data) ? (banners as any).data.length : 'sin data'} banners`);
-      const [jota, ofertas, productos] = await Promise.all([
+      const [verticales, banners, jota, ofertas, productos] = await Promise.all([
+        this.verticalesService.findAll({ page: 1, limit: 5 }),
+        this.resilientService.sendWithResilience(
+          this.imageClient,
+          { cmd: 'get_all_banners' },
+          { fields: this.fieldsImage },
+          bannerOptions,
+        ) as Promise<BannerResponse>,
         this.resilientService.sendWithResilience(
           this.productsClient,
           { cmd: 'get_products_jota' },
@@ -122,6 +173,7 @@ export class HomeService {
           resilientOptions,
         ) as Promise<any>,
       ]);
+      this.logger.log(`[home] get_all_banners → ${Array.isArray((banners as any)?.data) ? (banners as any).data.length : 'sin data'} banners`);
 
       this.fallbackDataService.saveSuccessfulResponse(productos, 'products');
       this.fallbackDataService.saveSuccessfulResponse(jota, 'jota');
@@ -139,10 +191,9 @@ export class HomeService {
       };
       response.status = 200;
       response.register = productos.total || 0;
-      this.homeDataCache.set(cacheKey, { data: response, timestamp: now });
       return response;
     } catch (error) {
-      this.logger.error('Error en getHomeData:', error);
+      this.logger.error('Error en buildHomeData:', error);
       const fallbackProducts =
         this.fallbackDataService.getFallbackProducts(limit);
       const fallbackJota = this.fallbackDataService.getFallbackJota();
@@ -168,9 +219,6 @@ export class HomeService {
   private async buildHomeSections(input: HomeBuildInput): Promise<HomeSectionResponse[]> {
     const dbSections = await this.homeSectionsService.getActiveSections();
     const sections = dbSections.length > 0 ? dbSections : this.getDefaultSections();
-
-    // JOTA: si en el admin se eligieron productos puntuales (config.codigos),
-    // usamos esos en vez del listado por marca por defecto (input.jota).
     let jotaData: any = (input as any).jota?.data ?? input.jota ?? [];
     let jotaTotal: any = (input as any).jota?.total ?? null;
     const jotaSection = sections.find((s) => s.type === 'JOTA');
@@ -197,10 +245,6 @@ export class HomeService {
       }
     }
 
-    // OFERTAS: si el admin configuró la sección (config.ofertaId), traemos ESA
-    // oferta y la fusionamos con la programación/colores de la config. Cada
-    // producto se enriquece con datos de catálogo (imagen/marca/precio tachado),
-    // manteniendo los precios de oferta (precioContado/precioCredito/cuotas).
     const ofertasSection = sections.find((s) => s.type === 'OFERTAS');
     const ofertasCfg: any = ofertasSection?.config || {};
     let ofertaPayload: any = null;
@@ -232,10 +276,8 @@ export class HomeService {
                 catData.map((c) => [String(c?.codigo_articulo ?? '').trim(), c]),
               );
             } catch {
-              // sin enriquecimiento si falla
             }
           }
-          // 18 cuotas sin interés: toggle general de la oferta + override por código.
           const sin18General = !!ofertasCfg.cuotasSinInteres18;
           const sin18Override: Record<string, boolean> =
             (ofertasCfg.sin18Override && typeof ofertasCfg.sin18Override === 'object')
@@ -263,6 +305,8 @@ export class HomeService {
             fechaInicio: ofertasCfg.fechaInicio ?? null,
             fechaFin: ofertasCfg.fechaFin ?? null,
             tema: ofertasCfg.tema ?? null,
+            combosHabilitado: !!oferta.combosHabilitado,
+            comboDescuento: Number(oferta.comboDescuento) || 0,
             productos: productosEnriquecidos,
           };
         }
@@ -292,9 +336,6 @@ export class HomeService {
       return baseUrl ? `${baseUrl}${path}` : path;
     };
 
-    // BANNERS2 (banners secundarios): layout estructurado de 2 hero anchos + 3
-    // feature cards + 4 promo cards. Cada slot referencia su imagen por `nombre`;
-    // acá le resolvemos la `imageUrl` reusando el mismo patrón que los banners.
     const resolveBanners2Payload = (cfg: Record<string, any> | undefined) => {
       const c: any = cfg && typeof cfg === 'object' ? cfg : {};
       const withImg = (slot: any) => {
@@ -388,9 +429,6 @@ export class HomeService {
             (b as any)?.meta && typeof (b as any).meta === 'object'
               ? (b as any).meta
               : {};
-          // Meta editado en el admin (title/subtitle/badge/ctaText/bg) vive en el
-          // item de config. Lo fusionamos (precedencia sobre el meta de la entidad)
-          // para que los textos y colores lleguen al storefront, no solo la imagen.
           const itemMeta =
             (it as any)?.meta && typeof (it as any).meta === 'object'
               ? (it as any).meta
@@ -437,7 +475,8 @@ export class HomeService {
     // stock y precio (config.modo === 'aleatorio', ej. "Lo Más Vendido").
     const productosByKey = new Map<string, any[]>();
     for (const s of sections) {
-      if ((s.type as HomeSectionType) !== 'PRODUCTOS') continue;
+      const t = s.type as HomeSectionType;
+      if (t !== 'PRODUCTOS' && t !== 'PRODUCT_CAROUSEL') continue;
       const cfg: any = s.config || {};
       const codigos: string[] = Array.isArray(cfg.codigos)
         ? cfg.codigos
@@ -517,6 +556,45 @@ export class HomeService {
             total: jotaTotal,
           };
           break;
+        case 'IMAGE_GRID': {
+          const cfgGrid: any = s.config || {};
+          const mapCelda = (c: any) => {
+            const nombre = String(c?.imagenNombre || c?.nombre || '').trim();
+            return {
+              imagenNombre: nombre || null,
+              imageUrl: nombre ? bannerUrl(nombre, 'desktop') : null,
+              title: c?.title ?? null,
+              subtitle: c?.subtitle ?? null,
+              ctaText: c?.ctaText ?? null,
+              href: c?.href ?? null,
+            };
+          };
+          // Layout por filas (cada fila con su nº de columnas). Fallback al
+          // formato viejo (columnas + celdas planas) → una sola fila.
+          let filas: any[] = [];
+          if (Array.isArray(cfgGrid.filas) && cfgGrid.filas.length > 0) {
+            filas = cfgGrid.filas.map((f: any) => ({
+              columnas: Math.max(1, Math.min(4, Number(f?.columnas) || 3)),
+              items: (Array.isArray(f?.celdas) ? f.celdas : []).map(mapCelda),
+            }));
+          } else if (Array.isArray(cfgGrid.celdas) && cfgGrid.celdas.length > 0) {
+            filas = [{ columnas: Math.max(1, Math.min(4, Number(cfgGrid.columnas) || 3)), items: cfgGrid.celdas.map(mapCelda) }];
+          }
+          section.payload = { filas };
+          break;
+        }
+        case 'PRODUCT_CAROUSEL': {
+          const cfgPc: any = s.config || {};
+          section.payload = {
+            productos: productosByKey.get(s.key) ?? input.productos ?? [],
+            titulo: (cfgPc.tituloOferta && String(cfgPc.tituloOferta).trim()) || s.titulo || null,
+            descripcion: cfgPc.descripcion ?? null,
+            colores: cfgPc.colores ?? null,
+            variante: cfgPc.variante === 'ofertas' ? 'ofertas' : 'titulo',
+            tipografia: cfgPc.tipografia ?? null,
+          };
+          break;
+        }
         case 'PRODUCTOS':
         default:
           section.payload = {
