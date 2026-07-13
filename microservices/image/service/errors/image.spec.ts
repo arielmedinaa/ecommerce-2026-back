@@ -36,8 +36,8 @@ export class BannerValidationService {
       };
     }
 
-    // Validar tipo de archivo
-    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    // Validar tipo de archivo — solo .webp (o video mp4)
+    const allowedMimes = ['image/webp', 'video/mp4'];
     if (!allowedMimes.includes(file.mimetype)) {
       const error = new Error('Tipo de archivo no válido');
       await this.bannerErrorService.logValidationError(
@@ -52,7 +52,7 @@ export class BannerValidationService {
         isValid: false,
         error: {
           success: false,
-          message: 'Solo se permiten archivos de imagen (jpeg, png, webp, gif)',
+          message: 'Solo se permiten imágenes .webp',
           data: [],
         },
       };

@@ -48,9 +48,6 @@ export class ErpClienteService {
 
   constructor(private readonly econt: EcontDatabaseService) {}
 
-  // Busca un cliente del ERP por número de documento/RUC. La parte numérica antes
-  // del guion es el `ruc`; el `-x` es el dígito verificador (dv). Best-effort: si el
-  // ERP no responde devuelve { encontrado:false } para no romper el checkout.
   async getClienteErpByDocumento(documento: string): Promise<ErpClienteDto> {
     const ruc = this.parseRuc(documento);
     if (!ruc) return { encontrado: false };
@@ -66,10 +63,44 @@ export class ErpClienteService {
         [ruc],
       );
       const c = rows?.[0];
-      if (!c) return { encontrado: false };
+      if (!c) {
+        // Fallback: la persona puede no estar en `cliente` (clientes de crédito)
+        // pero sí en un maestro de personas. Envuelto en su propio try/catch para
+        // que una tabla inexistente no enmascare el lookup principal.
+        try {
+          const personas = await this.econt.executeQuery<any>(
+            `SELECT primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, nombre_completo
+             FROM bicsa_personas WHERE nro_documento = ? LIMIT 1`,
+            [String(ruc)],
+          );
+          const p = personas?.[0];
+          if (p) {
+            const firstName =
+              [this.str(p.primer_nombre), this.str(p.segundo_nombre)].filter(Boolean).join(' ') ||
+              this.str(p.nombre_completo).split(/\s+/)[0] ||
+              '';
+            const lastName = [this.str(p.primer_apellido), this.str(p.segundo_apellido)]
+              .filter(Boolean)
+              .join(' ');
+            if (firstName || lastName) {
+              return {
+                encontrado: true,
+                documento: String(ruc),
+                firstName,
+                lastName,
+              };
+            }
+          }
+        } catch (e) {
+          this.logger.warn(
+            `ERP fallback personas no disponible (${documento}): ${(e as any)?.message ?? e}`,
+          );
+        }
+        return { encontrado: false };
+      }
 
       const referencias = await this.getReferencias(Number(c.codigo));
-      const { firstName, lastName } = this.splitNombre(c);
+      const { firstName, lastName } = await this.splitNombre(c);
 
       return {
         encontrado: true,
@@ -101,14 +132,18 @@ export class ErpClienteService {
         referencias,
       };
     } catch (e) {
-      this.logger.warn(`ERP cliente lookup falló (${documento}): ${(e as any)?.message ?? e}`);
+      this.logger.warn(
+        `ERP cliente lookup falló (${documento}): ${(e as any)?.message ?? e}`,
+      );
       return { encontrado: false };
     }
   }
 
   // Referencias familiares del cliente. El depto. de crédito exige hasta 3 sin
   // duplicar nombre ni celular.
-  private async getReferencias(codigoCliente: number): Promise<ErpReferencia[]> {
+  private async getReferencias(
+    codigoCliente: number,
+  ): Promise<ErpReferencia[]> {
     if (!codigoCliente) return [];
     try {
       const rows = await this.econt.executeQuery<any>(
@@ -125,7 +160,8 @@ export class ErpClienteService {
         const nKey = nombre.toLowerCase();
         const cKey = celular.replace(/\D/g, '');
         if (!nombre && !celular) continue;
-        if ((nKey && vistosNombre.has(nKey)) || (cKey && vistosCel.has(cKey))) continue;
+        if ((nKey && vistosNombre.has(nKey)) || (cKey && vistosCel.has(cKey)))
+          continue;
         if (nKey) vistosNombre.add(nKey);
         if (cKey) vistosCel.add(cKey);
         out.push({ nombre, parentesco: this.str(r.parentesco), celular });
@@ -133,7 +169,9 @@ export class ErpClienteService {
       }
       return out;
     } catch (e) {
-      this.logger.warn(`ERP referencias lookup falló (cliente ${codigoCliente}): ${(e as any)?.message ?? e}`);
+      this.logger.warn(
+        `ERP referencias lookup falló (cliente ${codigoCliente}): ${(e as any)?.message ?? e}`,
+      );
       return [];
     }
   }
@@ -152,14 +190,22 @@ export class ErpClienteService {
       ]);
       return {
         cargos: (cargos || [])
-          .map((r) => ({ codigo: Number(r.codigo), nombre: this.str(r.nombre) }))
+          .map((r) => ({
+            codigo: Number(r.codigo),
+            nombre: this.str(r.nombre),
+          }))
           .filter((r) => r.nombre),
         rubros: (rubros || [])
-          .map((r) => ({ id: Number(r.id), descripcion: this.str(r.descripcion) }))
+          .map((r) => ({
+            id: Number(r.id),
+            descripcion: this.str(r.descripcion),
+          }))
           .filter((r) => r.descripcion),
       };
     } catch (e) {
-      this.logger.warn(`ERP catálogos cargo/rubro falló: ${(e as any)?.message ?? e}`);
+      this.logger.warn(
+        `ERP catálogos cargo/rubro falló: ${(e as any)?.message ?? e}`,
+      );
       return { cargos: [], rubros: [] };
     }
   }
@@ -177,20 +223,86 @@ export class ErpClienteService {
   }
 
   private parseRuc(documento: string): number | null {
-    const base = String(documento ?? '').trim().split('-')[0].replace(/\D/g, '');
+    const base = String(documento ?? '')
+      .trim()
+      .split('-')[0]
+      .replace(/\D/g, '');
     if (!base) return null;
     const n = Number(base);
     return Number.isFinite(n) && n > 0 ? n : null;
   }
 
-  private splitNombre(c: any): { firstName: string; lastName: string } {
+  private async splitNombre(
+    c: any,
+  ): Promise<{ firstName: string; lastName: string }> {
     const n1 = this.str(c.nombre1);
-    const ap = [this.str(c.apellido1), this.str(c.apellido2)].filter(Boolean).join(' ').trim();
-    if (n1 || ap) return { firstName: n1, lastName: ap };
-    // Fallback: partir `nombre` completo (primer token = nombre, resto = apellidos).
-    const full = this.str(c.nombre);
-    const parts = full.split(/\s+/).filter(Boolean);
-    return { firstName: parts[0] ?? '', lastName: parts.slice(1).join(' ') };
+    const ap = [this.str(c.apellido1), this.str(c.apellido2)]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    // Caso confiable: el ERP trae apellidos estructurados → usarlos directo.
+    if (ap) return { firstName: n1 || this.str(c.nombre), lastName: ap };
+
+    // Sin apellidos estructurados: el string completo (nombre1 o nombre) trae
+    // nombre + apellido juntos. Primero intentamos desambiguar contra
+    // `bicsa_personas` (columnas discretas); si no aporta, heurística por tokens.
+    const doc = c.dv ? `${c.ruc}-${c.dv}` : String(c.ruc ?? '');
+    const bicsa = await this.nombreDesdeBicsa(doc);
+    if (bicsa && bicsa.lastName) return bicsa;
+
+    const full = n1 || this.str(c.nombre);
+    return this.splitPorTokens(full);
+  }
+
+  // Desambigua nombre/apellido consultando el maestro `bicsa_personas` por
+  // documento (columnas discretas). Devuelve null si no hay datos suficientes.
+  private async nombreDesdeBicsa(
+    documento: string,
+  ): Promise<{ firstName: string; lastName: string } | null> {
+    const ruc = this.parseRuc(documento);
+    if (!ruc) return null;
+    try {
+      const rows = await this.econt.executeQuery<any>(
+        `SELECT primer_nombre, segundo_nombre, primer_apellido, segundo_apellido
+         FROM bicsa_personas WHERE nro_documento = ? LIMIT 1`,
+        [String(ruc)],
+      );
+      const p = rows?.[0];
+      if (!p) return null;
+      const firstName = [this.str(p.primer_nombre), this.str(p.segundo_nombre)]
+        .filter(Boolean)
+        .join(' ');
+      const lastName = [this.str(p.primer_apellido), this.str(p.segundo_apellido)]
+        .filter(Boolean)
+        .join(' ');
+      if (!firstName && !lastName) return null;
+      return { firstName, lastName };
+    } catch (e) {
+      this.logger.warn(
+        `ERP nombreDesdeBicsa falló (${documento}): ${(e as any)?.message ?? e}`,
+      );
+      return null;
+    }
+  }
+
+  // Heurística por cantidad de tokens (típico PY: 2 nombres + 2 apellidos).
+  //  4+ → 2 nombres / resto apellidos · 3 → 1 nombre / 2 apellidos
+  //  2  → 1 / 1 · 1 → todo nombre.
+  private splitPorTokens(full: string): {
+    firstName: string;
+    lastName: string;
+  } {
+    const parts = this.str(full).split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return { firstName: '', lastName: '' };
+    if (parts.length === 1) return { firstName: parts[0], lastName: '' };
+    if (parts.length === 2)
+      return { firstName: parts[0], lastName: parts[1] };
+    if (parts.length === 3)
+      return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
+    return {
+      firstName: parts.slice(0, 2).join(' '),
+      lastName: parts.slice(2).join(' '),
+    };
   }
 
   private str(v: unknown): string {

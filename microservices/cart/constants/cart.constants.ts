@@ -26,6 +26,8 @@ export const DEFAULT_CART: Partial<Cart> = {
     ubicacion: {},
     agendamiento: moment().tz('America/Asuncion').format('YYYY-MM-DDTHH'),
     horaAgendamiento: '',
+    horarioDesde: '',
+    horarioHasta: '',
     retirar: 0
   },
   pago: {
@@ -71,6 +73,8 @@ export const DEFAULT_SOLICITUD: Partial<Cart> = {
     },
     agendamiento: '',
     horaAgendamiento: '',
+    horarioDesde: '',
+    horarioHasta: '',
     retirar: 0
   },
   pago: {

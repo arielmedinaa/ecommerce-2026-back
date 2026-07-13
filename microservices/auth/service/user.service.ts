@@ -297,23 +297,40 @@ export class UserService {
     if (!Number.isFinite(id)) return { data: null, success: false, message: 'USUARIO INVÁLIDO' };
     const u = await this.userRepository.findOne({ where: { id } });
     if (!u) return { data: null, success: false, message: 'USUARIO NO ENCONTRADO' };
+    let datosLaborales: any = null;
+    if (u.datosLaborales != null) {
+      datosLaborales =
+        typeof u.datosLaborales === 'string'
+          ? this.safeParse(u.datosLaborales)
+          : u.datosLaborales;
+    }
     return {
       data: {
         nombre: u.nombre || '',
         email: u.email || '',
         numeroCelular: u.numeroCelular || '',
         numeroDocumento: u.numeroDocumento || '',
+        parentescos: u.parentescos || '',
+        datosLaborales,
       },
       success: true,
       message: 'PERFIL DEL USUARIO',
     };
   }
 
+  private safeParse(s: string): any {
+    try {
+      return JSON.parse(s);
+    } catch {
+      return null;
+    }
+  }
+
   // Actualiza datos personales del cliente (nombre, teléfono, documento, email).
   // userId viene del token.
   async updateProfile(
     userId: number,
-    patch: { nombre?: string; numeroCelular?: string; numeroDocumento?: string; email?: string; parentescos?: string },
+    patch: { nombre?: string; numeroCelular?: string; numeroDocumento?: string; email?: string; parentescos?: string; datosLaborales?: any },
   ): Promise<{ data: any; success: boolean; message: string }> {
     const id = Number(userId);
     if (!Number.isFinite(id)) return { data: null, success: false, message: 'USUARIO INVÁLIDO' };
@@ -327,6 +344,17 @@ export class UserService {
     }
     // Referencias/parentescos (JSON serializado). Acepta string ya serializado.
     if (patch?.parentescos != null) updates.parentescos = String(patch.parentescos);
+    // Datos laborales (columna JSON). Acepta objeto o string ya serializado; solo
+    // se guarda si trae algún valor real (evita pisar con un objeto vacío).
+    if (patch?.datosLaborales != null) {
+      const lab =
+        typeof patch.datosLaborales === 'string'
+          ? this.safeParse(patch.datosLaborales)
+          : patch.datosLaborales;
+      if (lab && typeof lab === 'object' && Object.values(lab).some((v) => v != null && String(v).trim() !== '')) {
+        updates.datosLaborales = lab;
+      }
+    }
     if (Object.keys(updates).length === 0) return { data: null, success: false, message: 'NADA QUE ACTUALIZAR' };
     await this.userRepository.update(id, updates);
     return { data: updates, success: true, message: 'PERFIL ACTUALIZADO' };
@@ -375,7 +403,18 @@ export class UserService {
     if (!user) return { data: [], success: false, message: 'USUARIO NO ENCONTRADO' };
 
     const lista = Array.isArray(user.direcciones) ? [...user.direcciones] : [];
-    const nueva = { id: this.genDireccionId(), ...this.normalizarDireccion(address) };
+    const norm = this.normalizarDireccion(address);
+    // Dedup: si ya existe una dirección equivalente (misma calle/nº/ciudad/barrio),
+    // no la duplicamos (el autocompletado del ERP se dispara varias veces).
+    const claveDir = (d: any) =>
+      [d.callePrincipal, d.calleSecundaria, d.numerocasa, d.ciudadId ?? '', d.barrio]
+        .map((v) => String(v ?? '').trim().toLowerCase())
+        .join('|');
+    const yaExiste = lista.find((d) => claveDir(d) === claveDir(norm));
+    if (yaExiste) {
+      return { data: lista, nueva: yaExiste, success: true, message: 'DIRECCIÓN YA EXISTENTE' };
+    }
+    const nueva = { id: this.genDireccionId(), ...norm };
     // Si es la primera, o se pidió predeterminada, marcarla como tal y desmarcar el resto.
     if (nueva.predeterminada || lista.length === 0) {
       lista.forEach((d) => (d.predeterminada = false));

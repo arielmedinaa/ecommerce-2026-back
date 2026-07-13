@@ -30,6 +30,13 @@ export class HomeController {
     };
   }
 
+  @MessagePattern({ cmd: 'get_personalized_carousel' })
+  async getPersonalizedCarousel(
+    @Payload() payload: { userId: number | string; key: string },
+  ) {
+    return this.homeService.buildPersonalizedCarousel(payload?.userId, payload?.key);
+  }
+
   @MessagePattern({ cmd: 'get_home_content' })
   async getHomeContent(@Payload() payload: any) {
     try {

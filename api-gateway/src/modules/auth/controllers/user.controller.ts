@@ -248,7 +248,7 @@ export class UserController {
   @Put('me/perfil')
   async updateMiPerfil(
     @Req() req: Request,
-    @Body() patch: { nombre?: string; numeroCelular?: string; numeroDocumento?: string; email?: string; parentescos?: string },
+    @Body() patch: { nombre?: string; numeroCelular?: string; numeroDocumento?: string; email?: string; parentescos?: string; datosLaborales?: any },
   ) {
     const userId = await this.resolverUserId(req);
     const res: any = await firstValueFrom(

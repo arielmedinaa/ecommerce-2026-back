@@ -48,12 +48,12 @@ export class ImageController {
         },
       }),
       fileFilter: (req, file, cb) => {
-        // Imágenes (se convierten a .webp con Sharp) o video mp4 (se guarda tal cual).
-        const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4'];
+        // Solo .webp (requisito de campaña) o video mp4 (se guarda tal cual).
+        const allowedMimes = ['image/webp', 'video/mp4'];
         if (allowedMimes.includes(file.mimetype)) {
           cb(null, true);
         } else {
-          cb(new Error('Solo se permiten imágenes (jpg, png, webp, gif) o video mp4'), false);
+          cb(new Error('Solo se permiten imágenes .webp o video mp4'), false);
         }
       },
       limits: {
@@ -250,11 +250,11 @@ export class ImageController {
         },
       }),
       fileFilter: (req, file, cb) => {
-        const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        const allowedMimes = ['image/webp'];
         if (allowedMimes.includes(file.mimetype)) {
           cb(null, true);
         } else {
-          cb(new Error('Solo se permiten archivos de imagen (jpeg, png, webp, gif)'), false);
+          cb(new Error('Solo se permiten imágenes .webp'), false);
         }
       },
       limits: {

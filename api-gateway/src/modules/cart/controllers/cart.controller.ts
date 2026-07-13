@@ -1,8 +1,9 @@
-import { Controller, Post, Body, UsePipes, ValidationPipe, Inject, Req, Query, Get, Param } from '@nestjs/common';
+import { Controller, Post, Patch, Body, UsePipes, ValidationPipe, Inject, Req, Query, Get, Param, UseGuards } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { Request } from 'express';
 import { SneakyThrows } from '@decorators/sneaky-throws-new.decorator';
+import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 
 @Controller('cart')
 export class CartController {
@@ -42,6 +43,50 @@ export class CartController {
         { cmd: 'get_carts_by_user' },
         { userId, estado: query?.estado },
       ),
+    );
+  }
+
+  // Órdenes finalizadas del usuario autenticado (página de tracking).
+  @Get('orders')
+  @UseGuards(JwtAuthGuard)
+  @SneakyThrows('CartService', 'getUserOrders')
+  async getUserOrders(@Req() request: any) {
+    const userId = request.user?.sub;
+    return await firstValueFrom(
+      this.cartClient.send({ cmd: 'get_user_orders' }, { userId }),
+    );
+  }
+
+  // Editar una orden dentro de la ventana de gracia (20 min): agendamiento / artículos.
+  @Patch('orders/:codigo')
+  @UseGuards(JwtAuthGuard)
+  @SneakyThrows('CartService', 'updateOrder')
+  async updateOrder(
+    @Param('codigo') codigo: string,
+    @Body() body: any,
+    @Req() request: any,
+  ) {
+    const userId = request.user?.sub;
+    return await firstValueFrom(
+      this.cartClient.send({ cmd: 'update_order' }, { userId, codigo, patch: body }),
+    );
+  }
+
+  // Admin: órdenes de un cliente puntual (modal de clientes).
+  @Get('orders/byUser/:userId')
+  @SneakyThrows('CartService', 'getOrdersByUserAdmin')
+  async getOrdersByUserAdmin(@Param('userId') userId: string) {
+    return await firstValueFrom(
+      this.cartClient.send({ cmd: 'get_user_orders' }, { userId }),
+    );
+  }
+
+  // Admin: tracking por producto (submódulo Productos → Tracking).
+  @Get('orders/byProduct/:codigo')
+  @SneakyThrows('CartService', 'getOrdersByProduct')
+  async getOrdersByProduct(@Param('codigo') codigo: string) {
+    return await firstValueFrom(
+      this.cartClient.send({ cmd: 'get_orders_by_product' }, { codigo }),
     );
   }
 

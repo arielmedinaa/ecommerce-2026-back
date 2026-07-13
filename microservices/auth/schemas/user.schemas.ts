@@ -59,6 +59,14 @@ export class User {
   @Column({ type: 'longtext', nullable: true })
   parentescos?: string;
 
+  // Datos laborales del cliente (para solicitudes a crédito). Se sincronizan
+  // desde el ERP cuando existen y, si no, el cliente los completa una vez y
+  // quedan guardados para no re-tipear el próximo checkout.
+  // Shape: { empresa, cargo, rubro, fechaIngreso, salario?, ciudad, barrio,
+  //          callePrincipal, calleSecundaria, numerocasa, contactoNombre, contactoTelefono }
+  @Column({ type: 'json', nullable: true })
+  datosLaborales?: any;
+
   @Column({ type: 'datetime', nullable: true })
   fechaExpiracion?: Date;
 

@@ -42,6 +42,18 @@ export class ContentController {
     }
   }
 
+  // Carrusel personalizado "Compras de usuarios": se resuelve por-usuario
+  // (fuera del cache global del Home). Requiere sesión.
+  @Get('home/carousel/:key')
+  @UseGuards(JwtAuthGuard)
+  @SneakyThrows('ContentController', 'getPersonalizedCarousel')
+  async getPersonalizedCarousel(@Param('key') key: string, @Req() req: any) {
+    const userId = req.user?.sub;
+    return await firstValueFrom(
+      this.contentClient.send({ cmd: 'get_personalized_carousel' }, { userId, key }),
+    );
+  }
+
   @Get('home/sections')
   @SneakyThrows()
   async listHomeSections() {

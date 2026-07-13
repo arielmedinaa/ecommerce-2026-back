@@ -4,7 +4,7 @@ import { Order } from '@cart/schemas/order.schemas';
 import { OrderItem } from '@cart/schemas/order-item.schemas';
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
+import { Between, In, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { JwtService } from '@nestjs/jwt';
@@ -549,19 +549,56 @@ export class CartContadoService {
   ): Promise<{ data: Cart[]; success: boolean; message: string }> {
     try {
       const destino = await this.getCarritoActivoDeToken(userToken);
+      const decoded = this.jwtService.verify(userToken);
+      const usuario_id = parseInt(decoded.sub);
+
+      // Identidad del invitado: el id_usuario guardado en el `cliente` de CUALQUIER
+      // carrito del invitado (activo o finalizado). Con eso re-asignamos también las
+      // ÓRDENES ya finalizadas (ordenes.cliente_documento guarda el id de usuario),
+      // que de otro modo quedaban huérfanas al identificarse con la cuenta real.
+      const anyGuestCart = await this.carritoRead
+        .createQueryBuilder('cart')
+        .where("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.correo')) = :correo", { correo: guestEmail })
+        .orderBy('cart.codigo', 'DESC')
+        .getOne();
+      const guestUserId = Number((anyGuestCart?.cliente as any)?.id_usuario);
+      if (Number.isFinite(guestUserId) && guestUserId > 0 && guestUserId !== usuario_id) {
+        // 1) Re-asignar órdenes del invitado a la cuenta destino.
+        await this.orderWrite
+          .createQueryBuilder()
+          .update()
+          .set({ cliente_documento: String(usuario_id) })
+          .where('cliente_documento = :g', { g: String(guestUserId) })
+          .execute();
+        // 2) Re-asignar el dueño de los carritos finalizados del invitado (id_usuario/correo)
+        //    para que "Mis compras" y el admin muestren al cliente real.
+        const carritosInvitado = await this.carritoWrite
+          .createQueryBuilder('cart')
+          .where("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.correo')) = :correo", { correo: guestEmail })
+          .andWhere("cart.estado = '0'")
+          .getMany();
+        for (const cInv of carritosInvitado) {
+          cInv.cliente = this.utilsCart.buildClienteFromToken(
+            decoded,
+            userToken,
+            decoded.email,
+            cInv.cliente as any,
+          );
+          await this.carritoWrite.save(cInv);
+        }
+      }
+
       const guestCartRef = await this.carritoRead
         .createQueryBuilder('cart')
         .where("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.correo')) = :correo", { correo: guestEmail })
         .andWhere("cart.estado = '1'")
         .orderBy('cart.codigo', 'DESC')
         .getOne();
-      if (!guestCartRef) return { data: destino ? [destino] : [], success: true, message: 'SIN CARRITO INVITADO' };
+      if (!guestCartRef) return { data: destino ? [destino] : [], success: true, message: 'ORDENES INVITADO ASOCIADAS' };
       const guestCart = await this.carritoWrite.findOne({ where: { id: guestCartRef.id } });
       const gArt: any = guestCart?.articulos || { contado: [], credito: [] };
 
       // Si el usuario no tiene carrito activo, simplemente reasignamos el del invitado.
-      const decoded = this.jwtService.verify(userToken);
-      const usuario_id = parseInt(decoded.sub);
       if (!destino) {
         // Reconstruye el `cliente` con los datos reales del usuario (nombre, documento,
         // teléfono, correo) en vez de conservar el "Usuario Invitado" previo.
@@ -875,6 +912,409 @@ export class CartContadoService {
     } catch (error) {
       this.logger.error('Error al obtener resumen de compras por usuario:', error);
       return { data: [], success: false, message: 'ERROR AL OBTENER RESUMEN DE COMPRAS' };
+    }
+  }
+
+  /**
+   * Deriva las marcas/categorías que más compra un usuario a partir de sus
+   * carritos finalizados (estado='0'). Enriquece los códigos de artículo con
+   * los datos del producto (marca/categorías) vía el microservicio products.
+   * Se usa para el carrusel personalizado "Compras de usuarios" del Home.
+   */
+  async getUserTopCategorias(
+    userId: number | string,
+    limit = 5,
+  ): Promise<{
+    data: {
+      marcas: Array<{ codigo: string; nombre: string | null; count: number }>;
+      categorias: Array<{ nombre: string; count: number }>;
+    };
+    success: boolean;
+    message: string;
+  }> {
+    const vacio = { marcas: [], categorias: [] };
+    try {
+      const id = String(userId ?? '').trim();
+      if (!id || id === 'null' || id === 'undefined') {
+        return { data: vacio, success: true, message: 'SIN USUARIO' };
+      }
+
+      const carritos = await this.carritoRead
+        .createQueryBuilder('cart')
+        .where('cart.estado = :estado', { estado: '0' })
+        .andWhere(
+          "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id",
+          { id },
+        )
+        .orderBy('cart.codigo', 'DESC')
+        .limit(50)
+        .getMany();
+
+      // Junta los códigos de artículo (contado + crédito) de todas las compras.
+      const codigos = [
+        ...new Set(
+          carritos.flatMap((c) => [
+            ...((c.articulos as any)?.contado || []),
+            ...((c.articulos as any)?.credito || []),
+          ].map((a: any) => String(a.codigo)).filter(Boolean)),
+        ),
+      ];
+
+      if (codigos.length === 0) {
+        return { data: vacio, success: true, message: 'SIN COMPRAS' };
+      }
+
+      const productos: any[] = await this.resilientService.sendWithResilience(
+        this.productsService,
+        { cmd: 'get_products' },
+        { ids: codigos, fields: 'codigo,marca,categorias' },
+        {
+          retries: 2,
+          delay: 800,
+          fallback: async () => [],
+          circuitBreaker: { failureThreshold: 3, resetTimeout: 30000 },
+        },
+      );
+
+      const marcaCount = new Map<string, { nombre: string | null; count: number }>();
+      const catCount = new Map<string, number>();
+      for (const p of productos || []) {
+        const codigoMarca = p?.marca != null && String(p.marca).trim() ? String(p.marca).trim() : '';
+        if (codigoMarca) {
+          const prev = marcaCount.get(codigoMarca);
+          const nombre = p?.nombre_marca ? String(p.nombre_marca).trim() : prev?.nombre ?? null;
+          marcaCount.set(codigoMarca, { nombre, count: (prev?.count || 0) + 1 });
+        }
+        const cat = p?.categorias?.[0]?.nombre ? String(p.categorias[0].nombre).trim() : '';
+        if (cat) catCount.set(cat, (catCount.get(cat) || 0) + 1);
+      }
+
+      const marcas = [...marcaCount.entries()]
+        .map(([codigo, v]) => ({ codigo, nombre: v.nombre, count: v.count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, limit);
+      const categorias = [...catCount.entries()]
+        .map(([nombre, count]) => ({ nombre, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, limit);
+
+      return {
+        data: { marcas, categorias },
+        success: true,
+        message: 'TOP CATEGORIAS/MARCAS DEL USUARIO',
+      };
+    } catch (error) {
+      this.logger.error('Error al obtener top categorías por usuario:', error);
+      return { data: vacio, success: false, message: 'ERROR AL OBTENER TOP CATEGORIAS' };
+    }
+  }
+
+  // Ventana de gracia (min) para editar una orden tras finalizarla.
+  private readonly ORDER_EDIT_WINDOW_MIN = 20;
+
+  /**
+   * Órdenes finalizadas del usuario (estado=0) con sus items enriquecidos con la
+   * imagen del producto (los ordenes_items no guardan imagen). Para la página de
+   * tracking del storefront y el admin.
+   */
+  async getUserOrders(
+    userId: number | string,
+  ): Promise<{ data: any[]; success: boolean; message: string }> {
+    try {
+      const id = String(userId ?? '').trim();
+      if (!id || id === 'null' || id === 'undefined') {
+        return { data: [], success: true, message: 'SIN USUARIO' };
+      }
+
+      // Leemos desde la conexión de ESCRITURA: son las órdenes propias del usuario
+      // y necesitan consistencia read-after-write (la réplica de lectura queda
+      // stale tras editar artículos/agendamiento y devolvía articulos: []).
+      // Antigüedad calculada con el reloj de la BD (evita desfases de timezone en JS,
+      // ej. mysql2 `timezone` del driver vs. la timezone real del server → minutos negativos).
+      // Nota: esta query NO hace join con items — un join con `take()` fanea filas
+      // y desalinea el `raw` (1 fila por item) contra `entities` (1 por orden).
+      const rows = await this.orderWrite
+        .createQueryBuilder('orden')
+        .select('orden.id', 'id')
+        .addSelect('TIMESTAMPDIFF(MINUTE, orden.fecha_creacion, NOW())', 'minutos_desde_creacion')
+        .where('orden.cliente_documento = :id', { id })
+        .andWhere('orden.estado = :estado', { estado: 0 })
+        .orderBy('orden.fecha_creacion', 'DESC')
+        .take(50)
+        .getRawMany();
+      if (rows.length === 0) {
+        return { data: [], success: true, message: 'SIN ORDENES' };
+      }
+      const orderIds = rows.map((r) => Number(r.id));
+      const minutosByOrderId = new Map<number, number>(
+        rows.map((r) => [Number(r.id), Number(r.minutos_desde_creacion ?? 0)]),
+      );
+      const ordersUnsorted = await this.orderWrite.find({
+        where: { id: In(orderIds) },
+        relations: { items: true },
+      });
+      const orderById = new Map(ordersUnsorted.map((o) => [o.id, o]));
+      const orders = orderIds.map((oid) => orderById.get(oid)).filter(Boolean) as typeof ordersUnsorted;
+
+      // Enriquecer con imágenes (una sola llamada a products).
+      const codigos = [
+        ...new Set(
+          orders.flatMap((o) => (o.items || []).map((it) => String(it.producto_codigo))).filter(Boolean),
+        ),
+      ];
+      const imgByCodigo = new Map<string, string | null>();
+      if (codigos.length > 0) {
+        try {
+          const res: any = await this.resilientService.sendWithResilience(
+            this.productsService,
+            { cmd: 'get_products_by_codigos' },
+            { codigos, limit: codigos.length },
+            { retries: 2, delay: 800, fallback: async () => ({ data: [] }), circuitBreaker: { failureThreshold: 3, resetTimeout: 30000 } },
+          );
+          const data: any[] = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+          for (const p of data) {
+            const cod = String(p?.codigo_articulo ?? p?.codigo ?? '').trim();
+            const img = Array.isArray(p?.imagenes) ? p.imagenes[0] : null;
+            if (cod) imgByCodigo.set(cod, img || null);
+          }
+        } catch (e) {
+          this.logger.warn(`No se pudieron enriquecer imágenes de órdenes: ${e}`);
+        }
+      }
+
+      const data = orders.map((o) => {
+        const minutos = minutosByOrderId.get(o.id) ?? 0;
+        const envio: any = o.datos_envio || {};
+        return {
+          id: o.id,
+          codigo: o.codigo,
+          carritoCodigo: o.carrito_codigo,
+          total: Number(o.total) || 0,
+          estado: o.estado,
+          fechaCreacion: o.fecha_creacion,
+          cambios: Array.isArray(o.cambios) ? o.cambios : [],
+          editable: minutos < this.ORDER_EDIT_WINDOW_MIN,
+          minutosDesdeFinalizado: Math.floor(minutos),
+          ventanaEdicionMin: this.ORDER_EDIT_WINDOW_MIN,
+          envio: {
+            retirar: !!envio.retirar,
+            agendamiento: envio.agendamiento ?? null,
+            horaAgendamiento: envio.horaAgendamiento ?? null,
+            horarioDesde: envio.horarioDesde ?? null,
+            horarioHasta: envio.horarioHasta ?? null,
+            callePrincipal: envio.callePrincipal ?? envio.direccion ?? null,
+            ciudad: envio.ciudad ?? envio.city ?? null,
+          },
+          articulos: (o.items || []).map((it) => ({
+            codigo: it.producto_codigo,
+            nombre: it.producto_nombre,
+            cantidad: it.cantidad,
+            precio: Number(it.precio_unitario) || 0,
+            subtotal: Number(it.subtotal) || 0,
+            imagen: imgByCodigo.get(String(it.producto_codigo)) ?? null,
+          })),
+        };
+      });
+
+      return { data, success: true, message: 'ORDENES DEL USUARIO' };
+    } catch (error) {
+      this.logger.error('Error al obtener órdenes del usuario:', error);
+      return { data: [], success: false, message: 'ERROR AL OBTENER ORDENES' };
+    }
+  }
+
+  /**
+   * Edita una orden dentro de la ventana de gracia (20 min): cambia el
+   * agendamiento (fecha/hora/franja) y/o los artículos. Persiste en ordenes /
+   * ordenes_items, refleja los cambios en el carrito asociado y re-envía la
+   * solicitud al ERP (CentralApp).
+   */
+  async updateOrder(
+    userId: number | string,
+    codigo: string,
+    patch: {
+      agendamiento?: { fecha?: string; hora?: string; horarioDesde?: string; horarioHasta?: string };
+      items?: Array<{ codigo: string | number; nombre: string; cantidad: number; precio: number }>;
+    },
+  ): Promise<{ data: any; success: boolean; message: string }> {
+    try {
+      const id = String(userId ?? '').trim();
+      const order = await this.orderWrite.findOne({
+        where: { codigo, cliente_documento: id, estado: 0 },
+        relations: { items: true },
+      });
+      if (!order) {
+        return { data: null, success: false, message: 'ORDEN NO ENCONTRADA' };
+      }
+
+      // Validación server-side de la ventana de gracia.
+      const minutos = (Date.now() - new Date(order.fecha_creacion).getTime()) / 60000;
+      if (minutos >= this.ORDER_EDIT_WINDOW_MIN) {
+        return {
+          data: null,
+          success: false,
+          message: 'La orden ya no puede editarse (pasaron más de 20 minutos).',
+        };
+      }
+
+      // Carrito asociado (para reflejar los cambios y re-empujar al ERP).
+      const carrito = await this.carritoWrite
+        .createQueryBuilder('cart')
+        .where('cart.codigo = :codigo', { codigo: order.carrito_codigo })
+        .getOne();
+
+      // Auditoría de cambios post-compra (se persiste en order.cambios).
+      const cambios: any[] = Array.isArray(order.cambios) ? [...order.cambios] : [];
+      const ahora = new Date().toISOString();
+
+      // 1) Agendamiento → datos_envio de la orden + envio del carrito.
+      if (patch.agendamiento) {
+        const a = patch.agendamiento;
+        const envioPrev: any = { ...(order.datos_envio || {}) };
+        const envio: any = { ...envioPrev };
+        if (a.fecha != null) envio.agendamiento = a.fecha;
+        if (a.hora != null) envio.horaAgendamiento = a.hora;
+        if (a.horarioDesde != null) envio.horarioDesde = a.horarioDesde;
+        if (a.horarioHasta != null) envio.horarioHasta = a.horarioHasta;
+        order.datos_envio = envio;
+        if (carrito) carrito.envio = { ...(carrito.envio as any), ...envio };
+        cambios.push({
+          tipo: 'agendamiento',
+          fecha: ahora,
+          antes: {
+            agendamiento: envioPrev.agendamiento ?? null,
+            horaAgendamiento: envioPrev.horaAgendamiento ?? null,
+            horarioDesde: envioPrev.horarioDesde ?? null,
+            horarioHasta: envioPrev.horarioHasta ?? null,
+          },
+          despues: {
+            agendamiento: envio.agendamiento ?? null,
+            horaAgendamiento: envio.horaAgendamiento ?? null,
+            horarioDesde: envio.horarioDesde ?? null,
+            horarioHasta: envio.horarioHasta ?? null,
+          },
+          resumen: `Reprogramó la entrega${envio.horaAgendamiento ? ` a las ${envio.horaAgendamiento}` : ''}`,
+        });
+      }
+
+      // 2) Items → reemplaza ordenes_items, recalcula total, actualiza carrito.
+      if (Array.isArray(patch.items) && patch.items.length > 0) {
+        const nuevos = patch.items.map((it) => ({
+          codigo: String(it.codigo),
+          nombre: String(it.nombre ?? ''),
+          cantidad: Number(it.cantidad) || 1,
+          precio: Number(it.precio) || 0,
+        }));
+
+        const antesItems = (order.items || []).map((it) => ({
+          codigo: it.producto_codigo,
+          nombre: it.producto_nombre,
+          cantidad: it.cantidad,
+        }));
+
+        await this.orderItemWrite.delete({ orden_id: order.id });
+        const nuevosItems = nuevos.map((it) =>
+          this.orderItemWrite.create({
+            orden_id: order.id,
+            producto_codigo: it.codigo,
+            producto_nombre: it.nombre,
+            cantidad: it.cantidad,
+            precio_unitario: it.precio,
+            subtotal: it.cantidad * it.precio,
+            evento_id: null,
+          }),
+        );
+        await this.orderItemWrite.save(nuevosItems);
+
+        const total = nuevos.reduce((s, it) => s + it.cantidad * it.precio, 0);
+        order.total = total;
+
+        if (carrito) {
+          const articulos: any = { ...(carrito.articulos as any) };
+          articulos.contado = nuevos.map((it) => ({
+            codigo: it.codigo,
+            nombre: it.nombre,
+            cantidad: it.cantidad,
+            precio: it.precio,
+          }));
+          carrito.articulos = articulos;
+        }
+
+        cambios.push({
+          tipo: 'articulo',
+          fecha: ahora,
+          antes: antesItems,
+          despues: nuevos.map((it) => ({ codigo: it.codigo, nombre: it.nombre, cantidad: it.cantidad })),
+          resumen:
+            antesItems.length === 0
+              ? `Agregó: ${nuevos.map((n) => n.nombre).join(', ')}`
+              : `Actualizó los artículos: ${nuevos.map((n) => n.nombre).join(', ')}`,
+        });
+      }
+
+      order.cambios = cambios;
+      await this.orderWrite.save(order);
+      if (carrito) await this.carritoWrite.save(carrito);
+
+      // 3) Re-empujar la solicitud al ERP (best-effort, en segundo plano).
+      const clienteToken = (order.datos_pago as any)?.cliente?.equipo || (carrito?.cliente as any)?.equipo;
+      if (clienteToken) {
+        setImmediate(async () => {
+          try {
+            await this.insertarSolicitudesCentralApp({}, clienteToken, '', order.carrito_codigo);
+          } catch (e) {
+            this.logger.error('Error al re-enviar solicitud a CentralApp tras editar orden:', e as any);
+          }
+        });
+      }
+
+      const [refreshed] = (await this.getUserOrders(id)).data.filter((o: any) => o.codigo === codigo);
+      return { data: refreshed ?? null, success: true, message: 'ORDEN ACTUALIZADA' };
+    } catch (error) {
+      this.logger.error('Error al actualizar orden:', error);
+      return { data: null, success: false, message: 'ERROR AL ACTUALIZAR ORDEN' };
+    }
+  }
+
+  /**
+   * Tracking por producto (admin): órdenes que contienen un código de artículo,
+   * con datos de la orden y del cliente. Para el submódulo Productos → Tracking.
+   */
+  async getOrdersByProduct(
+    productoCodigo: string,
+  ): Promise<{ data: any; success: boolean; message: string }> {
+    try {
+      const cod = String(productoCodigo ?? '').trim();
+      if (!cod) return { data: { total: 0, unidades: 0, ordenes: [] }, success: true, message: 'SIN CODIGO' };
+
+      const items = await this.orderItemWrite
+        .createQueryBuilder('it')
+        .innerJoinAndSelect('it.orden', 'o')
+        .where('it.producto_codigo = :cod', { cod })
+        .orderBy('o.fecha_creacion', 'DESC')
+        .take(200)
+        .getMany();
+
+      const unidades = items.reduce((s, it) => s + (Number(it.cantidad) || 0), 0);
+      const ordenes = items.map((it) => ({
+        codigo: it.orden?.codigo,
+        carritoCodigo: it.orden?.carrito_codigo,
+        clienteId: it.orden?.cliente_documento,
+        fechaCreacion: it.orden?.fecha_creacion,
+        estado: it.orden?.estado,
+        cantidad: it.cantidad,
+        precioUnitario: Number(it.precio_unitario) || 0,
+        nombre: it.producto_nombre,
+      }));
+
+      return {
+        data: { total: ordenes.length, unidades, ordenes },
+        success: true,
+        message: 'TRACKING POR PRODUCTO',
+      };
+    } catch (error) {
+      this.logger.error('Error al obtener tracking por producto:', error);
+      return { data: { total: 0, unidades: 0, ordenes: [] }, success: false, message: 'ERROR TRACKING PRODUCTO' };
     }
   }
 

@@ -38,6 +38,9 @@ export class Order {
   @Column({ default: 1 })
   estado: number; // 1 activa, 0 cancelada, etc.
 
+  @Column({ type: 'json', nullable: true })
+  cambios: any[]; // Auditoría de cambios post-compra (artículo/agendamiento)
+
   @CreateDateColumn()
   fecha_creacion: Date;
 

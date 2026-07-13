@@ -40,6 +40,7 @@ export class HomeService implements OnModuleInit {
     private readonly fallbackDataService: FallbackDataService,
     @Inject('PRODUCTS_SERVICE') private readonly productsClient: ClientProxy,
     @Inject('IMAGE_SERVICE') private readonly imageClient: ClientProxy,
+    @Inject('CART_SERVICE') private readonly cartClient: ClientProxy,
     private readonly verticalesService: VerticalesService,
     private readonly homeSectionsService: HomeSectionsService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
@@ -295,6 +296,7 @@ export class HomeService implements OnModuleInit {
               nombre_subcategoria: cat?.nombre_subcategoria ?? null,
               precioCatalogo: cat?.precioventaRedondeado ?? cat?.precioventa ?? null,
               precioTope: cat?.preciotope ?? null,
+              cuotas: Array.isArray(cat?.cuotas) ? cat.cuotas : undefined,
               sinInteres18,
             };
           });
@@ -592,6 +594,7 @@ export class HomeService implements OnModuleInit {
             colores: cfgPc.colores ?? null,
             variante: cfgPc.variante === 'ofertas' ? 'ofertas' : 'titulo',
             tipografia: cfgPc.tipografia ?? null,
+            modo: cfgPc.modo ?? null,
           };
           break;
         }
@@ -605,6 +608,112 @@ export class HomeService implements OnModuleInit {
       }
       return section;
     });
+  }
+
+  /**
+   * Resuelve el carrusel personalizado "Compras de usuarios" para un usuario
+   * concreto. NO pasa por el cache global del Home: se llama desde un endpoint
+   * autenticado aparte. Deriva las marcas más compradas del usuario (cart) y
+   * trae productos de esa marca (products). Si el usuario no tiene compras,
+   * devuelve un set aleatorio como fallback (mismo comportamiento que 'aleatorio').
+   */
+  async buildPersonalizedCarousel(
+    userId: number | string,
+    key: string,
+  ): Promise<ResponseData<any>> {
+    const build = (data: any, message: string, status: number): ResponseData<any> => {
+      const r = new ResponseData<any>();
+      r.data = data;
+      r.message = message;
+      r.status = status;
+      r.register = Array.isArray(data?.productos) ? data.productos.length : 0;
+      return r;
+    };
+    try {
+      const section = await this.homeSectionsService.getByKey(key);
+      if (!section || (section.type as HomeSectionType) !== 'PRODUCT_CAROUSEL') {
+        return build(null, 'Sección no encontrada', 404);
+      }
+      const cfg: any = section.config || {};
+      const limit = Number(cfg.limit) > 0 ? Number(cfg.limit) : 12;
+
+      let productos: any[] = [];
+      let marcaNombre: string | null = null;
+
+      // 1) Top marcas del usuario a partir de sus compras finalizadas.
+      let top: any = null;
+      try {
+        top = await firstValueFrom(
+          this.cartClient.send({ cmd: 'get_user_top_categorias' }, { userId, limit: 5 }),
+        );
+      } catch (e) {
+        this.logger.warn(`No se pudo obtener top de compras (user ${userId}): ${e}`);
+      }
+      const marcas: Array<{ codigo: string; nombre: string | null }> = top?.data?.marcas ?? [];
+
+      // 2) Traer productos con stock de esas marcas (en orden de preferencia).
+      for (const m of marcas) {
+        if (productos.length >= limit) break;
+        try {
+          const res: any = await firstValueFrom(
+            this.productsClient.send(
+              { cmd: 'get_products' },
+              { marca: m.codigo, limit: limit * 2, offset: 0, soloConStock: true, precioMin: 1 },
+            ),
+          );
+          const data: any[] = Array.isArray(res?.data) ? res.data : [];
+          if (data.length && !marcaNombre) marcaNombre = m.nombre;
+          const vistos = new Set(productos.map((p) => String(p.codigo ?? p.codigo_articulo)));
+          for (const p of data) {
+            const cod = String(p.codigo ?? p.codigo_articulo);
+            if (!vistos.has(cod)) {
+              vistos.add(cod);
+              productos.push(p);
+            }
+          }
+        } catch (e) {
+          this.logger.warn(`No se pudieron traer productos de marca ${m.codigo}: ${e}`);
+        }
+      }
+
+      // 3) Fallback: sin compras (o sin resultados) → aleatorio con stock.
+      if (productos.length === 0) {
+        try {
+          const res: any = await firstValueFrom(
+            this.productsClient.send(
+              { cmd: 'get_products' },
+              { limit: Math.max(limit * 3, 60), offset: 0, soloConStock: true, precioMin: 1 },
+            ),
+          );
+          const data: any[] = Array.isArray(res?.data) ? [...res.data] : [];
+          for (let i = data.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [data[i], data[j]] = [data[j], data[i]];
+          }
+          productos = data.slice(0, limit);
+        } catch (e) {
+          this.logger.warn(`Fallback aleatorio del carrusel personalizado falló: ${e}`);
+        }
+      }
+
+      const payload = {
+        productos: productos.slice(0, limit),
+        titulo:
+          (cfg.tituloOferta && String(cfg.tituloOferta).trim()) ||
+          section.titulo ||
+          (marcaNombre ? `Lo mejor de ${marcaNombre} para vos` : 'Elegido para vos'),
+        descripcion: cfg.descripcion ?? null,
+        colores: cfg.colores ?? null,
+        variante: cfg.variante === 'ofertas' ? 'ofertas' : 'titulo',
+        tipografia: cfg.tipografia ?? null,
+        modo: 'compras_usuario',
+        personalizado: marcas.length > 0 && productos.length > 0,
+      };
+      return build(payload, 'Carrusel personalizado', 200);
+    } catch (error) {
+      this.logger.error('Error al construir carrusel personalizado', error as any);
+      return build(null, 'Error al construir carrusel personalizado', 500);
+    }
   }
 
   private getDefaultSections(): HomeSection[] {

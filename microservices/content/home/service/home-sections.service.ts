@@ -26,6 +26,15 @@ export class HomeSectionsService {
     }
   }
 
+  async getByKey(key: string): Promise<HomeSection | null> {
+    try {
+      return await this.homeSectionRepoRead.findOne({ where: { key } });
+    } catch (error) {
+      this.logger.error(`Error al obtener home section ${key}`, error);
+      return null;
+    }
+  }
+
   async listAll(): Promise<HomeSection[]> {
     try {
       return await this.homeSectionRepoRead.find({

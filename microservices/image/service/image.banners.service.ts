@@ -106,12 +106,16 @@ export class BannerService {
 
       const bannerId = uuidv4();
       const baseFileName = `${bannerId}_${nombre.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      // Los recortes de producto del efecto 3D NO se recortan a dimensiones de
+      // banner: se guardan en su tamaño/proporción original (con transparencia).
+      const preserveOriginal = /(^|[-_])3d(\b|[-_]|$)/i.test(variante) || variante === 'landing-3d';
       const savedImages = await this.processAndSaveImages(
         file,
         baseFileName,
         bannerId,
         nombre,
         creadoPor,
+        preserveOriginal,
       );
       const bannerData = {
         id: bannerId,
@@ -206,11 +210,15 @@ export class BannerService {
       const original = await this.imageStorage.getObjectBuffer(originalKey);
       const bannerId = uuidv4();
       const baseFileName = `${bannerId}_${nombre.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      // Recortes del efecto 3D: se guardan sin recorte (tamaño/proporción
+      // originales + transparencia).
+      const preserveOriginal = /(^|[-_])3d(\b|[-_]|$)/i.test(variante) || variante === 'landing-3d';
       const savedImages = await this.processAndSaveImagesFromBuffer(
         original.buffer,
         baseFileName,
         bannerId,
         creadoPor,
+        preserveOriginal,
       );
 
       const bannerData: Partial<Banners> = {
@@ -322,9 +330,48 @@ export class BannerService {
     bannerId: string,
     nombre: string,
     creadoPor: string,
+    preserveOriginal = false,
   ): Promise<any> {
     const savedImages = {};
     const tempPath = file.path;
+
+    // Modo sin recorte (efecto 3D): guarda UNA webp con el tamaño/proporción
+    // originales (conserva alfa) y apunta las 4 "dimensiones" a esa imagen.
+    if (preserveOriginal) {
+      try {
+        const fileName = `${baseFileName}_original.webp`;
+        const key = this.imageStorage.buildKey(fileName);
+        const filePath = path.join(this.bannersDir, fileName);
+        const meta = await sharp(tempPath).metadata();
+        const transformer = sharp(tempPath).webp({ quality: 90 });
+        let url: string | undefined;
+        if (this.imageStorage.isS3()) {
+          const buffer = await transformer.toBuffer();
+          const put = await this.imageStorage.putObject({
+            key,
+            body: buffer,
+            contentType: 'image/webp',
+            cacheControl: 'public, max-age=31536000, immutable',
+          });
+          url = put.url;
+        } else {
+          await transformer.toFile(filePath);
+        }
+        const entry = {
+          fileName,
+          key,
+          filePath: this.imageStorage.isS3() ? null : filePath,
+          width: meta.width || null,
+          height: meta.height || null,
+          url: url || `/image/banner/${baseFileName.split('_')[1]}/desktop`,
+        };
+        if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+        return { desktop: entry, tablet: entry, mobile: entry, small: entry };
+      } catch (error) {
+        if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+        throw error;
+      }
+    }
 
     try {
       for (const [device, dimension] of Object.entries(this.dimensions)) {
@@ -393,8 +440,33 @@ export class BannerService {
     baseFileName: string,
     bannerId: string,
     creadoPor: string,
+    preserveOriginal = false,
   ): Promise<any> {
     const savedImages: any = {};
+
+    // Modo sin recorte (efecto 3D): una webp con tamaño/proporción originales
+    // (conserva alfa); las 4 "dimensiones" apuntan a esa imagen.
+    if (preserveOriginal) {
+      const fileName = `${baseFileName}_original.webp`;
+      const key = this.imageStorage.buildKey(fileName);
+      const meta = await sharp(buffer).metadata();
+      const out = await sharp(buffer).webp({ quality: 90 }).toBuffer();
+      const put = await this.imageStorage.putObject({
+        key,
+        body: out,
+        contentType: 'image/webp',
+        cacheControl: 'public, max-age=31536000, immutable',
+      });
+      const entry = {
+        fileName,
+        key,
+        filePath: null,
+        width: meta.width || null,
+        height: meta.height || null,
+        url: put.url,
+      };
+      return { desktop: entry, tablet: entry, mobile: entry, small: entry };
+    }
 
     for (const [device, dimension] of Object.entries(this.dimensions)) {
       const fileName = `${baseFileName}_${device}.webp`;

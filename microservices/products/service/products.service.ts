@@ -810,7 +810,13 @@ export class ProductsService {
       return out;
     };
 
-    const slots: { fecha: string; dia: number; horas: string[] }[] = [];
+    const slots: {
+      fecha: string;
+      dia: number;
+      horas: string[];
+      horaMin?: string;
+      horaMax?: string;
+    }[] = [];
 
     if (retiro) {
       // Retiro en local: hoy desde ahora (dentro de ventana) + próximos días completos.
@@ -824,7 +830,7 @@ export class ProductsService {
         const desde = i === 0 ? Math.max(ini, nowMin) : ini;
         if (i === 0 && nowMin > fin) continue;
         const horas = horasEntre(desde, fin);
-        if (horas.length) slots.push({ fecha, dia: ddow, horas });
+        if (horas.length) slots.push({ fecha, dia: ddow, horas, horaMin: h.inicial, horaMax: h.final });
       }
       return {
         data: { allInStock, interior, retiro, slots, avisos },
@@ -844,9 +850,10 @@ export class ProductsService {
         const h = byDow.get(ddow);
         if (!h || h.estado !== 1 || !h.reglaInterior) continue;
         const ini = this.hmsToMin(h.inicial)!;
-        const max = this.hmsToMin(h.maximo) ?? this.hmsToMin(h.final)!;
-        const horas = horasEntre(ini, max);
-        if (horas.length) slots.push({ fecha, dia: ddow, horas });
+        // La franja va siempre hasta el horario final (la "hora máxima" no la limita).
+        const fin = this.hmsToMin(h.final)!;
+        const horas = horasEntre(ini, fin);
+        if (horas.length) slots.push({ fecha, dia: ddow, horas, horaMin: h.inicial, horaMax: h.final });
       }
       return {
         data: { allInStock, interior, retiro, slots, avisos },
@@ -859,22 +866,24 @@ export class ProductsService {
     if (hoy && hoy.estado === 1) {
       const ini = this.hmsToMin(hoy.inicial)!;
       const fin = this.hmsToMin(hoy.final)!;
-      const max = this.hmsToMin(hoy.maximo) ?? fin;
+      // La "hora máxima" NO limita la franja (que va hasta `fin`); solo indica hasta
+      // qué hora es posible entregar el MISMO día.
+      const maximo = this.hmsToMin(hoy.maximo) ?? fin;
       const corte = this.hmsToMin(hoy.corte);
       if (nowMin < ini)
         avisos.push(`Los pedidos se reciben desde las ${hoy.inicial}.`);
       const earliest = Math.max(nowMin + 240, ini); // +4h de preparación
       let hoyPosible = false;
       if (nowMin <= fin) {
-        if (allInStock) hoyPosible = earliest <= max;
-        else hoyPosible = corte != null && nowMin <= corte && earliest <= max;
+        if (allInStock) hoyPosible = earliest <= maximo;
+        else hoyPosible = corte != null && nowMin <= corte && earliest <= maximo;
       }
       if (hoyPosible) {
-        const horas = horasEntre(earliest, max);
-        if (horas.length) slots.push({ fecha: ymd, dia: dow, horas });
+        const horas = horasEntre(earliest, fin);
+        if (horas.length) slots.push({ fecha: ymd, dia: dow, horas, horaMin: hoy.inicial, horaMax: hoy.final });
       } else if (!allInStock) {
         avisos.push(
-          'Hay artículos sin stock: la entrega se agenda para el día siguiente desde las 10:00.',
+          'Uno de tus artículos está teniendo mucha demanda 🙌 así que vamos a necesitar un poquito más de tiempo para preparar tu envío.',
         );
       }
     }
@@ -887,10 +896,11 @@ export class ProductsService {
       const h = byDow.get(ddow);
       if (!h || h.estado !== 1) continue;
       const ini = this.hmsToMin(h.inicial)!;
-      const max = this.hmsToMin(h.maximo) ?? this.hmsToMin(h.final)!;
+      // Franja hasta el horario final (la "hora máxima" no la limita).
+      const fin = this.hmsToMin(h.final)!;
       const desde = allInStock ? ini : Math.max(startNext, ini);
-      const horas = horasEntre(desde, max);
-      if (horas.length) slots.push({ fecha, dia: ddow, horas });
+      const horas = horasEntre(desde, fin);
+      if (horas.length) slots.push({ fecha, dia: ddow, horas, horaMin: h.inicial, horaMax: h.final });
     }
 
     return {

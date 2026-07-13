@@ -94,6 +94,30 @@ export class CartController {
     return this.cartService.getComprasResumenByUsers(payload?.userIds || []);
   }
 
+  @MessagePattern({ cmd: 'get_user_top_categorias' })
+  async getUserTopCategorias(
+    @Payload() payload: { userId: number | string; limit?: number },
+  ) {
+    return this.cartService.getUserTopCategorias(payload?.userId, payload?.limit ?? 5);
+  }
+
+  @MessagePattern({ cmd: 'get_user_orders' })
+  async getUserOrders(@Payload() payload: { userId: number | string }) {
+    return this.cartService.getUserOrders(payload?.userId);
+  }
+
+  @MessagePattern({ cmd: 'update_order' })
+  async updateOrder(
+    @Payload() payload: { userId: number | string; codigo: string; patch: any },
+  ) {
+    return this.cartService.updateOrder(payload?.userId, payload?.codigo, payload?.patch || {});
+  }
+
+  @MessagePattern({ cmd: 'get_orders_by_product' })
+  async getOrdersByProduct(@Payload() payload: { codigo: string }) {
+    return this.cartService.getOrdersByProduct(payload?.codigo);
+  }
+
   @MessagePattern({ cmd: 'sync_cart_cliente' })
   async syncCartCliente(
     @Payload() payload: { userId: number | string; cliente: { razonsocial?: string; correo?: string; telefono?: string; documento?: string } },
