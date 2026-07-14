@@ -92,6 +92,69 @@ export class ProductsUtils {
     private readonly productReadRepository: Repository<Product>,
   ) {}
 
+  buildProcFilters(filters: any = {}) {
+    const num = (v: any): number | null => {
+      if (v === undefined || v === null || v === '') return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
+    const soloStock =
+      filters.soloConStock === true ||
+      filters.soloConStock === 1 ||
+      filters.soloConStock === '1' ||
+      filters.soloConStock === 'true';
+    return {
+      marca: this.normFiltro(filters.marca),
+      categoria: this.normFiltro(filters.categoria),
+      proveedor: this.normFiltro(filters.proveedor),
+      precioMin: num(filters.precioMin),
+      precioMax: num(filters.precioMax),
+      soloStock: soloStock ? 1 : null,
+      busqueda: this.normBusqueda(filters.busqueda ?? filters.search),
+    };
+  }
+
+  async enrichProductRows(
+    productos: any[],
+    productsImagesReadRepository: any,
+  ): Promise<any[]> {
+    const codigosProductos = productos.map((item: any) =>
+      item.codigo_articulo.trim(),
+    );
+    const imagenesMap = new Map();
+    if (codigosProductos.length > 0) {
+      const imagenes = await productsImagesReadRepository
+        .createQueryBuilder('img')
+        .where('img.producto_codigo IN (:...codigos)', {
+          codigos: codigosProductos,
+        })
+        .andWhere('img.activo = :activo', { activo: true })
+        .orderBy('img.orden', 'ASC')
+        .getMany();
+
+      imagenes.forEach((img) => {
+        if (!imagenesMap.has(img.producto_codigo)) {
+          imagenesMap.set(img.producto_codigo, []);
+        }
+        imagenesMap.get(img.producto_codigo).push(img.url_imagen);
+      });
+    }
+
+    const dataWithTrimmedNames = productos.map((item: any) => ({
+      ...item,
+      codigo_articulo: item.codigo_articulo.trim(),
+      nombre_articulo: item.nombre_articulo.trim(),
+      nombre_subcategoria: item.nombre_subcategoria.trim(),
+      nombre_marca: item.nombre_marca.trim(),
+      nombre_proveedor: item.nombre_proveedor.trim(),
+      codigo_de_barra: item.codigo_de_barra.trim(),
+      descripcion: item.nota.trim(),
+      imagenes: imagenesMap.get(item.codigo_articulo.trim()) || [],
+    }));
+
+    return this.calculoCreditoProductos(dataWithTrimmedNames || []);
+  }
+
   async calculoCreditoProductos(products: any[]) {
     if (!Array.isArray(products)) {
       this.logger.error('Error: products no es un array:', products);
@@ -219,7 +282,7 @@ export class ProductsUtils {
     let exactMatch = false;
     let detectedBrand: string | null = null;
     let detectedCategory: string | null = null;
-    
+
     if (numericRegex.test(cleanedQuery)) {
       // For numeric codes, search both as code and as part of name
       nombre = cleanedQuery;
@@ -229,7 +292,7 @@ export class ProductsUtils {
 
       detectedBrand = this.detectBrand(cleanedQuery);
       detectedCategory = this.detectCategory(cleanedQuery);
-      
+
       if (exactMatch) {
         nombre = exactMatchRegex.exec(cleanedQuery)?.[1] || cleanedQuery;
       } else {
@@ -237,7 +300,9 @@ export class ProductsUtils {
           nombre = nombre.replace(new RegExp(detectedBrand, 'gi'), '').trim();
         }
         if (detectedCategory) {
-          nombre = nombre.replace(new RegExp(detectedCategory, 'gi'), '').trim();
+          nombre = nombre
+            .replace(new RegExp(detectedCategory, 'gi'), '')
+            .trim();
         }
       }
     }
@@ -354,7 +419,9 @@ export class ProductsUtils {
 
         if (numericRegex.test(searchParams.nombre)) {
           // For numeric searches, check exact match in codigo_articulo
-          matchesNombre = productCode === searchParams.nombre || productCode.includes(searchParams.nombre);
+          matchesNombre =
+            productCode === searchParams.nombre ||
+            productCode.includes(searchParams.nombre);
         } else if (searchParams.exactMatch) {
           matchesNombre =
             productName.includes(searchParams.nombre) ||
@@ -424,5 +491,191 @@ export class ProductsUtils {
         searchParams.categoria || '',
       ),
     };
+  }
+
+  normFiltro(value: any): string | null {
+    if (value === undefined || value === null) return null;
+    const s = String(value).trim();
+    return s === '' ? null : s;
+  }
+
+  normBusqueda(value: any): string | null {
+    const s = this.normFiltro(value);
+    if (!s) return s;
+    const singular = s
+      .split(/\s+/)
+      .map((tok) => this.singularizarToken(tok))
+      .join(' ')
+      .trim();
+    return singular === '' ? null : singular;
+  }
+
+  private singularizarToken(tok: string): string {
+    if (tok.length <= 4) return tok;
+    if (/[bcdfghjklmnpqrstvwxyz]es$/i.test(tok)) {
+      const base = tok.slice(0, -2);
+      if (base.length >= 4) return base;
+    }
+    // Vocal + "s" → quitar "s": fundas→funda, zapatillas→zapatilla, mesas→mesa.
+    if (/[aeiou]s$/i.test(tok)) return tok.slice(0, -1);
+    return tok;
+  }
+
+  private esJotaRow(r: any, ProductsService: any): boolean {
+    return (
+      Number(r?.codigo_marca) === ProductsService.JOTA_MARCA ||
+      /jota/i.test(String(r?.nombre_marca ?? ''))
+    );
+  }
+
+  private esConsultaJota(
+    rows: any[],
+    filters: any = {},
+    ProductsService: any,
+  ): boolean {
+    const categoria = Number(filters?.categoria);
+    if (
+      Number.isFinite(categoria) &&
+      ProductsService.JOTA_FAMILIAS.has(categoria)
+    )
+      return true;
+    const search = String(filters?.search ?? '').trim();
+    if (search && ProductsService.JOTA_KEYWORDS.test(search)) return true;
+    if (Array.isArray(rows) && rows.length) {
+      const enFam = rows.filter((r) =>
+        ProductsService.JOTA_FAMILIAS.has(Number(r?.codigo_categoria)),
+      );
+      if (enFam.length * 2 >= rows.length) return true;
+    }
+    return false;
+  }
+
+  nowAsuncion(): { ymd: string; minutes: number; dow: number } {
+    const tz = 'America/Asuncion';
+    const parts = Object.fromEntries(
+      new Intl.DateTimeFormat('en-CA', {
+        timeZone: tz,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      })
+        .formatToParts(new Date())
+        .map((p) => [p.type, p.value]),
+    );
+    const hh = parts.hour === '24' ? '00' : parts.hour;
+    const ymd = `${parts.year}-${parts.month}-${parts.day}`;
+    const minutes = Number(hh) * 60 + Number(parts.minute);
+    const dow = new Date(`${ymd}T12:00:00Z`).getUTCDay(); // 0=Dom..6=Sab
+    return { ymd, minutes, dow };
+  }
+
+  hmsToMin(t: any): number | null {
+    if (!t) return null;
+    const [h, m] = String(t).split(':');
+    const n = Number(h) * 60 + Number(m || 0);
+    return Number.isFinite(n) ? n : null;
+  }
+  minToHm = (min: number) =>
+    `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+
+  addDaysYmd(ymd: string, days: number): string {
+    const d = new Date(`${ymd}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+
+  async aplicarPrioridadJota(
+    res: { data: any[]; total: number },
+    filters: any = {},
+    ProductsService: any,
+    getCachedPrismaProductos: any,
+  ): Promise<{ data: any[]; total: number }> {
+    const rows = Array.isArray(res.data) ? res.data : [];
+    const marcaFiltro = this.normFiltro(filters?.marca);
+    if (marcaFiltro || rows.length === 0) return res;
+    if (!this.esConsultaJota(rows, filters, ProductsService)) return res;
+
+    const offset = Number(filters?.offset) || 0;
+    const limit = Number(filters?.limit) || rows.length;
+
+    const dedupPrepend = (jota: any[], resto: any[]) => {
+      const cods = new Set(jota.map((r) => String(r?.codigo_articulo)));
+      return [
+        ...jota,
+        ...resto.filter((r) => !cods.has(String(r?.codigo_articulo))),
+      ];
+    };
+
+    if (offset > 0) {
+      const jota = rows.filter((r) => this.esJotaRow(r, ProductsService));
+      if (!jota.length || jota.length === rows.length) return res;
+      return {
+        ...res,
+        data: dedupPrepend(
+          jota,
+          rows.filter((r) => !this.esJotaRow(r, ProductsService)),
+        ),
+      };
+    }
+
+    try {
+      const jotaRes = await getCachedPrismaProductos({
+        ...filters,
+        marca: ProductsService.JOTA_MARCA,
+        offset: 0,
+        limit: Math.max(limit, 12),
+      });
+      const jota = Array.isArray(jotaRes.data) ? jotaRes.data : [];
+      if (!jota.length) return res;
+      const merged = dedupPrepend(jota, rows);
+      const data = limit > 0 ? merged.slice(0, limit) : merged;
+      return { ...res, data };
+    } catch (e) {
+      this.logger.warn(
+        `aplicarPrioridadJota falló: ${(e as any)?.message ?? e}`,
+      );
+      return res;
+    }
+  }
+
+  async contarProductosV2(filters: any = {}, WEB_BASE_WHERE: any={}, STOCK_EXISTS: any={}): Promise<number> {
+    const f = this.buildProcFilters(filters);
+    const rows = await this.productReadRepository.query(
+      `SELECT COUNT(*) AS total
+         FROM articulo a
+        WHERE ${WEB_BASE_WHERE}
+          AND (? IS NULL OR a.marca = CAST(? AS UNSIGNED))
+          AND (? IS NULL OR a.familia = CAST(? AS UNSIGNED))
+          AND (? IS NULL OR a.proveedor = CAST(? AS UNSIGNED))
+          AND (? IS NULL OR a.precioventa >= ?)
+          AND (? IS NULL OR a.precioventa <= ?)
+          AND (? IS NULL
+               OR TRIM(a.codigo) = ?
+               OR a.codigodebarra = ?
+               OR a.nombre LIKE CONCAT('%', REPLACE(?, ' ', '%'), '%'))
+          AND (? IS NULL OR ? = 0 OR ${STOCK_EXISTS})`,
+      [
+        f.marca,
+        f.marca,
+        f.categoria,
+        f.categoria,
+        f.proveedor,
+        f.proveedor,
+        f.precioMin,
+        f.precioMin,
+        f.precioMax,
+        f.precioMax,
+        f.busqueda,
+        f.busqueda,
+        f.busqueda,
+        f.busqueda,
+        f.soloStock,
+        f.soloStock,
+      ],
+    );
+    return Number(rows?.[0]?.total || 0);
   }
 }

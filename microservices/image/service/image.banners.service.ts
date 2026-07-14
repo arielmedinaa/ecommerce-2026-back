@@ -42,10 +42,7 @@ export class BannerService {
       String(process.env.IS_DOCKER || '').toLowerCase() === 'true' ||
       String(process.env.RUN_MODE || '').toLowerCase() === 'all';
     const rawHome = os.homedir();
-    // En Docker queremos que "~/" apunte al path montado por volumen (bajo /home/appuser),
-    // así los archivos se reflejan en `ecommerce-2026-back/imagesEcommerce` del host.
     const homeForTilde = isDocker ? dockerHome : rawHome;
-    // Expand "~" to homedir so paths are absolute and work across services/containers
     this.bannersDir =
       configured === '~'
         ? homeForTilde
@@ -106,9 +103,9 @@ export class BannerService {
 
       const bannerId = uuidv4();
       const baseFileName = `${bannerId}_${nombre.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      // Los recortes de producto del efecto 3D NO se recortan a dimensiones de
-      // banner: se guardan en su tamaño/proporción original (con transparencia).
-      const preserveOriginal = /(^|[-_])3d(\b|[-_]|$)/i.test(variante) || variante === 'landing-3d';
+      // Ningún banner se recorta a dimensiones fijas: se guarda en su
+      // tamaño/proporción original (con transparencia si la tuviera).
+      const preserveOriginal = true;
       const savedImages = await this.processAndSaveImages(
         file,
         baseFileName,
@@ -210,9 +207,9 @@ export class BannerService {
       const original = await this.imageStorage.getObjectBuffer(originalKey);
       const bannerId = uuidv4();
       const baseFileName = `${bannerId}_${nombre.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      // Recortes del efecto 3D: se guardan sin recorte (tamaño/proporción
-      // originales + transparencia).
-      const preserveOriginal = /(^|[-_])3d(\b|[-_]|$)/i.test(variante) || variante === 'landing-3d';
+      // Ningún banner se recorta a dimensiones fijas: se guarda sin recorte
+      // (tamaño/proporción originales + transparencia).
+      const preserveOriginal = true;
       const savedImages = await this.processAndSaveImagesFromBuffer(
         original.buffer,
         baseFileName,
@@ -260,9 +257,6 @@ export class BannerService {
     }
   }
 
-  // Guarda un banner de VIDEO (mp4) sin procesarlo con Sharp: mueve el objeto
-  // original de S3 a la ruta definitiva y apunta las 4 "dimensiones" a esa misma
-  // key, para que GET /image/banner/:nombre/:device sirva el mp4 en cualquier device.
   private async saveVideoBannerFromS3(
     originalKey: string,
     nombre: string,
@@ -778,7 +772,6 @@ export class BannerService {
       }
       const banner = await this.bannerRepository.findOne({ where: { id } });
       if (!banner) {
-        const error = new NotFoundException('Banner no encontrado');
         await this.bannerErrorService.logValidationError(
           id,
           'deleteBanner',

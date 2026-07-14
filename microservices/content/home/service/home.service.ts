@@ -359,7 +359,9 @@ export class HomeService implements OnModuleInit {
       if (Array.isArray(heroSlidesRaw) && heroSlidesRaw.length > 0) {
         const out: any[] = [];
         const seen = new Set<string>();
+        const legacySplitPct = Number((cfg as any)?.heroSplitPct ?? 50);
         for (const it of heroSlidesRaw) {
+          const splitPct = Number(it?.splitPct ?? legacySplitPct);
           const mediaType = String(it?.mediaType || 'image');
           if (mediaType === 'video') {
             const videoUrl = String(it?.videoUrl || '').trim();
@@ -375,6 +377,7 @@ export class HomeService implements OnModuleInit {
                 href: it?.href ?? null,
                 mediaType: 'video',
                 videoUrl,
+                splitPct,
                 order: Number(it?.order ?? 0),
               },
             });
@@ -403,6 +406,7 @@ export class HomeService implements OnModuleInit {
               href: it?.href ?? meta?.href,
               mediaType: 'image',
               imageUrl: bannerUrl(nombre, 'desktop'),
+              splitPct,
               order: Number.isFinite(order) ? order : meta?.order,
             },
           });

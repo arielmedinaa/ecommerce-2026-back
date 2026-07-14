@@ -85,78 +85,10 @@ export class ProductsService {
     });
   }
 
-  /** Normaliza los filtros del listado a los 7 parámetros opcionales del proc v2. */
-  private buildProcFilters(filters: any = {}) {
-    const num = (v: any): number | null => {
-      if (v === undefined || v === null || v === '') return null;
-      const n = Number(v);
-      return Number.isFinite(n) ? n : null;
-    };
-    const soloStock =
-      filters.soloConStock === true ||
-      filters.soloConStock === 1 ||
-      filters.soloConStock === '1' ||
-      filters.soloConStock === 'true';
-    return {
-      marca: this.normFiltro(filters.marca),
-      categoria: this.normFiltro(filters.categoria),
-      proveedor: this.normFiltro(filters.proveedor),
-      precioMin: num(filters.precioMin),
-      precioMax: num(filters.precioMax),
-      soloStock: soloStock ? 1 : null,
-      busqueda: this.normBusqueda(filters.busqueda ?? filters.search),
-    };
-  }
-
   invalidateCache(): void {
     void this.cache.delByPrefix('products:');
   }
 
-  private async enrichProductRows(productos: any[]): Promise<any[]> {
-    const codigosProductos = productos.map((item: any) =>
-      item.codigo_articulo.trim(),
-    );
-    const imagenesMap = new Map();
-    if (codigosProductos.length > 0) {
-      const imagenes = await this.productsImagesReadRepository
-        .createQueryBuilder('img')
-        .where('img.producto_codigo IN (:...codigos)', {
-          codigos: codigosProductos,
-        })
-        .andWhere('img.activo = :activo', { activo: true })
-        .orderBy('img.orden', 'ASC')
-        .getMany();
-
-      imagenes.forEach((img) => {
-        if (!imagenesMap.has(img.producto_codigo)) {
-          imagenesMap.set(img.producto_codigo, []);
-        }
-        imagenesMap.get(img.producto_codigo).push(img.url_imagen);
-      });
-    }
-
-    const dataWithTrimmedNames = productos.map((item: any) => ({
-      ...item,
-      codigo_articulo: item.codigo_articulo.trim(),
-      nombre_articulo: item.nombre_articulo.trim(),
-      nombre_subcategoria: item.nombre_subcategoria.trim(),
-      nombre_marca: item.nombre_marca.trim(),
-      nombre_proveedor: item.nombre_proveedor.trim(),
-      codigo_de_barra: item.codigo_de_barra.trim(),
-      descripcion: item.nota.trim(),
-      imagenes: imagenesMap.get(item.codigo_articulo.trim()) || [],
-    }));
-
-    return this.productsUtils.calculoCreditoProductos(
-      dataWithTrimmedNames || [],
-    );
-  }
-
-  /**
-   * Catálogo COMPLETO (proc v2): ~41k artículos habilitados para web, con stock
-   * OPCIONAL. Pensado para el panel "Analizar Artículos" del admin — paginado y
-   * buscable server-side (NUNCA traer los 41k de una; el proc con limit 0 tarda ~15s).
-   */
   async getCatalogoV2(
     filters: any = {},
   ): Promise<{ data: any[]; total: number }> {
@@ -168,7 +100,7 @@ export class ProductsService {
 
     const limit = Number(filters.limit) || 50;
     const offset = Number(filters.offset) || 0;
-    const f = this.buildProcFilters(filters);
+    const f = this.productsUtils.buildProcFilters(filters);
     const result = await this.productReadRepository.query(
       'CALL proc_obtener_listado_articulos_ecommerce_v2(?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
@@ -184,55 +116,12 @@ export class ProductsService {
       ],
     );
 
-    const dataConCuotas = await this.enrichProductRows(result[0] || []);
-    const total = await this.contarProductosV2(filters);
+    const dataConCuotas = await this.productsUtils.enrichProductRows(result[0] || [], this.productsImagesReadRepository);
+    const total = await this.productsUtils.contarProductosV2(filters, this.WEB_BASE_WHERE, this.STOCK_EXISTS);
 
     const payload = { data: dataConCuotas as any[], total };
     await this.cache.set(cacheKey, payload, this.CACHE_TTL);
     return payload;
-  }
-
-  /**
-   * Conteo para el catálogo v2: base web (baja=0, web/websc=1) + filtros, con stock
-   * OPCIONAL (solo lo exige si el filtro soloConStock está activo). COUNT liviano,
-   * sin tmp tables, para que la paginación de los 41k sea barata.
-   */
-  private async contarProductosV2(filters: any = {}): Promise<number> {
-    const f = this.buildProcFilters(filters);
-    const rows = await this.productReadRepository.query(
-      `SELECT COUNT(*) AS total
-         FROM articulo a
-        WHERE ${this.WEB_BASE_WHERE}
-          AND (? IS NULL OR a.marca = CAST(? AS UNSIGNED))
-          AND (? IS NULL OR a.familia = CAST(? AS UNSIGNED))
-          AND (? IS NULL OR a.proveedor = CAST(? AS UNSIGNED))
-          AND (? IS NULL OR a.precioventa >= ?)
-          AND (? IS NULL OR a.precioventa <= ?)
-          AND (? IS NULL
-               OR TRIM(a.codigo) = ?
-               OR a.codigodebarra = ?
-               OR a.nombre LIKE CONCAT('%', REPLACE(?, ' ', '%'), '%'))
-          AND (? IS NULL OR ? = 0 OR ${this.STOCK_EXISTS})`,
-      [
-        f.marca,
-        f.marca,
-        f.categoria,
-        f.categoria,
-        f.proveedor,
-        f.proveedor,
-        f.precioMin,
-        f.precioMin,
-        f.precioMax,
-        f.precioMax,
-        f.busqueda,
-        f.busqueda,
-        f.busqueda,
-        f.busqueda,
-        f.soloStock,
-        f.soloStock,
-      ],
-    );
-    return Number(rows?.[0]?.total || 0);
   }
 
   private async getCachedPrismaProductos(
@@ -248,7 +137,7 @@ export class ProductsService {
 
     const limit = Number(filters.limit) || 0;
     const offset = Number(filters.offset) || 0;
-    const f = this.buildProcFilters(filters);
+    const f = this.productsUtils.buildProcFilters(filters);
     const result = await this.productReadRepository.query(
       'CALL proc_obtener_articulos_ecommerce_web(?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
@@ -265,7 +154,7 @@ export class ProductsService {
     );
 
     const productos = result[0] || [];
-    const dataConCuotas = await this.enrichProductRows(productos);
+    const dataConCuotas = await this.productsUtils.enrichProductRows(productos, this.productsImagesReadRepository);
     const total = await this.contarProductos(filters);
 
     await this.cache.set(
@@ -277,40 +166,8 @@ export class ProductsService {
     return { data: dataConCuotas as any[], total };
   }
 
-  private normFiltro(value: any): string | null {
-    if (value === undefined || value === null) return null;
-    const s = String(value).trim();
-    return s === '' ? null : s;
-  }
-
-  // Normaliza el término de búsqueda a su forma singular (español) por token, para
-  // que "celulares" matchee productos cuyo nombre dice "celular". Conservador: no
-  // toca palabras cortas y solo aplica reglas de plural comunes (-es / -s).
-  private normBusqueda(value: any): string | null {
-    const s = this.normFiltro(value);
-    if (!s) return s;
-    const singular = s
-      .split(/\s+/)
-      .map((tok) => this.singularizarToken(tok))
-      .join(' ')
-      .trim();
-    return singular === '' ? null : singular;
-  }
-
-  private singularizarToken(tok: string): string {
-    if (tok.length <= 4) return tok; // "gas", "mes", "web"... no tocar
-    // Consonante + "es" → quitar "es": celulares→celular, televisores→televisor.
-    if (/[bcdfghjklmnpqrstvwxyz]es$/i.test(tok)) {
-      const base = tok.slice(0, -2);
-      if (base.length >= 4) return base;
-    }
-    // Vocal + "s" → quitar "s": fundas→funda, zapatillas→zapatilla, mesas→mesa.
-    if (/[aeiou]s$/i.test(tok)) return tok.slice(0, -1);
-    return tok;
-  }
-
   private async contarProductos(filters: any = {}): Promise<number> {
-    const f = this.buildProcFilters(filters);
+    const f = this.productsUtils.buildProcFilters(filters);
     // Mismas condiciones que proc_obtener_articulos_ecommerce_web: el stock>0 es
     // OBLIGATORIO siempre (el proc ignora p_solo_con_stock), por eso el total coincide
     // con las filas que devuelve el listado (~1524 sin filtros).
@@ -351,7 +208,6 @@ export class ProductsService {
   async getFacets(): Promise<any> {
     const cached = await this.cache.get('products:facets');
     if (cached) return cached;
-    // Facetas sobre el mismo conjunto óptimo-web (con stock) que muestra el listado.
     const baseWhere = `${this.WEB_BASE_WHERE} AND ${this.STOCK_EXISTS}`;
     const [categorias, marcas, proveedores, precio] = await Promise.all([
       this.productReadRepository.query(
@@ -397,7 +253,6 @@ export class ProductsService {
     const cached = await this.cache.get('products:stats');
     if (cached) return cached;
     const [base, stock, webEnabled] = await Promise.all([
-      // Conjunto óptimo-web (con stock>0): coincide con el listado (~1524).
       this.productReadRepository.query(
         `SELECT COUNT(*) AS total_web, SUM(a.web = 1) AS activos,
                 COUNT(DISTINCT a.familia) AS categorias_totales,
@@ -415,7 +270,6 @@ export class ProductsService {
              GROUP BY sa.codigo_articulo
           ) t`,
       ),
-      // Todos los habilitados para web (con o sin stock) → para derivar sin_stock.
       this.productReadRepository.query(
         `SELECT COUNT(*) AS web_total FROM articulo a WHERE ${this.WEB_BASE_WHERE}`,
       ),
@@ -437,86 +291,12 @@ export class ProductsService {
 
   async findAll(filters: any = {}): Promise<{ data: any[]; total: number }> {
     const res = await this.getCachedPrismaProductos(filters);
-    return this.aplicarPrioridadJota(res, filters);
-  }
-
-  // Familias donde JOTA (marca 257) es prioritaria: 4 Refrigeración, 5 Climatización,
-  // 6 Cocinas y anafes, 7 Lavado.
-  private static readonly JOTA_MARCA = 257;
-  private static readonly JOTA_FAMILIAS = new Set([4, 5, 6, 7]);
-  private static readonly JOTA_KEYWORDS =
-    /(cocina|anafe|heladera|refriger|freezer|climatiz|aire|lavarrop|lavado|lavasecarropas)/i;
-
-  private esJotaRow(r: any): boolean {
-    return (
-      Number(r?.codigo_marca) === ProductsService.JOTA_MARCA ||
-      /jota/i.test(String(r?.nombre_marca ?? ''))
+    return this.productsUtils.aplicarPrioridadJota(
+      res,
+      filters,
+      this,
+      this.getCachedPrismaProductos,
     );
-  }
-
-  // ¿La consulta apunta a familias JOTA? (por categoria, keyword de búsqueda, o porque
-  // la mayoría de las filas pertenecen a esas familias).
-  private esConsultaJota(rows: any[], filters: any = {}): boolean {
-    const categoria = Number(filters?.categoria);
-    if (Number.isFinite(categoria) && ProductsService.JOTA_FAMILIAS.has(categoria)) return true;
-    const search = String(filters?.search ?? '').trim();
-    if (search && ProductsService.JOTA_KEYWORDS.test(search)) return true;
-    if (Array.isArray(rows) && rows.length) {
-      const enFam = rows.filter((r) =>
-        ProductsService.JOTA_FAMILIAS.has(Number(r?.codigo_categoria)),
-      );
-      if (enFam.length * 2 >= rows.length) return true;
-    }
-    return false;
-  }
-
-  // Hace que JOTA lidere el listado en familias JOTA: en la primera página (offset 0)
-  // trae los artículos JOTA de la misma consulta y los antepone (dedup); en páginas
-  // siguientes solo reordena los JOTA ya presentes. No aplica si el usuario filtró por
-  // otra marca.
-  private async aplicarPrioridadJota(
-    res: { data: any[]; total: number },
-    filters: any = {},
-  ): Promise<{ data: any[]; total: number }> {
-    const rows = Array.isArray(res.data) ? res.data : [];
-    const marcaFiltro = this.normFiltro(filters?.marca);
-    if (marcaFiltro || rows.length === 0) return res;
-    if (!this.esConsultaJota(rows, filters)) return res;
-
-    const offset = Number(filters?.offset) || 0;
-    const limit = Number(filters?.limit) || rows.length;
-
-    const dedupPrepend = (jota: any[], resto: any[]) => {
-      const cods = new Set(jota.map((r) => String(r?.codigo_articulo)));
-      return [...jota, ...resto.filter((r) => !cods.has(String(r?.codigo_articulo)))];
-    };
-
-    if (offset > 0) {
-      const jota = rows.filter((r) => this.esJotaRow(r));
-      if (!jota.length || jota.length === rows.length) return res;
-      return {
-        ...res,
-        data: dedupPrepend(jota, rows.filter((r) => !this.esJotaRow(r))),
-      };
-    }
-
-    // Página 0: traer JOTA de la misma consulta y anteponerlos.
-    try {
-      const jotaRes = await this.getCachedPrismaProductos({
-        ...filters,
-        marca: ProductsService.JOTA_MARCA,
-        offset: 0,
-        limit: Math.max(limit, 12),
-      });
-      const jota = Array.isArray(jotaRes.data) ? jotaRes.data : [];
-      if (!jota.length) return res;
-      const merged = dedupPrepend(jota, rows);
-      const data = limit > 0 ? merged.slice(0, limit) : merged;
-      return { ...res, data };
-    } catch (e) {
-      this.logger.warn(`aplicarPrioridadJota falló: ${(e as any)?.message ?? e}`);
-      return res;
-    }
   }
 
   async getSuggestions(
@@ -527,7 +307,7 @@ export class ProductsService {
     success: boolean;
     message: string;
   }> {
-    const termino = this.normFiltro(q);
+    const termino = this.productsUtils.normFiltro(q);
     if (!termino) {
       return {
         data: { productos: [], terminos: [], complementos: [] },
@@ -623,11 +403,8 @@ export class ProductsService {
     termino: string,
     resultados = 0,
   ): Promise<{ success: boolean }> {
-    const t = this.normFiltro(termino);
+    const t = this.productsUtils.normFiltro(termino);
     if (!t) return { success: false };
-    // Saneo: minúsculas, colapsar espacios, máx 4 palabras, dedupe de tokens
-    // repetidos consecutivos y tope 40 chars → evita basura tipo
-    // "amoladora makita varios herramientas makita varios makita...".
     const tokens = String(t)
       .toLowerCase()
       .replace(/\s+/g, ' ')
@@ -655,8 +432,6 @@ export class ProductsService {
     limit = 8,
   ): Promise<{ data: string[]; success: boolean }> {
     try {
-      // Solo términos "sanos": <=40 chars, con resultados, y máx ~4 palabras
-      // (NOT LIKE '% % % % %' descarta 5+ palabras). Devuelve un pool para rotar.
       const rows = await this.searchTermRead.query(
         `SELECT termino FROM search_terms
           WHERE CHAR_LENGTH(termino) <= 40
@@ -671,45 +446,6 @@ export class ProductsService {
       this.logger.error('getMasBuscado error', e as any);
       return { data: [], success: false };
     }
-  }
-
-  // ===================== AGENDAMIENTO + STOCK (checkout) =====================
-
-  // Hora actual en Paraguay (America/Asuncion) sin depender de la TZ del server.
-  private nowAsuncion(): { ymd: string; minutes: number; dow: number } {
-    const tz = 'America/Asuncion';
-    const parts = Object.fromEntries(
-      new Intl.DateTimeFormat('en-CA', {
-        timeZone: tz,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      })
-        .formatToParts(new Date())
-        .map((p) => [p.type, p.value]),
-    );
-    const hh = parts.hour === '24' ? '00' : parts.hour;
-    const ymd = `${parts.year}-${parts.month}-${parts.day}`;
-    const minutes = Number(hh) * 60 + Number(parts.minute);
-    const dow = new Date(`${ymd}T12:00:00Z`).getUTCDay(); // 0=Dom..6=Sab
-    return { ymd, minutes, dow };
-  }
-
-  private hmsToMin(t: any): number | null {
-    if (!t) return null;
-    const [h, m] = String(t).split(':');
-    const n = Number(h) * 60 + Number(m || 0);
-    return Number.isFinite(n) ? n : null;
-  }
-  private minToHm = (min: number) =>
-    `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
-  private addDaysYmd(ymd: string, days: number): string {
-    const d = new Date(`${ymd}T12:00:00Z`);
-    d.setUTCDate(d.getUTCDate() + days);
-    return d.toISOString().slice(0, 10);
   }
 
   async getHorariosAgendamiento(): Promise<{ data: any[]; success: boolean }> {
@@ -736,7 +472,6 @@ export class ProductsService {
     return { data, success: true };
   }
 
-  // Stock real por código (reusa la misma definición que el catálogo).
   async getStockByCodigos(
     codigos: string[],
   ): Promise<{
@@ -755,7 +490,6 @@ export class ProductsService {
     const found = new Map<string, boolean>();
     for (const r of rows || [])
       found.set(String(r.codigo).trim(), Number(r.en_stock) === 1);
-    // Código no encontrado => sin stock (conservador).
     const data = list.map((codigo) => ({
       codigo,
       enStock: found.get(codigo) ?? false,
@@ -784,7 +518,6 @@ export class ProductsService {
     ]);
     const allInStock = stock.length > 0 ? stock.every((s) => s.enStock) : true;
 
-    // Interior de la ciudad
     let interior = false;
     const ciudadId = Number(payload?.ciudadId);
     if (Number.isFinite(ciudadId) && ciudadId > 0) {
@@ -798,15 +531,15 @@ export class ProductsService {
     const byDow = new Map<number, any>();
     for (const h of horarios) byDow.set(h.dia, h);
 
-    const { ymd, minutes: nowMin, dow } = this.nowAsuncion();
+    const { ymd, minutes: nowMin, dow } = this.productsUtils.nowAsuncion();
     const avisos: string[] = [];
-    const SLOT_STEP = 60; // slots por hora
+    const SLOT_STEP = 60;
 
     const horasEntre = (desdeMin: number, hastaMin: number): string[] => {
       const out: string[] = [];
       let start = Math.ceil(desdeMin / SLOT_STEP) * SLOT_STEP;
       for (let m = start; m <= hastaMin; m += SLOT_STEP)
-        out.push(this.minToHm(m));
+        out.push(this.productsUtils.minToHm(m));
       return out;
     };
 
@@ -821,12 +554,12 @@ export class ProductsService {
     if (retiro) {
       // Retiro en local: hoy desde ahora (dentro de ventana) + próximos días completos.
       for (let i = 0; i < 7 && slots.length < 5; i++) {
-        const fecha = this.addDaysYmd(ymd, i);
+        const fecha = this.productsUtils.addDaysYmd(ymd, i);
         const ddow = new Date(`${fecha}T12:00:00Z`).getUTCDay();
         const h = byDow.get(ddow);
         if (!h || h.estado !== 1) continue;
-        const ini = this.hmsToMin(h.inicial)!;
-        const fin = this.hmsToMin(h.final)!;
+        const ini = this.productsUtils.hmsToMin(h.inicial)!;
+        const fin = this.productsUtils.hmsToMin(h.final)!;
         const desde = i === 0 ? Math.max(ini, nowMin) : ini;
         if (i === 0 && nowMin > fin) continue;
         const horas = horasEntre(desde, fin);
@@ -843,15 +576,13 @@ export class ProductsService {
       avisos.push(
         'Tu ciudad es del interior: la entrega se agenda para el día siguiente o posterior.',
       );
-      // Sólo días con regla_interior=1; entrega desde el día siguiente.
       for (let i = 1; i <= 9 && slots.length < 5; i++) {
-        const fecha = this.addDaysYmd(ymd, i);
+        const fecha = this.productsUtils.addDaysYmd(ymd, i);
         const ddow = new Date(`${fecha}T12:00:00Z`).getUTCDay();
         const h = byDow.get(ddow);
         if (!h || h.estado !== 1 || !h.reglaInterior) continue;
-        const ini = this.hmsToMin(h.inicial)!;
-        // La franja va siempre hasta el horario final (la "hora máxima" no la limita).
-        const fin = this.hmsToMin(h.final)!;
+        const ini = this.productsUtils.hmsToMin(h.inicial)!;
+        const fin = this.productsUtils.hmsToMin(h.final)!;
         const horas = horasEntre(ini, fin);
         if (horas.length) slots.push({ fecha, dia: ddow, horas, horaMin: h.inicial, horaMax: h.final });
       }
@@ -864,12 +595,10 @@ export class ProductsService {
     // Capital
     const hoy = byDow.get(dow);
     if (hoy && hoy.estado === 1) {
-      const ini = this.hmsToMin(hoy.inicial)!;
-      const fin = this.hmsToMin(hoy.final)!;
-      // La "hora máxima" NO limita la franja (que va hasta `fin`); solo indica hasta
-      // qué hora es posible entregar el MISMO día.
-      const maximo = this.hmsToMin(hoy.maximo) ?? fin;
-      const corte = this.hmsToMin(hoy.corte);
+      const ini = this.productsUtils.hmsToMin(hoy.inicial)!;
+      const fin = this.productsUtils.hmsToMin(hoy.final)!;
+      const maximo = this.productsUtils.hmsToMin(hoy.maximo) ?? fin;
+      const corte = this.productsUtils.hmsToMin(hoy.corte);
       if (nowMin < ini)
         avisos.push(`Los pedidos se reciben desde las ${hoy.inicial}.`);
       const earliest = Math.max(nowMin + 240, ini); // +4h de preparación
@@ -888,16 +617,14 @@ export class ProductsService {
       }
     }
 
-    // Días siguientes
-    const startNext = this.hmsToMin('10:00')!; // sin stock o tras el corte: arranca 10:00
+    const startNext = this.productsUtils.hmsToMin('10:00')!;
     for (let i = 1; i <= 9 && slots.length < 5; i++) {
-      const fecha = this.addDaysYmd(ymd, i);
+      const fecha = this.productsUtils.addDaysYmd(ymd, i);
       const ddow = new Date(`${fecha}T12:00:00Z`).getUTCDay();
       const h = byDow.get(ddow);
       if (!h || h.estado !== 1) continue;
-      const ini = this.hmsToMin(h.inicial)!;
-      // Franja hasta el horario final (la "hora máxima" no la limita).
-      const fin = this.hmsToMin(h.final)!;
+      const ini = this.productsUtils.hmsToMin(h.inicial)!;
+      const fin = this.productsUtils.hmsToMin(h.final)!;
       const desde = allInStock ? ini : Math.max(startNext, ini);
       const horas = horasEntre(desde, fin);
       if (horas.length) slots.push({ fecha, dia: ddow, horas, horaMin: h.inicial, horaMax: h.final });
