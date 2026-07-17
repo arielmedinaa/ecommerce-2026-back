@@ -40,10 +40,6 @@ export class HomeSection {
   @Column({ type: 'varchar', length: 120, nullable: true })
   titulo?: string;
 
-  // Config libre por sección. Ej:
-  // - BANNERS/HERO: { "variantes": ["hero"] }
-  // - PRODUCTOS: { "limit": 12, "offset": 0 }
-  // - JOTA: { "marca": "257", "limit": 12 }
   @Column({ type: 'json', nullable: true })
   config?: Record<string, any>;
 

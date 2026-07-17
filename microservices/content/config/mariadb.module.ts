@@ -9,7 +9,7 @@ import { Cupon } from '@content/cupones/schemas/cupon.schema';
 import { CuponesPorProducto } from '@content/cupones/schemas/cupon-productos.schema';
 import { Event } from '@content/events/schemas/event.schema';
 import { EventProduct } from '@content/events/schemas/event-product.schema';
-// Order/OrderItem (tabla `ordenes`) pertenecen a cart; content los consulta por RPC.
+
 import { EventCondition } from '@content/events/schemas/event-condition.schema';
 import { HomeSection } from '@content/home/schemas/home-section.schema';
 import { Promotion } from '@content/promotions/schemas/promotion.schema';

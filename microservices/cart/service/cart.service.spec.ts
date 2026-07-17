@@ -166,30 +166,6 @@ export class CartValidationService {
       };
     }
 
-    // if (!cuenta || cuenta.trim() === '') {
-    //   const error = new Error('Cuenta de cliente inválida');
-    //   await this.cartErrorService.logMicroserviceError(
-    //     error,
-    //     codigo?.toString(),
-    //     'validateCartPayload',
-    //     {
-    //       motivo: 'cuenta_invalida',
-    //       clienteToken,
-    //       cuenta,
-    //       codigo,
-    //     },
-    //   );
-    //   this.logger.error('Error al validar el producto', error);
-    //   return {
-    //     isValid: false,
-    //     error: {
-    //       success: false,
-    //       message: 'Cuenta de cliente no válida',
-    //       data: [],
-    //     },
-    //   };
-    // }
-
     return await this.validateProduct(producto, codigo?.toString());
   }
 
@@ -452,29 +428,6 @@ export class CartValidationService {
         },
       }
     }
-
-    // if (!clienteInfo || [clienteInfo].length < 0) {
-    //   const error = new Error('Cliente inválido - No se proporcionó el objeto del clienteInfo');
-    //   await this.cartErrorService.logMicroserviceError(
-    //     error,
-    //     codigo?.toString(),
-    //     'validateInsertCentralApp',
-    //     {
-    //       motivo: 'cliente_invalido',
-    //       clienteInfo,
-    //       codigo,
-    //     },
-    //   );
-    //   this.logger.error('Erro al proporcionar el cuerpo del clienteInfo', error);
-    //   return {
-    //     isValid: false,
-    //     error: {
-    //       success: false,
-    //       message: 'Cliente inválido - No se proporcionó el objeto del clienteInfo',
-    //       data: [],
-    //     },
-    //   }
-    // }
 
     if (!clienteToken || clienteToken.trim() === '') {
       const error = new Error('Token de cliente inválido');

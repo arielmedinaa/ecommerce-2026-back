@@ -24,7 +24,6 @@ export class Oferta {
   @Column({ default: true })
   activo: boolean;
 
-  // Combos: si la oferta permite combinar sus artículos, y el % de descuento del combo.
   @Column({ default: false })
   combosHabilitado: boolean;
 

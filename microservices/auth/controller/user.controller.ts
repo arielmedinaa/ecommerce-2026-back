@@ -14,13 +14,11 @@ export class UserController {
     private readonly userTrackService: UserTrackService,
   ) {}
 
-  // Autocompletado de cliente del ERP por documento/RUC (checkout).
   @MessagePattern({ cmd: 'get_cliente_erp' })
   async getClienteErp(@Payload() payload: { documento: string }) {
     return this.erpClienteService.getClienteErpByDocumento(String(payload?.documento ?? ''));
   }
 
-  // Catálogos de Cargo y Rubro del ERP para los selects del checkout de crédito.
   @MessagePattern({ cmd: 'get_cargos_rubros' })
   async getCargosRubros() {
     return this.erpClienteService.getCatalogos();
@@ -82,7 +80,6 @@ export class UserController {
     return this.userService.updateUsers(data.filters, data.updates);
   }
 
-  // ----------------------------- Perfil (datos personales) -----------------------------
   @MessagePattern({ cmd: 'get_user_profile_db' })
   async getProfile(@Payload() payload: { userId: number }) {
     return this.userService.getProfile(Number(payload?.userId));
@@ -93,7 +90,6 @@ export class UserController {
     return this.userService.updateProfile(Number(payload?.userId), payload?.patch || {});
   }
 
-  // ----------------------------- Direcciones -----------------------------
   @MessagePattern({ cmd: 'get_user_addresses' })
   async getUserAddresses(@Payload() payload: { userId: number }) {
     return this.userService.getUserAddresses(Number(payload?.userId));
@@ -114,13 +110,11 @@ export class UserController {
     return this.userService.deleteUserAddress(Number(payload?.userId), payload?.addressId);
   }
 
-  // Ingesta de eventos de tracking (fire-and-forget vía NATS emit → sin respuesta).
   @EventPattern('track_user_event')
   handleTrackEvent(@Payload() payload: TrackEventInput | TrackEventInput[]) {
     this.userTrackService.track(payload);
   }
 
-  // Resumen de seguimiento del usuario (30 días) para el admin.
   @MessagePattern({ cmd: 'get_user_track' })
   async getUserTrack(@Payload() payload: { userId: string }) {
     return this.userTrackService.getUserTrack(String(payload?.userId ?? ''));

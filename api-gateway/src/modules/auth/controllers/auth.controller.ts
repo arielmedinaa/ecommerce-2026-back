@@ -44,7 +44,7 @@ export class AuthController {
   @Get('google')
   @UseGuards(AuthGuard('google'))
   async googleAuth() {
-    // Inicia el flujo de Google OAuth
+    
   }
 
   @Get('google/callback')
@@ -173,7 +173,6 @@ export class AuthController {
     );
   }
 
-  // Envía un código de verificación al email (simulado).
   @Post('email-code')
   async sendEmailCode(@Body() body: { email: string }) {
     return await firstValueFrom(
@@ -181,7 +180,6 @@ export class AuthController {
     );
   }
 
-  // Verifica el código enviado al email.
   @Post('email-code/verify')
   async verifyEmailCode(@Body() body: { email: string; code: string }) {
     return await firstValueFrom(

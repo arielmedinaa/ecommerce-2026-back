@@ -43,13 +43,6 @@ export class VerticalValidation {
       return { isValid: false, error: 'Limite de filtros es requerido' };
     };
 
-    // if (!filters.offset) {
-    //   this.logger.error('Error al validar el offset de los filtros', {
-    //     filters,
-    //   });
-    //   return { isValid: false, error: 'Offset de filtros es requerido' };
-    // };
-    
     return { isValid: true, error: null };
   }
 }

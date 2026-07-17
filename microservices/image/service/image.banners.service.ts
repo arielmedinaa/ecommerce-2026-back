@@ -103,8 +103,7 @@ export class BannerService {
 
       const bannerId = uuidv4();
       const baseFileName = `${bannerId}_${nombre.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      // Ningún banner se recorta a dimensiones fijas: se guarda en su
-      // tamaño/proporción original (con transparencia si la tuviera).
+
       const preserveOriginal = true;
       const savedImages = await this.processAndSaveImages(
         file,
@@ -162,6 +161,7 @@ export class BannerService {
     modificadoPor: string,
     meta?: Record<string, any>,
     contentType?: string,
+    originalKeyMobile?: string,
   ): Promise<{ data: Banners; message: string; success: boolean }> {
     try {
       const existingBanner = await this.bannerRepository.findOne({
@@ -190,9 +190,8 @@ export class BannerService {
         };
       }
 
-      // ----- Video (mp4): NO se procesa con Sharp; se guarda el archivo tal cual.
       const isVideo =
-        /video\//i.test(contentType || '') || /\.mp4$/i.test(originalKey);
+        /video\
       if (isVideo) {
         return await this.saveVideoBannerFromS3(
           originalKey,
@@ -205,10 +204,12 @@ export class BannerService {
       }
 
       const original = await this.imageStorage.getObjectBuffer(originalKey);
+      const originalMobile = originalKeyMobile
+        ? await this.imageStorage.getObjectBuffer(originalKeyMobile)
+        : undefined;
       const bannerId = uuidv4();
       const baseFileName = `${bannerId}_${nombre.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      // Ningún banner se recorta a dimensiones fijas: se guarda sin recorte
-      // (tamaño/proporción originales + transparencia).
+
       const preserveOriginal = true;
       const savedImages = await this.processAndSaveImagesFromBuffer(
         original.buffer,
@@ -216,6 +217,7 @@ export class BannerService {
         bannerId,
         creadoPor,
         preserveOriginal,
+        originalMobile?.buffer,
       );
 
       const bannerData: Partial<Banners> = {
@@ -235,6 +237,7 @@ export class BannerService {
       const newEntity = this.bannerRepository.create(bannerData);
       const newBanner = await this.bannerRepository.save(newEntity);
       await this.imageStorage.deleteObject(originalKey);
+      if (originalKeyMobile) await this.imageStorage.deleteObject(originalKeyMobile);
 
       return {
         data: newBanner,
@@ -329,8 +332,6 @@ export class BannerService {
     const savedImages = {};
     const tempPath = file.path;
 
-    // Modo sin recorte (efecto 3D): guarda UNA webp con el tamaño/proporción
-    // originales (conserva alfa) y apunta las 4 "dimensiones" a esa imagen.
     if (preserveOriginal) {
       try {
         const fileName = `${baseFileName}_original.webp`;
@@ -429,37 +430,69 @@ export class BannerService {
     }
   }
 
+  private async saveOriginalWebp(
+    buffer: Buffer,
+    fileName: string,
+  ): Promise<{
+    fileName: string;
+    key: string;
+    filePath: null;
+    width: number | null;
+    height: number | null;
+    url?: string;
+  }> {
+    const key = this.imageStorage.buildKey(fileName);
+    const meta = await sharp(buffer).metadata();
+    const out = await sharp(buffer).webp({ quality: 90 }).toBuffer();
+    const put = await this.imageStorage.putObject({
+      key,
+      body: out,
+      contentType: 'image/webp',
+      cacheControl: 'public, max-age=31536000, immutable',
+    });
+    return {
+      fileName,
+      key,
+      filePath: null,
+      width: meta.width || null,
+      height: meta.height || null,
+      url: put.url,
+    };
+  }
+
   private async processAndSaveImagesFromBuffer(
     buffer: Buffer,
     baseFileName: string,
     bannerId: string,
     creadoPor: string,
     preserveOriginal = false,
+    bufferMobile?: Buffer,
   ): Promise<any> {
     const savedImages: any = {};
 
-    // Modo sin recorte (efecto 3D): una webp con tamaño/proporción originales
-    // (conserva alfa); las 4 "dimensiones" apuntan a esa imagen.
     if (preserveOriginal) {
-      const fileName = `${baseFileName}_original.webp`;
-      const key = this.imageStorage.buildKey(fileName);
-      const meta = await sharp(buffer).metadata();
-      const out = await sharp(buffer).webp({ quality: 90 }).toBuffer();
-      const put = await this.imageStorage.putObject({
-        key,
-        body: out,
-        contentType: 'image/webp',
-        cacheControl: 'public, max-age=31536000, immutable',
-      });
-      const entry = {
-        fileName,
-        key,
-        filePath: null,
-        width: meta.width || null,
-        height: meta.height || null,
-        url: put.url,
+      const desktopEntry = await this.saveOriginalWebp(
+        buffer,
+        `${baseFileName}_desktop_original.webp`,
+      );
+      if (bufferMobile) {
+        const mobileEntry = await this.saveOriginalWebp(
+          bufferMobile,
+          `${baseFileName}_mobile_original.webp`,
+        );
+        return {
+          desktop: desktopEntry,
+          tablet: desktopEntry,
+          small: desktopEntry,
+          mobile: mobileEntry,
+        };
+      }
+      return {
+        desktop: desktopEntry,
+        tablet: desktopEntry,
+        mobile: desktopEntry,
+        small: desktopEntry,
       };
-      return { desktop: entry, tablet: entry, mobile: entry, small: entry };
     }
 
     for (const [device, dimension] of Object.entries(this.dimensions)) {
@@ -568,7 +601,6 @@ export class BannerService {
         return { kind: 'url', value: url, contentType: 'image/webp' };
       }
 
-      // Local filesystem mode
       const files = fs.readdirSync(this.bannersDir);
       const matchingFile = files.find(
         (f) =>
@@ -616,7 +648,7 @@ export class BannerService {
     nombre: string,
     device: string = 'desktop',
   ): Promise<{ buffer: Buffer; contentType: string }> {
-    // Modo local (no S3): resolvemos vía getBannerImage (path en disco).
+    
     if (!this.imageStorage.isS3()) {
       const location = await this.getBannerImage(nombre, device);
       if (location.kind === 'file') {
@@ -638,23 +670,18 @@ export class BannerService {
       }
     }
 
-    // S3 mode: derive key from DB (sin pasar por getBannerImage, que tira
-    // NotFound si `dimensiones` está NULL antes de poder aplicar el fallback).
     const banner = await this.bannerRepository.findOne({
       where: { nombre, estado: 'activo' },
     });
     if (!banner) throw new NotFoundException('Banner no encontrado');
     let key: string | undefined = banner?.dimensiones?.[device]?.key;
 
-    // Fallback: si `dimensiones` no tiene la key del device (p.ej. banners cuyo
-    // JSON quedó NULL), la derivamos desde `ruta` (apunta al *_desktop.webp).
-    // Los 4 archivos por device existen en S3 con el mismo prefijo.
     if (!key && banner?.ruta) {
       const ruta = String(banner.ruta);
       if (/_(?:desktop|tablet|mobile|small)\.[a-z0-9]+$/i.test(ruta)) {
         key = ruta.replace(/_(?:desktop|tablet|mobile|small)(\.[a-z0-9]+)$/i, `_${device}$1`);
       } else {
-        // Video u otros formatos sin sufijo de device: servimos `ruta` tal cual.
+        
         key = ruta;
       }
     }
@@ -664,7 +691,7 @@ export class BannerService {
       const obj = await this.imageStorage.getObjectBuffer(key);
       return { buffer: obj.buffer, contentType: obj.contentType || 'image/webp' };
     } catch {
-      // Si la variante puntual no existe en S3, caemos al desktop como último recurso.
+      
       const fallbackKey = key.replace(/_(?:tablet|mobile|small)(\.[a-z0-9]+)$/i, '_desktop$1');
       if (fallbackKey !== key) {
         const obj = await this.imageStorage.getObjectBuffer(fallbackKey);
@@ -759,6 +786,37 @@ export class BannerService {
     }
   }
 
+  private async deleteStoredFilesForBanner(
+    banner: Banners,
+    bannerId: string,
+  ): Promise<void> {
+    const targets = new Set<string>();
+    for (const entry of Object.values(banner.dimensiones || {})) {
+      const target = this.imageStorage.isS3()
+        ? (entry as any)?.key
+        : (entry as any)?.filePath;
+      if (target) targets.add(target);
+    }
+
+    for (const target of targets) {
+      try {
+        if (this.imageStorage.isS3()) {
+          await this.imageStorage.deleteObject(target);
+        } else if (fs.existsSync(target)) {
+          fs.unlinkSync(target);
+        }
+      } catch (deleteError) {
+        await this.bannerErrorService.logFileProcessingError(
+          bannerId,
+          target,
+          'unknown',
+          deleteError,
+          'deleteStoredFilesForBanner',
+        );
+      }
+    }
+  }
+
   async deleteBanner(
     id: string,
   ): Promise<{ data: null; message: string; success: boolean }> {
@@ -785,31 +843,7 @@ export class BannerService {
         };
       }
 
-      const baseFileName = `${banner.id}_${banner.nombre.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      for (const device of Object.keys(this.dimensions)) {
-        const fileName = `${baseFileName}_${device}.webp`;
-        const key = this.imageStorage.buildKey(fileName);
-
-        if (this.imageStorage.isS3()) {
-          await this.imageStorage.deleteObject(key);
-          continue;
-        }
-
-        const filePath = path.join(this.bannersDir, fileName);
-        if (fs.existsSync(filePath)) {
-          try {
-            fs.unlinkSync(filePath);
-          } catch (deleteError) {
-            await this.bannerErrorService.logFileProcessingError(
-              id,
-              fileName,
-              device,
-              deleteError,
-              'deleteBanner',
-            );
-          }
-        }
-      }
+      await this.deleteStoredFilesForBanner(banner, id);
 
       await this.bannerRepository.delete(id);
       return {

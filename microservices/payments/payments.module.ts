@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { MariaDbModule } from './config/mariadb.module';
 import { PaymentsService } from './service/payments.service';
 import { PaymentsController } from './controller/payments.controller';
@@ -9,9 +10,11 @@ import { ErrorLoggingInterceptor } from './interceptors/error-logging.intercepto
 import { SqsModule } from '@shared/common/queue/sqs/sqs.module';
 import { PaymentsQueueService } from './queue/payments.queue.service';
 import { PaymentsSqsWorker } from './worker/payments.sqs.worker';
+import { VposService } from './service/vpos.service';
 
 @Module({
   imports: [
+    ConfigModule,
     MariaDbModule,
     SqsModule,
   ],
@@ -22,6 +25,7 @@ import { PaymentsSqsWorker } from './worker/payments.sqs.worker';
     PaymentsSqsWorker,
     PaymentsValidationService,
     PaymentErrorService,
+    VposService,
     {
       provide: APP_INTERCEPTOR,
       useClass: ErrorLoggingInterceptor,

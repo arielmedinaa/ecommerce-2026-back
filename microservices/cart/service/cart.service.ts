@@ -160,7 +160,6 @@ export class CartContadoService {
       });
     }
 
-    // Verificar límite de compra por producto (si hay límite en evento)
     if (eventoValidation.limite && eventoValidation.limite > 0) {
       let cantidadActualEnCarrito = 0;
       if (carritoExistente && carritoExistente.articulos) {
@@ -168,7 +167,6 @@ export class CartContadoService {
         const credito = carritoExistente.articulos.credito || [];
         const allArticulos = [...contado, ...credito];
 
-        // Buscar el mismo producto (mismo código, mismo tipo de venta)
         const productosExistentes = allArticulos.filter((item: any) => {
           if (articuloTipo === 'credito') {
             return (
@@ -206,7 +204,6 @@ export class CartContadoService {
           const montoMinimo = parseFloat(condicion.valor);
           if (isNaN(montoMinimo) || montoMinimo <= 0) continue;
 
-          // Calcular monto total del carrito actual (sin el nuevo producto)
           let montoActual = 0;
           if (carritoExistente && carritoExistente.articulos) {
             const contado = carritoExistente.articulos.contado || [];
@@ -216,7 +213,7 @@ export class CartContadoService {
               0,
             );
           }
-          // Sumar precio del nuevo producto (ya con precioOferta si aplica)
+          
           montoActual += producto.precio * (producto.cantidad || 1);
 
           if (montoActual < montoMinimo) {
@@ -230,7 +227,6 @@ export class CartContadoService {
           const maxUnidades = parseInt(condicion.valor);
           if (isNaN(maxUnidades) || maxUnidades <= 0) continue;
 
-          // Calcular total de unidades en carrito actual
           let unidadesActuales = 0;
           if (carritoExistente && carritoExistente.articulos) {
             const contado = carritoExistente.articulos.contado || [];
@@ -240,7 +236,7 @@ export class CartContadoService {
               0,
             );
           }
-          // Sumar unidades del nuevo producto
+          
           unidadesActuales += producto.cantidad || 1;
 
           if (unidadesActuales > maxUnidades) {
@@ -251,7 +247,7 @@ export class CartContadoService {
             };
           }
         }
-        // METODO_PAGO_ESPECIFICO se validará al finalizar compra
+        
       }
     }
 
@@ -396,8 +392,6 @@ export class CartContadoService {
     };
   }
 
-  // ¿El usuario tuvo movimientos de carrito en los últimos 30 días?
-  // (cualquier carrito suyo actualizado en ese período: abierto, abandonado o finalizado).
   async userHasMovements(userId: number | string): Promise<{ hasMovements: boolean; count: number; success: boolean }> {
     try {
       const count = await this.carritoRead
@@ -412,9 +406,6 @@ export class CartContadoService {
     }
   }
 
-  // Cuenta órdenes de un cliente por estado. Expuesto vía RPC para que content
-  // (eventos "solo nuevos usuarios") no lea la tabla `ordenes` directamente:
-  // database-per-service → cada servicio sólo toca sus propias tablas.
   async countUserOrders(
     clienteDocumento: string,
     estado = 1,
@@ -430,7 +421,6 @@ export class CartContadoService {
     }
   }
 
-  // Carrito activo (estado '1') del usuario del token. Helper para remove/clear.
   private async getCarritoActivoDeToken(clienteToken: string): Promise<Cart | null> {
     const decoded = this.jwtService.verify(clienteToken);
     const usuario_id = parseInt(decoded.sub);
@@ -445,7 +435,6 @@ export class CartContadoService {
     return this.carritoWrite.findOne({ where: { id: ref.id } });
   }
 
-  // Quita un ítem del carrito activo (por código de producto; tipo opcional contado/credito).
   async removeCartItem(
     clienteToken: string,
     productoCodigo: string | number,
@@ -468,9 +457,6 @@ export class CartContadoService {
     }
   }
 
-  // Quita varios ítems del carrito activo en UNA sola lectura-modificación-escritura.
-  // Evita la condición de carrera de disparar N removeCartItem en paralelo
-  // (cada uno leía el carrito completo y el último save pisaba a los demás).
   async removeCartItems(
     clienteToken: string,
     items: Array<{ codigo: string | number; tipo?: 'contado' | 'credito' }>,
@@ -495,7 +481,6 @@ export class CartContadoService {
     }
   }
 
-  // Setea la cantidad de un ítem del carrito activo (si <=0, lo quita).
   async setCartItemQty(
     clienteToken: string,
     productoCodigo: string | number,
@@ -527,7 +512,6 @@ export class CartContadoService {
     }
   }
 
-  // Vacía el carrito activo del usuario (deja articulos en blanco, estado '1').
   async clearCart(clienteToken: string): Promise<{ data: Cart[]; success: boolean; message: string }> {
     try {
       const carrito = await this.getCarritoActivoDeToken(clienteToken);
@@ -541,8 +525,6 @@ export class CartContadoService {
     }
   }
 
-  // Mergea el carrito del invitado (por email) en el carrito activo del usuario logueado.
-  // Mueve los artículos y cierra el carrito del invitado para evitar duplicados.
   async mergeGuestCart(
     userToken: string,
     guestEmail: string,
@@ -552,10 +534,6 @@ export class CartContadoService {
       const decoded = this.jwtService.verify(userToken);
       const usuario_id = parseInt(decoded.sub);
 
-      // Identidad del invitado: el id_usuario guardado en el `cliente` de CUALQUIER
-      // carrito del invitado (activo o finalizado). Con eso re-asignamos también las
-      // ÓRDENES ya finalizadas (ordenes.cliente_documento guarda el id de usuario),
-      // que de otro modo quedaban huérfanas al identificarse con la cuenta real.
       const anyGuestCart = await this.carritoRead
         .createQueryBuilder('cart')
         .where("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.correo')) = :correo", { correo: guestEmail })
@@ -563,15 +541,14 @@ export class CartContadoService {
         .getOne();
       const guestUserId = Number((anyGuestCart?.cliente as any)?.id_usuario);
       if (Number.isFinite(guestUserId) && guestUserId > 0 && guestUserId !== usuario_id) {
-        // 1) Re-asignar órdenes del invitado a la cuenta destino.
+        
         await this.orderWrite
           .createQueryBuilder()
           .update()
           .set({ cliente_documento: String(usuario_id) })
           .where('cliente_documento = :g', { g: String(guestUserId) })
           .execute();
-        // 2) Re-asignar el dueño de los carritos finalizados del invitado (id_usuario/correo)
-        //    para que "Mis compras" y el admin muestren al cliente real.
+
         const carritosInvitado = await this.carritoWrite
           .createQueryBuilder('cart')
           .where("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.correo')) = :correo", { correo: guestEmail })
@@ -598,10 +575,8 @@ export class CartContadoService {
       const guestCart = await this.carritoWrite.findOne({ where: { id: guestCartRef.id } });
       const gArt: any = guestCart?.articulos || { contado: [], credito: [] };
 
-      // Si el usuario no tiene carrito activo, simplemente reasignamos el del invitado.
       if (!destino) {
-        // Reconstruye el `cliente` con los datos reales del usuario (nombre, documento,
-        // teléfono, correo) en vez de conservar el "Usuario Invitado" previo.
+
         guestCart.cliente = this.utilsCart.buildClienteFromToken(
           decoded,
           userToken,
@@ -612,7 +587,6 @@ export class CartContadoService {
         return { data: [guestCart], success: true, message: 'CARRITO INVITADO REASIGNADO' };
       }
 
-      // Fusionar artículos (sumando cantidades por codigo+tipo).
       const dArt: any = destino.articulos || { contado: [], credito: [] };
       for (const t of ['contado', 'credito']) {
         const destList = Array.isArray(dArt[t]) ? dArt[t] : [];
@@ -625,7 +599,7 @@ export class CartContadoService {
       }
       destino.articulos = dArt;
       await this.carritoWrite.save(destino);
-      // Cerrar el carrito del invitado.
+      
       guestCart.estado = '0';
       await this.carritoWrite.save(guestCart);
       return { data: [destino], success: true, message: 'CARRITO INVITADO FUSIONADO' };
@@ -818,7 +792,7 @@ export class CartContadoService {
           "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id_usuario",
           { id_usuario: String(userId) },
         )
-        // Antigüedad calculada con el reloj de la BD (evita desfases de timezone en JS).
+        
         .addSelect(
           'TIMESTAMPDIFF(MINUTE, COALESCE(cart.updatedAt, cart.createdAt), NOW())',
           'age_min',
@@ -827,7 +801,7 @@ export class CartContadoService {
         qb.andWhere('cart.estado = :estado', { estado: String(estado) });
       }
       const { entities, raw } = await qb.orderBy('cart.codigo', 'DESC').getRawAndEntities();
-      const ABANDONO_MIN = 20; // un carrito no finalizado sin actividad > 20 min = abandonado
+      const ABANDONO_MIN = 20; 
       const enriched = (entities || []).map((c: any, i: number) => {
         const ageMin = Number(raw?.[i]?.age_min ?? 0);
         const finalizado = c?.estado === '0' || c?.finished === '1';
@@ -846,9 +820,6 @@ export class CartContadoService {
     }
   }
 
-  // Propaga los datos del cliente (nombre/correo/teléfono/documento) al objeto JSON
-  // `cliente` de TODOS los carritos del usuario. Se llama cuando el cliente actualiza
-  // su perfil, para que los carritos dejen de mostrar datos viejos ("Usuario Invitado").
   async syncClienteByUser(
     userId: number | string,
     patch: { razonsocial?: string; correo?: string; telefono?: string; documento?: string },
@@ -887,7 +858,6 @@ export class CartContadoService {
       const ids = (Array.isArray(userIds) ? userIds : [])
         .map((x) => String(x))
         .filter((x) => x && x !== 'null' && x !== 'undefined');
-      // ids vacío => resumen de TODOS los usuarios con compras finalizadas (para el filtro por tipo).
 
       const qb = this.carritoRead
         .createQueryBuilder('cart')
@@ -915,12 +885,6 @@ export class CartContadoService {
     }
   }
 
-  /**
-   * Deriva las marcas/categorías que más compra un usuario a partir de sus
-   * carritos finalizados (estado='0'). Enriquece los códigos de artículo con
-   * los datos del producto (marca/categorías) vía el microservicio products.
-   * Se usa para el carrusel personalizado "Compras de usuarios" del Home.
-   */
   async getUserTopCategorias(
     userId: number | string,
     limit = 5,
@@ -950,7 +914,6 @@ export class CartContadoService {
         .limit(50)
         .getMany();
 
-      // Junta los códigos de artículo (contado + crédito) de todas las compras.
       const codigos = [
         ...new Set(
           carritos.flatMap((c) => [
@@ -1009,14 +972,8 @@ export class CartContadoService {
     }
   }
 
-  // Ventana de gracia (min) para editar una orden tras finalizarla.
   private readonly ORDER_EDIT_WINDOW_MIN = 20;
 
-  /**
-   * Órdenes finalizadas del usuario (estado=0) con sus items enriquecidos con la
-   * imagen del producto (los ordenes_items no guardan imagen). Para la página de
-   * tracking del storefront y el admin.
-   */
   async getUserOrders(
     userId: number | string,
   ): Promise<{ data: any[]; success: boolean; message: string }> {
@@ -1026,13 +983,6 @@ export class CartContadoService {
         return { data: [], success: true, message: 'SIN USUARIO' };
       }
 
-      // Leemos desde la conexión de ESCRITURA: son las órdenes propias del usuario
-      // y necesitan consistencia read-after-write (la réplica de lectura queda
-      // stale tras editar artículos/agendamiento y devolvía articulos: []).
-      // Antigüedad calculada con el reloj de la BD (evita desfases de timezone en JS,
-      // ej. mysql2 `timezone` del driver vs. la timezone real del server → minutos negativos).
-      // Nota: esta query NO hace join con items — un join con `take()` fanea filas
-      // y desalinea el `raw` (1 fila por item) contra `entities` (1 por orden).
       const rows = await this.orderWrite
         .createQueryBuilder('orden')
         .select('orden.id', 'id')
@@ -1056,7 +1006,6 @@ export class CartContadoService {
       const orderById = new Map(ordersUnsorted.map((o) => [o.id, o]));
       const orders = orderIds.map((oid) => orderById.get(oid)).filter(Boolean) as typeof ordersUnsorted;
 
-      // Enriquecer con imágenes (una sola llamada a products).
       const codigos = [
         ...new Set(
           orders.flatMap((o) => (o.items || []).map((it) => String(it.producto_codigo))).filter(Boolean),
@@ -1123,12 +1072,6 @@ export class CartContadoService {
     }
   }
 
-  /**
-   * Edita una orden dentro de la ventana de gracia (20 min): cambia el
-   * agendamiento (fecha/hora/franja) y/o los artículos. Persiste en ordenes /
-   * ordenes_items, refleja los cambios en el carrito asociado y re-envía la
-   * solicitud al ERP (CentralApp).
-   */
   async updateOrder(
     userId: number | string,
     codigo: string,
@@ -1147,7 +1090,6 @@ export class CartContadoService {
         return { data: null, success: false, message: 'ORDEN NO ENCONTRADA' };
       }
 
-      // Validación server-side de la ventana de gracia.
       const minutos = (Date.now() - new Date(order.fecha_creacion).getTime()) / 60000;
       if (minutos >= this.ORDER_EDIT_WINDOW_MIN) {
         return {
@@ -1157,17 +1099,14 @@ export class CartContadoService {
         };
       }
 
-      // Carrito asociado (para reflejar los cambios y re-empujar al ERP).
       const carrito = await this.carritoWrite
         .createQueryBuilder('cart')
         .where('cart.codigo = :codigo', { codigo: order.carrito_codigo })
         .getOne();
 
-      // Auditoría de cambios post-compra (se persiste en order.cambios).
       const cambios: any[] = Array.isArray(order.cambios) ? [...order.cambios] : [];
       const ahora = new Date().toISOString();
 
-      // 1) Agendamiento → datos_envio de la orden + envio del carrito.
       if (patch.agendamiento) {
         const a = patch.agendamiento;
         const envioPrev: any = { ...(order.datos_envio || {}) };
@@ -1197,7 +1136,6 @@ export class CartContadoService {
         });
       }
 
-      // 2) Items → reemplaza ordenes_items, recalcula total, actualiza carrito.
       if (Array.isArray(patch.items) && patch.items.length > 0) {
         const nuevos = patch.items.map((it) => ({
           codigo: String(it.codigo),
@@ -1256,7 +1194,6 @@ export class CartContadoService {
       await this.orderWrite.save(order);
       if (carrito) await this.carritoWrite.save(carrito);
 
-      // 3) Re-empujar la solicitud al ERP (best-effort, en segundo plano).
       const clienteToken = (order.datos_pago as any)?.cliente?.equipo || (carrito?.cliente as any)?.equipo;
       if (clienteToken) {
         setImmediate(async () => {
@@ -1276,10 +1213,6 @@ export class CartContadoService {
     }
   }
 
-  /**
-   * Tracking por producto (admin): órdenes que contienen un código de artículo,
-   * con datos de la orden y del cliente. Para el submódulo Productos → Tracking.
-   */
   async getOrdersByProduct(
     productoCodigo: string,
   ): Promise<{ data: any; success: boolean; message: string }> {
@@ -1460,14 +1393,6 @@ export class CartContadoService {
     }
   }
 
-  // Listado de carritos para el panel de administración (sin token de cliente).
-  // Devuelve una lista UNIFICADA donde cada carrito trae su `situacion` calculada
-  // server-side (fuente de verdad) + métricas para gestión:
-  //   - situacion: 'en_proceso' (<=20min sin actividad) | 'abandonado' (>20min) | 'finalizado'
-  //   - ageMin: minutos desde la última actividad (updatedAt, o createdAt si nunca se tocó)
-  //   - metodoPago / entrega ('retiro'|'delivery') / tiempoFinalizacionMin / total (sólo finalizados)
-  // Orden: abandonados primero (los que hay que contactar), luego en proceso, luego finalizados.
-  // Filtros: `search` (código o datos del cliente), `situacion`, rango `desde/hasta`.
   async getCartWithoutToken(
     filters: any,
   ): Promise<{
@@ -1481,7 +1406,7 @@ export class CartContadoService {
     totalFiltrado: number;
     promedioFinalizacionMin: number;
   }> {
-    const ABANDONO_MIN = 20; // sin actividad > 20 min y no finalizado = abandonado
+    const ABANDONO_MIN = 20; 
     const limit = Math.max(1, Number(filters?.limit ?? 10));
     const offset = Math.max(0, Number(filters?.offset ?? filters?.skip ?? 0));
     const search = String(filters?.search ?? '').trim().toLowerCase();
@@ -1494,17 +1419,14 @@ export class CartContadoService {
     const hasDesde = !!(desde && !Number.isNaN(desde.getTime()));
     const hasHasta = !!(hasta && !Number.isNaN(hasta.getTime()));
 
-    // Expresiones SQL reutilizables (MariaDB).
     const ageExpr = `TIMESTAMPDIFF(MINUTE, COALESCE(c.updatedAt, c.createdAt), NOW())`;
-    // OJO: `finished` puede ser NULL. Sin COALESCE, `(false OR NULL)=NULL` y `NOT NULL=NULL`
-    // (lógica de 3 valores de SQL) → los carritos no finalizados quedarían sin clasificar.
+
     const finalizadoExpr = `(c.estado = '0' OR COALESCE(c.finished, '') = '1')`;
     const abandonadoExpr = `(NOT ${finalizadoExpr} AND ${ageExpr} > ${ABANDONO_MIN})`;
     const enProcesoExpr = `(NOT ${finalizadoExpr} AND ${ageExpr} <= ${ABANDONO_MIN})`;
     const situacionExpr = `CASE WHEN ${finalizadoExpr} THEN 'finalizado' WHEN ${abandonadoExpr} THEN 'abandonado' ELSE 'en_proceso' END`;
     const prioridadExpr = `CASE WHEN ${abandonadoExpr} THEN 0 WHEN ${enProcesoExpr} THEN 1 ELSE 2 END`;
 
-    // Base con los filtros comunes (fecha + búsqueda); se clona para cada conteo/consulta.
     const base = () => {
       const qb = this.carritoRead.createQueryBuilder('c');
       if (hasDesde && hasHasta) qb.andWhere('c.createdAt BETWEEN :desde AND :hasta', { desde, hasta });
@@ -1526,21 +1448,18 @@ export class CartContadoService {
       return qb;
     };
 
-    // Totales reales (sobre todo el set filtrado por fecha/búsqueda, sin paginar).
     const [totalEnProceso, totalAbandonados, totalFinalizados] = await Promise.all([
       base().andWhere(enProcesoExpr).getCount(),
       base().andWhere(abandonadoExpr).getCount(),
       base().andWhere(finalizadoExpr).getCount(),
     ]);
 
-    // Promedio de tiempo en finalizar (minutos) — métrica de gestión.
     const avgRow = await base()
       .andWhere(finalizadoExpr)
       .select(`AVG(TIMESTAMPDIFF(MINUTE, c.createdAt, COALESCE(c.updatedAt, c.createdAt)))`, 'avg')
       .getRawOne();
     const promedioFinalizacionMin = Math.round(Number(avgRow?.avg ?? 0));
 
-    // Página: aplica filtro de situación + orden abandonados-primero.
     const pageQb = applySituacion(base())
       .addSelect(situacionExpr, 'situacion_calc')
       .addSelect(ageExpr, 'age_min')
@@ -1752,7 +1671,7 @@ export class CartContadoService {
             eventoId = eventoResponse.id;
           }
         } catch (error) {
-          // Si no hay evento, ignorar
+          
         }
 
         orderItems.push(
@@ -1774,8 +1693,7 @@ export class CartContadoService {
         total: montoTotal,
         datos_envio: process?.envio || {},
         datos_pago: process,
-        // Mantener consistencia con el sistema actual: las órdenes finalizadas
-        // se registran con `estado = 0` (y el conteo de beneficios diarios usa ese valor).
+
         estado: 0,
       });
 
@@ -1800,7 +1718,6 @@ export class CartContadoService {
         }
       });
 
-      // Validar beneficios por cupones (compras diarias)
       setImmediate(async () => {
         try {
           await this.validateDailyPurchaseBenefits(usuario_id);
@@ -2068,8 +1985,7 @@ export class CartContadoService {
         .where('order.cliente_documento = :clienteDocumento', {
           clienteDocumento,
         })
-        // En este proyecto las órdenes "finalizadas" se guardan con `estado = 0`
-        // (ver datos reales). Este conteo alimenta los beneficios diarios.
+
         .andWhere('order.estado = 0')
         .andWhere('order.fecha_creacion BETWEEN :start AND :end', {
           start: todayStart,
@@ -2077,7 +1993,6 @@ export class CartContadoService {
         })
         .getCount();
 
-      //this.logger.log(`Carritos finalizados del día para cliente ${clienteDocumento}: ${orderCount}`);
       return orderCount;
     } catch (error) {
       this.logger.error('Error al contar carritos finalizados del día:', error);
@@ -2099,7 +2014,6 @@ export class CartContadoService {
         ),
       );
 
-      //this.logger.debug('Response Beneficios', benefitEventsResponse.data)
       if (!benefitEventsResponse || !benefitEventsResponse.data) {
         return;
       }

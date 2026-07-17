@@ -20,7 +20,7 @@ export class UserController {
         this.cartClient.send({ cmd: 'get_carts_by_user' }, { userId, estado: '0' }),
       );
       const carts: any[] = Array.isArray(cartsRes?.data) ? cartsRes.data.slice(0, 5) : [];
-      // 2) Códigos de los artículos comprados.
+      
       const codigos = new Set<string>();
       for (const c of carts) {
         const art = c?.articulos || {};
@@ -33,7 +33,6 @@ export class UserController {
       }
       if (codigos.size === 0) return { data: { familia: null, productos: [] }, success: true, message: 'SIN HISTORIAL' };
 
-      // 3) Resolver familia de cada comprado y contar la más frecuente.
       const prodsRes: any = await firstValueFrom(
         this.productsClient.send({ cmd: 'get_products_by_codigos' }, { codigos: [...codigos], limit: 200 }),
       );
@@ -46,7 +45,6 @@ export class UserController {
       if (tally.size === 0) return { data: { familia: null, productos: [] }, success: true, message: 'SIN FAMILIA' };
       const topFamilia = [...tally.entries()].sort((a, b) => b[1] - a[1])[0][0];
 
-      // 4) Productos de esa familia (excluir los ya comprados).
       const recomRes: any = await firstValueFrom(
         this.productsClient.send(
           { cmd: 'get_products' },
@@ -65,13 +63,11 @@ export class UserController {
         }));
       return { data: { familia: topFamilia, productos }, success: true, message: 'RECOMENDACION' };
     } catch (e) {
-      // Sin sesión / sin historial → vacío (el front no muestra la sección).
+      
       return { data: { familia: null, productos: [] }, success: true, message: 'SIN RECOMENDACION' };
     }
   }
 
-  // Resuelve el id del usuario autenticado a partir del JWT (cookie o Authorization),
-  // reutilizando el mismo cmd que /auth/me. Lanza 401 si no hay token válido.
   private async resolverUserId(req: Request): Promise<number> {
     const token =
       (req as any).cookies?.access_token ||
@@ -85,7 +81,6 @@ export class UserController {
     return id;
   }
 
-  // Estado de un email: si existe (en otra cuenta) y si tuvo movimientos (carritos) en 30d.
   @Get('email-status')
   async emailStatus(@Query('email') email: string, @Query('excludeUserId') excludeUserId?: string) {
     const found: any = await firstValueFrom(
@@ -114,7 +109,6 @@ export class UserController {
     }
   }
 
-  // Listado de clientes para el admin: paginado + búsqueda + filtros.
   @Get('clientes')
   async listClientes(@Query() query: any) {
     return await firstValueFrom(
@@ -129,7 +123,6 @@ export class UserController {
     );
   }
 
-  // Todos los ids de clientes que cumplen los filtros (para "seleccionar todos").
   @Get('clientes/ids')
   async clientesIds(@Query() query: any) {
     return await firstValueFrom(
@@ -137,9 +130,6 @@ export class UserController {
     );
   }
 
-  // Cupones del usuario, ENRIQUECIDOS con el detalle del master (content).
-  // Backward-compatible: conserva idCupon/descripcion (los usa el admin) y agrega
-  // codigo/tipoDescuento/porcentaje/valor/montoMinimo/vigente (los usa el storefront).
   @Get(':id/cupones')
   async userCoupons(@Param('id') id: string) {
     const uc: any = await firstValueFrom(
@@ -169,8 +159,6 @@ export class UserController {
     return { data, success: true, message: 'CUPONES DEL USUARIO' };
   }
 
-  // Ingesta de tracking (público): fire-and-forget hacia el auth service vía NATS emit.
-  // Acepta userId (o guestId) en el body; no espera respuesta ni bloquea al cliente.
   @Post('track')
   trackEvent(@Body() body: { userId?: string; guestId?: string; tipo: string; metadata?: any } | any) {
     try {
@@ -186,12 +174,11 @@ export class UserController {
         this.authClient.emit('track_user_event', normalized).subscribe({ error: () => undefined });
       }
     } catch {
-      // fire-and-forget: nunca falla al cliente
+      
     }
     return { success: true };
   }
 
-  // Resumen de seguimiento (30 días) de un cliente para el admin.
   @Get(':id/tracking')
   async userTracking(@Param('id') id: string) {
     return await firstValueFrom(
@@ -219,7 +206,6 @@ export class UserController {
     }
   }
 
-  // ----------------------------- Perfil (datos personales) del usuario autenticado -----------------------------
   @Get('me/perfil')
   async getMiPerfil(@Req() req: Request) {
     const userId = await this.resolverUserId(req);
@@ -228,8 +214,6 @@ export class UserController {
     );
   }
 
-  // Autocompletado de cliente del ERP por documento/RUC (checkout). Público: se usa
-  // antes de que el cliente nuevo tenga sesión completa.
   @Get('erp-cliente/:documento')
   async getClienteErp(@Param('documento') documento: string) {
     return await firstValueFrom(
@@ -237,7 +221,6 @@ export class UserController {
     );
   }
 
-  // Catálogos de Cargo y Rubro del ERP para los selects del checkout de crédito.
   @Get('erp-cargos-rubros')
   async getCargosRubros() {
     return await firstValueFrom(
@@ -254,8 +237,7 @@ export class UserController {
     const res: any = await firstValueFrom(
       this.authClient.send({ cmd: 'update_user_personal' }, { userId, patch }),
     );
-    // Propaga los datos nuevos al objeto `cliente` de TODOS los carritos del usuario
-    // (best-effort: si falla, el perfil igual quedó actualizado).
+
     if (res?.success) {
       try {
         await firstValueFrom(
@@ -279,8 +261,6 @@ export class UserController {
     return res;
   }
 
-  // ----------------------------- Direcciones del usuario autenticado -----------------------------
-  // El userId SIEMPRE se resuelve del token (no se confía en un id del cliente).
   @Get('me/direcciones')
   async getMisDirecciones(@Req() req: Request) {
     const userId = await this.resolverUserId(req);

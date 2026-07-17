@@ -521,7 +521,6 @@ export class LandingValidationService {
       };
     }
 
-    // Validar formato del slug (solo letras, números, guiones y guiones bajos)
     const slugRegex = /^[a-z0-9-_]+$/;
     if (!slugRegex.test(slug)) {
       const error = new Error('Formato de slug inválido');
@@ -566,7 +565,6 @@ export class LandingValidationService {
       };
     }
 
-    // Validar que sea un identificador válido
     const keyRegex = /^[A-Z_]+$/;
     if (!keyRegex.test(templateKey)) {
       const error = new Error('Formato de template key inválido');

@@ -10,13 +10,10 @@ export interface TrackEventInput {
 }
 
 const RETENTION_DAYS = 30;
-const FLUSH_MS = 5000; // vuelca el buffer cada 5s
-const FLUSH_MAX = 200; // o al acumular 200 eventos
-const CLEANUP_MS = 6 * 60 * 60 * 1000; // purga cada 6h
+const FLUSH_MS = 5000; 
+const FLUSH_MAX = 200; 
+const CLEANUP_MS = 6 * 60 * 60 * 1000; 
 
-// Tracking de usuarios: ingesta fire-and-forget con buffer en memoria + escritura
-// por lotes (no golpea la DB en cada evento), retención de 30 días purgada por
-// intervalo, y agregación para el panel del admin (módulo de clientes).
 @Injectable()
 export class UserTrackService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(UserTrackService.name);
@@ -36,7 +33,7 @@ export class UserTrackService implements OnModuleInit, OnModuleDestroy {
     this.cleanupTimer = setInterval(() => {
       this.cleanupOld().catch((e) => this.logger.warn(`cleanup falló: ${e?.message ?? e}`));
     }, CLEANUP_MS);
-    // Purga inicial poco después del arranque.
+    
     setTimeout(() => this.cleanupOld().catch(() => undefined), 30_000);
   }
 
@@ -46,7 +43,6 @@ export class UserTrackService implements OnModuleInit, OnModuleDestroy {
     await this.flush().catch(() => undefined);
   }
 
-  // Fire-and-forget: solo bufferea. Ignora eventos sin userId/tipo.
   track(event: TrackEventInput | TrackEventInput[]): void {
     const events = Array.isArray(event) ? event : [event];
     for (const e of events) {
@@ -76,11 +72,10 @@ export class UserTrackService implements OnModuleInit, OnModuleDestroy {
     if (res.affected) this.logger.log(`Tracking: purgados ${res.affected} eventos > ${RETENTION_DAYS} días`);
   }
 
-  // Resumen de los últimos 30 días para el admin.
   async getUserTrack(userId: string): Promise<any> {
     const uid = String(userId ?? '').trim();
     if (!uid) return this.emptySummary();
-    // Asegura que lo bufferizado de este usuario esté persistido antes de leer.
+    
     await this.flush().catch(() => undefined);
 
     const since = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);

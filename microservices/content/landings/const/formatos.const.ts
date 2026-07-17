@@ -1,5 +1,5 @@
 export const FORMATOS_TEMPLATES = {
-  // Template 1: Landing Hero Moderna
+  
   HERO_MODERNA: {
     name: 'Hero Moderna',
     slug: 'hero-moderna',
@@ -83,7 +83,6 @@ export default HeroModerna;
     ]
   },
 
-  // Template 2: Landing Producto
   PRODUCTO_FEATURES: {
     name: 'Producto Features',
     slug: 'producto-features',
@@ -119,7 +118,7 @@ const ProductoFeatures = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      {/* Header */}
+      {}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -136,7 +135,7 @@ const ProductoFeatures = ({
         </div>
       </header>
 
-      {/* Hero Section */}
+      {}
       <section className="py-20 px-4">
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
@@ -148,7 +147,7 @@ const ProductoFeatures = ({
         </div>
       </section>
 
-      {/* Features Grid */}
+      {}
       <section id="features" className="py-20 px-4 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-3 gap-8">
@@ -175,7 +174,7 @@ const ProductoFeatures = ({
         </div>
       </section>
 
-      {/* CTA Section */}
+      {}
       <section className="py-20 px-4 bg-gradient-to-r from-blue-600 to-purple-600">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
@@ -213,7 +212,6 @@ export default ProductoFeatures;
     ]
   },
 
-  // Template 3: Landing SaaS
   SAAS_LANDING: {
     name: 'SaaS Landing',
     slug: 'saas-landing',
@@ -255,7 +253,7 @@ const SaasLanding = ({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
+      {}
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -272,7 +270,7 @@ const SaasLanding = ({
         </div>
       </nav>
 
-      {/* Hero Section */}
+      {}
       <section className="relative py-20 px-4 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-indigo-50 to-purple-50"></div>
         <div className="relative max-w-7xl mx-auto text-center">
@@ -297,7 +295,7 @@ const SaasLanding = ({
         </div>
       </section>
 
-      {/* Stats Section */}
+      {}
       <section className="py-16 px-4 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-8 text-center">
@@ -321,7 +319,7 @@ const SaasLanding = ({
         </div>
       </section>
 
-      {/* Pricing Section */}
+      {}
       <section id="pricing" className="py-20 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
@@ -402,7 +400,6 @@ export default SaasLanding;
     ]
   },
 
-  // Template 4: Landing Minimalista
   MINIMALISTA: {
     name: 'Minimalista Clean',
     slug: 'minimalista-clean',
@@ -421,7 +418,7 @@ const Minimalista = ({
 }) => {
   return (
     <div className="min-h-screen bg-white">
-      {/* Simple Navigation */}
+      {}
       <header className="absolute top-0 left-0 right-0 z-10">
         <div className="max-w-6xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
@@ -433,7 +430,7 @@ const Minimalista = ({
         </div>
       </header>
 
-      {/* Hero Section */}
+      {}
       <section className="min-h-screen flex items-center justify-center px-6">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-5xl md:text-7xl font-light text-gray-900 mb-6 leading-tight tracking-tight">
@@ -451,12 +448,12 @@ const Minimalista = ({
         </div>
       </section>
 
-      {/* Divider */}
+      {}
       <div className="max-w-6xl mx-auto px-6">
         <div className="border-t border-gray-200"></div>
       </div>
 
-      {/* Content Section */}
+      {}
       <section className="py-32 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-2 gap-24 items-center">
@@ -503,7 +500,7 @@ const Minimalista = ({
         </div>
       </section>
 
-      {/* Contact Section */}
+      {}
       <section className="py-32 px-6">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-light text-gray-900 mb-6">
@@ -518,7 +515,7 @@ const Minimalista = ({
         </div>
       </section>
 
-      {/* Footer */}
+      {}
       <footer className="py-12 px-6 border-t border-gray-200">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between">

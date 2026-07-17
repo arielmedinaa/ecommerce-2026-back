@@ -276,8 +276,6 @@ export class LandingsService {
     }
   }
 
-  // ==================== MÉTODOS DE FORMATOS ====================
-
   async getAllFormatos(
     page = 1,
     limit = 10,

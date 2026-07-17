@@ -1,8 +1,6 @@
 import { DynamicModule, Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 
-// Conservado por compatibilidad; ya no se usa para descubrimiento (NATS es un bus
-// compartido, no requiere host:port por servicio).
 export const SERVICE_PORTS = {
   AUTH_SERVICE: 3101,
   CART_SERVICE: 3102,
@@ -13,14 +11,10 @@ export const SERVICE_PORTS = {
   IMAGE_SERVICE: 3107,
 } as const;
 
-/** Servidores NATS del bus de mensajería (default: el Service `nats` en k8s). */
 const getNatsServers = (): string[] => [
   process.env.NATS_URL || 'nats://nats:4222',
 ];
 
-// Configuración del lado CLIENTE (ClientProxy). Todos los clientes publican al mismo
-// bus NATS; el subject se deriva del pattern `{cmd}` y NATS lo entrega al queue group
-// del servicio dueño. No lleva `queue` (eso es del lado servidor / subscriber).
 export const getMicroserviceConfig = (_serviceName: string) => ({
   transport: Transport.NATS,
   options: { servers: getNatsServers() },
@@ -54,7 +48,7 @@ export class MicroserviceModule {
     return {
       module: MicroserviceModule,
       imports: [
-        ClientsModule.register(clientModules as any), // Temporary type assertion
+        ClientsModule.register(clientModules as any), 
       ],
       exports: [ClientsModule],
     };

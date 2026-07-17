@@ -231,7 +231,6 @@ export class PromotionsService {
     const promo = await this.promotionRepositoryRead.findOne({ where: { id: promoId } });
     if (!promo) throw new NotFoundException('Promoción no encontrada');
 
-    // Backwards compatible: if someone still uses key/url, store it as a lightweight banner entry
     const legacyBanner: PromotionBannerRef = {
       bannerId: `legacy:${key}:${Date.now()}`,
       nombre: `legacy-${promoId}-${key}`,
@@ -369,8 +368,6 @@ export class PromotionsService {
     return top || null;
   }
 
-  // Devuelve los codigos de producto asociados a una promocion (para el carrusel
-  // de landings). Orden estable por mas vendidos / mas vistos.
   async getPromotionProducts(promoId: number): Promise<{
     promoId: number;
     codigos: string[];
@@ -408,7 +405,6 @@ export class PromotionsService {
     return uniquePromoIds.map((id) => byId.get(id)).filter(Boolean);
   }
 
-  // Helpers for controller payloads
   parsePromoId(promoId: any) {
     return this.parseId(promoId, 'promoId');
   }

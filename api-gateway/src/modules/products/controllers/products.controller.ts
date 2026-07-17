@@ -93,8 +93,6 @@ export class ProductsController {
     }
   }
 
-  // Catálogo completo (~41k, proc v2) para el panel "Analizar Artículos" del admin.
-  // Paginado + buscable server-side (limit/offset/search/categoria/marca/proveedor/precio).
   @Post('/v2')
   async getCatalogoV2(@Body() filters: any = {}) {
     try {
@@ -112,7 +110,6 @@ export class ProductsController {
     }
   }
 
-  // Sugerencias de búsqueda (autocomplete + términos de refinamiento) para el storefront.
   @Get('/suggestions')
   async getProductSuggestions(@Query('q') q: string, @Query('limit') limit?: string) {
     try {
@@ -126,7 +123,6 @@ export class ProductsController {
     }
   }
 
-  // Complementos en dos niveles (cercanos/lejanos) de un producto → grid "Agrega más productos".
   @Post('/complementos')
   async getComplementosProducto(@Body() body: { codigo: string }) {
     try {
@@ -140,7 +136,6 @@ export class ProductsController {
     }
   }
 
-  // Registrar búsqueda (agregado "lo más buscado"). Fire-and-forget desde el front.
   @Post('/search-log')
   async logSearch(@Body() body: { termino: string; resultados?: number }) {
     try {
@@ -152,7 +147,6 @@ export class ProductsController {
     }
   }
 
-  // Términos más buscados.
   @Get('/mas-buscado')
   async getMasBuscado(@Query('limit') limit?: string) {
     try {
@@ -164,7 +158,6 @@ export class ProductsController {
     }
   }
 
-  // Horarios de agendamiento (ERP, en vivo) para el checkout.
   @Get('/horarios-agendamiento')
   async getHorariosAgendamiento() {
     try {
@@ -176,7 +169,6 @@ export class ProductsController {
     }
   }
 
-  // Stock real por códigos (validación en checkout).
   @Post('/stock')
   async getProductsStock(@Body() body: { codigos: string[] }) {
     try {
@@ -188,7 +180,6 @@ export class ProductsController {
     }
   }
 
-  // Fechas/horas de entrega válidas según stock + horarios + ciudad.
   @Post('/agendamiento/slots')
   async getAgendamientoSlots(@Body() body: { codigos: string[]; ciudadId?: number; retirar?: boolean }) {
     try {

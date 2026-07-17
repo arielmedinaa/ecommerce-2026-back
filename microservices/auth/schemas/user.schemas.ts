@@ -47,23 +47,12 @@ export class User {
   @Column({ type: 'json', nullable: true })
   infoDispositivo?: any;
 
-  // Direcciones de envío guardadas por el usuario (array). Cada item:
-  // { id, etiqueta, callePrincipal, calleSecundaria, numerocasa, ciudad?, ciudadId?,
-  //   barrio?, referencia?, ubicacion?: {lat,lng}, predeterminada? }
-  // El shape es compatible con el `envio` del carrito para prefilear el checkout.
   @Column({ type: 'json', nullable: true })
   direcciones?: any[];
 
-  // Referencias familiares (parentescos) del cliente para solicitudes a crédito.
-  // JSON serializado: [{ nombre, parentesco, celular }] (hasta 3, sin duplicados).
   @Column({ type: 'longtext', nullable: true })
   parentescos?: string;
 
-  // Datos laborales del cliente (para solicitudes a crédito). Se sincronizan
-  // desde el ERP cuando existen y, si no, el cliente los completa una vez y
-  // quedan guardados para no re-tipear el próximo checkout.
-  // Shape: { empresa, cargo, rubro, fechaIngreso, salario?, ciudad, barrio,
-  //          callePrincipal, calleSecundaria, numerocasa, contactoNombre, contactoTelefono }
   @Column({ type: 'json', nullable: true })
   datosLaborales?: any;
 

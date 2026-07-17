@@ -86,8 +86,7 @@ export class PromotionsController {
     if (bannerFiles.length > 0) {
       const baseName = String(normalizedBody?.nombre || 'promo');
       const ts = Date.now();
-      // Subidas en paralelo: cada banner es independiente. El índice mantiene el
-      // nombre único y Promise.all preserva el orden de bannerRefs.
+
       bannerRefs = await Promise.all(
         bannerFiles.map(async (file, i) => {
           const uniqueName = `${baseName}-${ts}-${i + 1}`;
@@ -373,7 +372,7 @@ export class PromotionsController {
     }
 
     const ts = Date.now();
-    // Subidas en paralelo: cada banner es independiente. Promise.all preserva el orden.
+    
     const bannerRefs: any[] = await Promise.all(
       banners.map(async (file, i) => {
         const uniqueName = `${promoName}-${ts}-${i + 1}`;

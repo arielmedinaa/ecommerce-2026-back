@@ -211,13 +211,8 @@ export class AuthService {
       throw new Error('Guest token expired or invalid');
     }
 
-    // Crear usuario Google
     const googleUser = await this.validateGoogleUser(googleProfile);
 
-    // Migrar carritos del guest al Google user (actualizar cliente.equipo)
-    // Esto se haría en el servicio de cart
-
-    // Eliminar usuario invitado
     await this.userRepository.delete(guestUser.id);
 
     this.logger.log(
@@ -327,7 +322,6 @@ export class AuthService {
         },
       };
 
-      // Bloquea asignar un cupón vencido/inactivo a un cliente.
       try {
         const cuponRes = await this.resilientService.sendWithResilience(
           this.contentClient,
@@ -353,7 +347,6 @@ export class AuthService {
         resilientOptions,
       ) as number;
 
-      // Semántica (igual que el admin): limite<=0 ⇒ ilimitado por usuario; N>0 ⇒ máximo N.
       const limiteRaw = Number(limitePorUsuarioCupon);
       const limite = Number.isFinite(limiteRaw) ? limiteRaw : 1;
       if (limite > 0) {
@@ -378,7 +371,6 @@ export class AuthService {
         },
       );
 
-      // createCouponForUser devuelve null si el índice UNIQUE rechazó el duplicado.
       if (!coupon) {
         return {
           success: false,
@@ -441,8 +433,7 @@ export class AuthService {
 
     const asignados: number[] = [];
     const omitidos: Array<{ userId: number; motivo: string }> = [];
-    // Semántica: limite<=0 ⇒ ilimitado por usuario (el índice UNIQUE evita el duplicado
-    // exacto igual); limite>0 ⇒ máximo N por usuario.
+
     const limiteNorm = Number.isFinite(limite) ? limite : 1;
     for (const uid of userIds) {
       try {

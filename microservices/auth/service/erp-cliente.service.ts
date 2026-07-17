@@ -64,9 +64,7 @@ export class ErpClienteService {
       );
       const c = rows?.[0];
       if (!c) {
-        // Fallback: la persona puede no estar en `cliente` (clientes de crédito)
-        // pero sí en un maestro de personas. Envuelto en su propio try/catch para
-        // que una tabla inexistente no enmascare el lookup principal.
+
         try {
           const personas = await this.econt.executeQuery<any>(
             `SELECT primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, nombre_completo
@@ -139,8 +137,6 @@ export class ErpClienteService {
     }
   }
 
-  // Referencias familiares del cliente. El depto. de crédito exige hasta 3 sin
-  // duplicar nombre ni celular.
   private async getReferencias(
     codigoCliente: number,
   ): Promise<ErpReferencia[]> {
@@ -176,8 +172,6 @@ export class ErpClienteService {
     }
   }
 
-  // Catálogos del ERP para los selects de Cargo y Rubro del checkout de crédito.
-  // `cargo` y `rubro_cliente` son listas independientes. Best-effort.
   async getCatalogos(): Promise<ErpCatalogos> {
     try {
       const [cargos, rubros] = await Promise.all([
@@ -215,7 +209,7 @@ export class ErpClienteService {
     try {
       const d = v instanceof Date ? v : new Date(String(v));
       if (isNaN(d.getTime())) return '';
-      // Formato YYYY-MM-DD para inputs date.
+      
       return d.toISOString().slice(0, 10);
     } catch {
       return '';
@@ -240,12 +234,9 @@ export class ErpClienteService {
       .filter(Boolean)
       .join(' ')
       .trim();
-    // Caso confiable: el ERP trae apellidos estructurados → usarlos directo.
+    
     if (ap) return { firstName: n1 || this.str(c.nombre), lastName: ap };
 
-    // Sin apellidos estructurados: el string completo (nombre1 o nombre) trae
-    // nombre + apellido juntos. Primero intentamos desambiguar contra
-    // `bicsa_personas` (columnas discretas); si no aporta, heurística por tokens.
     const doc = c.dv ? `${c.ruc}-${c.dv}` : String(c.ruc ?? '');
     const bicsa = await this.nombreDesdeBicsa(doc);
     if (bicsa && bicsa.lastName) return bicsa;
@@ -254,8 +245,6 @@ export class ErpClienteService {
     return this.splitPorTokens(full);
   }
 
-  // Desambigua nombre/apellido consultando el maestro `bicsa_personas` por
-  // documento (columnas discretas). Devuelve null si no hay datos suficientes.
   private async nombreDesdeBicsa(
     documento: string,
   ): Promise<{ firstName: string; lastName: string } | null> {
@@ -285,9 +274,6 @@ export class ErpClienteService {
     }
   }
 
-  // Heurística por cantidad de tokens (típico PY: 2 nombres + 2 apellidos).
-  //  4+ → 2 nombres / resto apellidos · 3 → 1 nombre / 2 apellidos
-  //  2  → 1 / 1 · 1 → todo nombre.
   private splitPorTokens(full: string): {
     firstName: string;
     lastName: string;

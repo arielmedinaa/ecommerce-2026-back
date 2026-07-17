@@ -34,7 +34,6 @@ export class CartController {
     return result;
   }
 
-  // Admin: carritos de un cliente puntual (no depende del token del cliente).
   @Get('byUser/:userId')
   @SneakyThrows('CartService', 'getCartsByUser')
   async getCartsByUser(@Param('userId') userId: string, @Query() query: any) {
@@ -46,7 +45,6 @@ export class CartController {
     );
   }
 
-  // Órdenes finalizadas del usuario autenticado (página de tracking).
   @Get('orders')
   @UseGuards(JwtAuthGuard)
   @SneakyThrows('CartService', 'getUserOrders')
@@ -57,7 +55,6 @@ export class CartController {
     );
   }
 
-  // Editar una orden dentro de la ventana de gracia (20 min): agendamiento / artículos.
   @Patch('orders/:codigo')
   @UseGuards(JwtAuthGuard)
   @SneakyThrows('CartService', 'updateOrder')
@@ -72,7 +69,6 @@ export class CartController {
     );
   }
 
-  // Admin: órdenes de un cliente puntual (modal de clientes).
   @Get('orders/byUser/:userId')
   @SneakyThrows('CartService', 'getOrdersByUserAdmin')
   async getOrdersByUserAdmin(@Param('userId') userId: string) {
@@ -81,7 +77,6 @@ export class CartController {
     );
   }
 
-  // Admin: tracking por producto (submódulo Productos → Tracking).
   @Get('orders/byProduct/:codigo')
   @SneakyThrows('CartService', 'getOrdersByProduct')
   async getOrdersByProduct(@Param('codigo') codigo: string) {
@@ -90,7 +85,6 @@ export class CartController {
     );
   }
 
-  // Quitar un ítem del carrito activo (estado global → DB).
   @Post('removeItem')
   @SneakyThrows('CartService', 'removeCartItem')
   async removeItem(@Body() body: any, @Req() request: Request) {
@@ -103,7 +97,6 @@ export class CartController {
     );
   }
 
-  // Setear la cantidad de un ítem del carrito activo.
   @Post('itemQty')
   @SneakyThrows('CartService', 'setCartItemQty')
   async setItemQty(@Body() body: any, @Req() request: Request) {
@@ -116,7 +109,6 @@ export class CartController {
     );
   }
 
-  // Quitar varios ítems del carrito activo en una sola operación (atómica).
   @Post('removeItems')
   @SneakyThrows('CartService', 'removeCartItems')
   async removeItems(@Body() body: any, @Req() request: Request) {
@@ -129,7 +121,6 @@ export class CartController {
     );
   }
 
-  // Vaciar el carrito activo.
   @Post('clear')
   @SneakyThrows('CartService', 'clearCart')
   async clear(@Req() request: Request) {
@@ -137,7 +128,6 @@ export class CartController {
     return await firstValueFrom(this.cartClient.send({ cmd: 'clear_cart' }, { token }));
   }
 
-  // Mergear el carrito del invitado (por email) al usuario logueado.
   @Post('mergeGuest')
   @SneakyThrows('CartService', 'mergeGuestCart')
   async mergeGuest(@Body() body: { guestEmail: string }, @Req() request: Request) {
@@ -147,7 +137,6 @@ export class CartController {
     );
   }
 
-  // Resumen de compras por usuario (para clasificar tipo de cliente).
   @Post('comprasResumen')
   @SneakyThrows('CartService', 'getComprasResumen')
   async getComprasResumen(@Body() body: { userIds: (number | string)[] }) {

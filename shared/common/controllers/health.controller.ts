@@ -2,9 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ServiceDiscoveryService } from '@shared/common/services/service-discovery.service';
 import { CommunicationService } from '@shared/common/services/communication.service';
 
-/**
- * Controlador para health checks y descubrimiento de servicios
- */
 @Injectable()
 export class HealthController {
   private readonly logger = new Logger(HealthController.name);
@@ -16,9 +13,6 @@ export class HealthController {
     this.logger.log('Health Controller inicializado');
   }
 
-  /**
-   * Endpoint básico de health check
-   */
   getHealth() {
     const serviceName = process.env.SERVICE_NAME || 'unknown';
     const port = process.env.PORT || 'unknown';
@@ -35,9 +29,6 @@ export class HealthController {
     };
   }
 
-  /**
-   * Endpoint detallado con información del servicio
-   */
   getDetailedHealth() {
     const serviceName = process.env.SERVICE_NAME || 'unknown';
     const port = process.env.PORT || 'unknown';
@@ -58,9 +49,6 @@ export class HealthController {
     };
   }
 
-  /**
-   * Endpoint para descubrimiento de servicios
-   */
   getServices() {
     this.logger.log('Petición de descubrimiento de servicios recibida');
     
@@ -75,9 +63,6 @@ export class HealthController {
     };
   }
 
-  /**
-   * Endpoint para verificar disponibilidad de un servicio específico
-   */
   async checkService(serviceName: string) {
     this.logger.log(`Verificando servicio específico: ${serviceName}`);
     
@@ -100,9 +85,6 @@ export class HealthController {
     };
   }
 
-  /**
-   * Endpoint para refrescar descubrimiento de servicios
-   */
   async refreshServices() {
     this.logger.log('🔄 Solicitud de refresco de servicios recibida');
     
@@ -127,9 +109,6 @@ export class HealthController {
     }
   }
 
-  /**
-   * Endpoint de prueba de comunicación entre servicios
-   */
   async testCommunication(serviceName: string, pattern: any = { cmd: 'ping' }, data: any = { test: true }) {
     this.logger.log(`🧪 Prueba de comunicación solicitada con ${serviceName}`);
     
@@ -138,8 +117,8 @@ export class HealthController {
         serviceName,
         pattern,
         data,
-        null, // Sin ClientProxy para prueba HTTP
-        2, // 2 reintentos
+        null, 
+        2, 
       );
       
       return {

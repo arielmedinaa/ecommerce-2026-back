@@ -214,7 +214,6 @@ export class BaseHttpException extends HttpException {
       throw error;
     }
 
-    // Extraer mensaje de múltiples fuentes
     const errorMessage = error.message || '';
     const microserviceError = error.response?.data || error;
     const microserviceMessage = microserviceError?.message || '';
@@ -242,7 +241,6 @@ export class BaseHttpException extends HttpException {
     console.error('='.repeat(80));
     console.error('END ERROR HANDLING\n');
 
-    // Detectar errores específicos de microservicios
     if (microserviceErrorType === 'BadRequestException' ||
         microserviceError?.statusCode === 400 ||
         fullErrorText.includes('Ya existe una landing') ||
@@ -252,11 +250,9 @@ export class BaseHttpException extends HttpException {
         error.name === 'BadRequestException' || 
         error.constructor?.name === 'BadRequestException' ||
         error.status === 400) {
-      
-      // Extraer el mensaje real del error original
+
       let realMessage = microserviceMessage || errorMessage;
-      
-      // Si el error tiene una respuesta con mensaje, usar ese
+
       if (responseMessage) {
         realMessage = responseMessage;
       } else if (causeMessage) {
@@ -266,8 +262,7 @@ export class BaseHttpException extends HttpException {
       } else if (detailMessage) {
         realMessage = detailMessage;
       }
-      
-      // Si el mensaje contiene "Internal server error", buscar el mensaje real en el error original
+
       if (realMessage === 'Internal server error' && errorMessage) {
         const originalErrorMatch = errorMessage.match(/BadRequestException: (.+)$/);
         if (originalErrorMatch) {
@@ -296,7 +291,6 @@ export class BaseHttpException extends HttpException {
       throw BaseHttpException.notFound('Resource', errorMessage, service, line);
     }
 
-    // Errores de MongoDB
     if (error.code === 11000 || error.code === 'E11000' || fullErrorText.includes('duplicate key')) {
       let field = 'unknown';
       let value = 'unknown';
@@ -318,7 +312,6 @@ export class BaseHttpException extends HttpException {
       throw BaseHttpException.duplicateKey(field, value, service, line);
     }
 
-    // Errores de conexión
     if (error.code === 'ECONNREFUSED') {
       throw BaseHttpException.serviceUnavailable(service || 'Unknown', operation, error, line);
     }
@@ -327,12 +320,10 @@ export class BaseHttpException extends HttpException {
       throw BaseHttpException.timeout(operation || 'Unknown', undefined, service, error, line);
     }
 
-    // Errores de validación de Mongoose
     if (error.name === 'ValidationError' || error.name === 'CastError') {
       throw BaseHttpException.validation(errorMessage, undefined, service, line);
     }
 
-    // Error genérico de microservicio
     if (errorMessage === 'Internal server error' || errorMessage?.includes('Internal server error')) {
       throw BaseHttpException.microserviceError(
         service || 'Unknown', 
@@ -342,7 +333,6 @@ export class BaseHttpException extends HttpException {
       );
     }
 
-    // Error por defecto
     throw BaseHttpException.internalServerError(
       errorMessage || 'Error desconocido',
       service,

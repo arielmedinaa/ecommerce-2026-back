@@ -4,7 +4,8 @@ import {
   Get, 
   Param, 
   Body, 
-  UploadedFile, 
+  UploadedFile,
+  UploadedFiles,
   UseInterceptors,
   Res,
   HttpStatus,
@@ -12,7 +13,7 @@ import {
   Inject,
   UseGuards
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FileFieldsInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { ClientProxy } from '@nestjs/microservices';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes } from '@nestjs/swagger';
@@ -36,31 +37,37 @@ export class ImageController {
   @UseGuards(JwtAuthGuard)
   @Post('banner/upload')
   @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: './temp',
-        filename: (req, file, cb) => {
-          const randomName = Array(32)
-            .fill(null)
-            .map(() => Math.round(Math.random() * 16).toString(16))
-            .join('');
-          cb(null, `${randomName}${extname(file.originalname)}`);
+    FileFieldsInterceptor(
+      [
+        { name: 'file', maxCount: 1 },
+        { name: 'fileMobile', maxCount: 1 },
+      ],
+      {
+        storage: diskStorage({
+          destination: './temp',
+          filename: (req, file, cb) => {
+            const randomName = Array(32)
+              .fill(null)
+              .map(() => Math.round(Math.random() * 16).toString(16))
+              .join('');
+            cb(null, `${randomName}${extname(file.originalname)}`);
+          },
+        }),
+        fileFilter: (req, file, cb) => {
+          
+          const allowedMimes = ['image/webp', 'video/mp4'];
+          if (allowedMimes.includes(file.mimetype)) {
+            cb(null, true);
+          } else {
+            cb(new Error('Solo se permiten imágenes .webp o video mp4'), false);
+          }
         },
-      }),
-      fileFilter: (req, file, cb) => {
-        // Solo .webp (requisito de campaña) o video mp4 (se guarda tal cual).
-        const allowedMimes = ['image/webp', 'video/mp4'];
-        if (allowedMimes.includes(file.mimetype)) {
-          cb(null, true);
-        } else {
-          cb(new Error('Solo se permiten imágenes .webp o video mp4'), false);
-        }
+        limits: {
+          
+          fileSize: 60 * 1024 * 1024,
+        },
       },
-      limits: {
-        // Hasta 60MB para permitir videos mp4 de promoción.
-        fileSize: 60 * 1024 * 1024,
-      },
-    })
+    )
   )
 
   @UseGuards(JwtAuthGuard)
@@ -69,7 +76,7 @@ export class ImageController {
   @ApiResponse({ status: 201, description: 'Banner subido exitosamente' })
   @ApiResponse({ status: 400, description: 'Error en la validación' })
   async uploadBanner(
-    @UploadedFile() file: any,
+    @UploadedFiles() files: { file?: any[]; fileMobile?: any[] },
     @Body() body: {
       nombre: string;
       variante: string;
@@ -78,7 +85,15 @@ export class ImageController {
       meta?: any;
     }
   ) {
+    const file = files?.file?.[0];
+    const fileMobile = files?.fileMobile?.[0];
     try {
+      if (!file) {
+        return {
+          statusCode: HttpStatus.BAD_REQUEST,
+          message: 'Falta el archivo "file" (desktop)',
+        };
+      }
       this.logger.log(`Uploading banner: ${body.nombre}`);
       const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || 'us-east-1';
       const endpoint = process.env.IMAGE_S3_ENDPOINT || process.env.S3_ENDPOINT || process.env.AWS_ENDPOINT;
@@ -98,7 +113,6 @@ export class ImageController {
         }
       }
 
-      const originalKey = `${originalKeyPrefix}/${uuidv4()}_${file.filename}`;
       const s3 = new S3Client({
         region,
         endpoint,
@@ -109,19 +123,27 @@ export class ImageController {
         },
       });
 
-      const bodyBuffer = fs.readFileSync(file.path);
-      await s3.send(
-        new PutObjectCommand({
-          Bucket: bucket,
-          Key: originalKey,
-          Body: bodyBuffer,
-          ContentType: file.mimetype || 'image/webp',
-          CacheControl: 'private, max-age=0, no-cache',
-        }),
-      );
+      const putToS3 = async (f: any) => {
+        const key = `${originalKeyPrefix}/${uuidv4()}_${f.filename}`;
+        const buffer = fs.readFileSync(f.path);
+        await s3.send(
+          new PutObjectCommand({
+            Bucket: bucket,
+            Key: key,
+            Body: buffer,
+            ContentType: f.mimetype || 'image/webp',
+            CacheControl: 'private, max-age=0, no-cache',
+          }),
+        );
+        return key;
+      };
+
+      const originalKey = await putToS3(file);
+      const originalKeyMobile = fileMobile ? await putToS3(fileMobile) : undefined;
 
       const payload = {
         key: originalKey,
+        keyMobile: originalKeyMobile,
         nombre: body.nombre,
         variante: body.variante,
         creadoPor: body.creadoPor,
@@ -133,14 +155,18 @@ export class ImageController {
       const pattern = { cmd: 'upload_banner_from_s3' };
       const result = await firstValueFrom(this.imageClient.send(pattern, payload));
 
-      // Cleanup temp file
       try {
         if (file?.path) fs.unlinkSync(file.path);
+        if (fileMobile?.path) fs.unlinkSync(fileMobile.path);
       } catch {}
 
       return result;
     } catch (error) {
       this.logger.error(`Error uploading banner: ${error.message}`);
+      try {
+        if (file?.path) fs.unlinkSync(file.path);
+        if (fileMobile?.path) fs.unlinkSync(fileMobile.path);
+      } catch {}
       return {
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
         message: 'Error al subir el banner',
@@ -258,7 +284,7 @@ export class ImageController {
         }
       },
       limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB
+        fileSize: 10 * 1024 * 1024, 
       },
     })
   )

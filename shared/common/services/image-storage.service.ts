@@ -25,7 +25,7 @@ async function streamToBuffer(body: any): Promise<Buffer> {
   if (!body) return Buffer.from('');
   if (Buffer.isBuffer(body)) return body;
   if (typeof body === 'string') return Buffer.from(body);
-  // AWS SDK v3 returns Readable stream in Node.
+  
   const readable = body as Readable;
   const chunks: Buffer[] = [];
   for await (const chunk of readable) {
@@ -107,7 +107,6 @@ export class ImageStorageService implements OnModuleInit {
     }
     return `${stripTrailingSlash(this.endpoint)}/${this.bucket}/${key}`;
   }
-
 
   publicUrlForKeyExternal(key: string): string {
     const externalBase = process.env.IMAGE_CDN_EXTERNAL_BASE_URL

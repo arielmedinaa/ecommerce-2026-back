@@ -6,14 +6,13 @@ import { In, Repository } from 'typeorm';
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
-  // Códigos de verificación de email en memoria (dev). Para prod, mover a Redis/DB.
+  
   private emailCodes = new Map<string, { code: string; exp: number }>();
 
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
   ) {}
 
-  // Busca un usuario por email (excluyendo opcionalmente un id, p.ej. el invitado actual).
   async findUserByEmail(email: string, excludeUserId?: number) {
     const e = String(email || '').trim();
     if (!e) return { exists: false };
@@ -22,13 +21,12 @@ export class UserService {
     return { exists: true, userId: u.id, nombre: u.nombre };
   }
 
-  // Genera y "envía" (simulado) un código de verificación de 6 dígitos al email.
   async sendEmailCode(email: string) {
     const e = String(email || '').trim().toLowerCase();
     if (!e) return { success: false, message: 'EMAIL REQUERIDO' };
     const code = String(Math.floor(100000 + Math.random() * 900000));
     this.emailCodes.set(e, { code, exp: Date.now() + 10 * 60 * 1000 });
-    // TODO: integrar proveedor real (SES/SMTP). Por ahora se registra/devuelve en dev.
+    
     this.logger.log(`[email-code] (simulado) -> ${e}: ${code}`);
     return {
       success: true,
@@ -126,7 +124,6 @@ export class UserService {
   }> {
     const page = Math.max(1, Number(params.page) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(params.pageSize) || 20));
-    const search = String(params.search ?? '').trim();
     const sort = ['fechaCreacion', 'nombre', 'email', 'ultimoInicioSesion'].includes(params.sort)
       ? params.sort
       : 'fechaCreacion';
@@ -153,8 +150,6 @@ export class UserService {
     };
   }
 
-  // Aplica los filtros de clientes a un QueryBuilder. Devuelve null si un filtro
-  // de ids (whitelist) quedó vacío (sin coincidencias posibles).
   private construirQueryClientes(params: any = {}): any | null {
     const qb = this.userRepository
       .createQueryBuilder('u')
@@ -191,8 +186,6 @@ export class UserService {
     return qb;
   }
 
-  // Devuelve TODOS los ids de clientes que cumplen los filtros (sin paginar),
-  // para "seleccionar todos" a través de páginas.
   async listClienteIds(params: any = {}): Promise<{ data: number[]; total: number; success: boolean; message: string }> {
     const qb = this.construirQueryClientes(params);
     if (!qb) return { data: [], total: 0, success: true, message: 'SIN COINCIDENCIAS' };
@@ -256,9 +249,6 @@ export class UserService {
     };
   }
 
-  // Envío masivo de mensajes (SIMULADO): no hay proveedor SMS/WhatsApp conectado.
-  // Resuelve teléfonos de los usuarios, "envía" a los que tienen y reporta el resumen.
-  // Dejar este punto listo para enchufar un proveedor real más adelante.
   async enviarMensajeMasivo(payload: {
     userIds: (number | string)[];
     mensaje: string;
@@ -276,7 +266,7 @@ export class UserService {
     for (const u of usuarios) {
       const tel = String(u.numeroCelular ?? '').trim();
       if (tel) {
-        // TODO: integrar proveedor real (Twilio/WhatsApp). Por ahora se registra como enviado.
+        
         this.logger.log(`[mensaje-masivo] (simulado) a ${tel} (user ${u.id})`);
         enviados.push({ id: u.id, telefono: tel });
       } else {
@@ -290,8 +280,6 @@ export class UserService {
     };
   }
 
-  // ============================ PERFIL (datos personales) ============================
-  // Devuelve los datos personales guardados del usuario, para prefilear el checkout.
   async getProfile(userId: number): Promise<{ data: any; success: boolean; message: string }> {
     const id = Number(userId);
     if (!Number.isFinite(id)) return { data: null, success: false, message: 'USUARIO INVÁLIDO' };
@@ -326,8 +314,6 @@ export class UserService {
     }
   }
 
-  // Actualiza datos personales del cliente (nombre, teléfono, documento, email).
-  // userId viene del token.
   async updateProfile(
     userId: number,
     patch: { nombre?: string; numeroCelular?: string; numeroDocumento?: string; email?: string; parentescos?: string; datosLaborales?: any },
@@ -342,10 +328,9 @@ export class UserService {
       const email = String(patch.email).trim().toLowerCase();
       if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) updates.email = email;
     }
-    // Referencias/parentescos (JSON serializado). Acepta string ya serializado.
+    
     if (patch?.parentescos != null) updates.parentescos = String(patch.parentescos);
-    // Datos laborales (columna JSON). Acepta objeto o string ya serializado; solo
-    // se guarda si trae algún valor real (evita pisar con un objeto vacío).
+
     if (patch?.datosLaborales != null) {
       const lab =
         typeof patch.datosLaborales === 'string'
@@ -360,15 +345,10 @@ export class UserService {
     return { data: updates, success: true, message: 'PERFIL ACTUALIZADO' };
   }
 
-  // ============================ DIRECCIONES ============================
-  // Direcciones de envío guardadas por usuario (columna JSON `direcciones`).
-  // Read-modify-write: leemos el array actual, lo mutamos y lo guardamos completo.
-
   private genDireccionId(): string {
     return `dir_${Date.now().toString(36)}_${Math.floor(Math.random() * 1e6).toString(36)}`;
   }
 
-  // Normaliza una dirección que llega del front al shape canónico (compatible con el envio del carrito).
   private normalizarDireccion(input: any = {}): any {
     const ubic = input.ubicacion || {};
     return {
@@ -404,8 +384,7 @@ export class UserService {
 
     const lista = Array.isArray(user.direcciones) ? [...user.direcciones] : [];
     const norm = this.normalizarDireccion(address);
-    // Dedup: si ya existe una dirección equivalente (misma calle/nº/ciudad/barrio),
-    // no la duplicamos (el autocompletado del ERP se dispara varias veces).
+
     const claveDir = (d: any) =>
       [d.callePrincipal, d.calleSecundaria, d.numerocasa, d.ciudadId ?? '', d.barrio]
         .map((v) => String(v ?? '').trim().toLowerCase())
@@ -415,7 +394,7 @@ export class UserService {
       return { data: lista, nueva: yaExiste, success: true, message: 'DIRECCIÓN YA EXISTENTE' };
     }
     const nueva = { id: this.genDireccionId(), ...norm };
-    // Si es la primera, o se pidió predeterminada, marcarla como tal y desmarcar el resto.
+    
     if (nueva.predeterminada || lista.length === 0) {
       lista.forEach((d) => (d.predeterminada = false));
       nueva.predeterminada = true;
@@ -453,7 +432,7 @@ export class UserService {
     let lista = Array.isArray(user.direcciones) ? [...user.direcciones] : [];
     const tenia = lista.some((d) => d.id === addressId);
     lista = lista.filter((d) => d.id !== addressId);
-    // Si borramos la predeterminada y quedan otras, promover la primera.
+    
     if (tenia && lista.length > 0 && !lista.some((d) => d.predeterminada)) {
       lista[0].predeterminada = true;
     }

@@ -72,3 +72,13 @@ data:
   IMAGE_S3_SIGNED_URL_TTL_SECONDS: "300"
   IMAGE_S3_EXTERNAL_BASE_URL: "http://s3.us-east-1.localhost.localstack.cloud:4566/ecommerce-images"
   IMAGE_CDN_BASE_URL: ""
+
+  VPOS_CLAVE_PUBLICA: "iuooOrDVDmnDEmSnp0OrZjzwyevyvLAL"
+  VPOS_CLAVE_PRIVADA: "8O(1VXAOn8Q0(+xCnFx(zxIv,I8D6rW153y1hg,n"
+  VPOS_URL_API: "https://vpos.infonet.com.py:8888"
+  VPOS_RETURN_URL: "https://your-domain.com/checkout/return"
+  VPOS_CANCEL_URL: "https://your-domain.com/checkout/cancel"
+  # NOTA: este valor es solo informativo/de referencia — Bancard NO lo lee de acá.
+  # La URL de confirmación real se registra en el portal de comercios
+  # (comercios.bancard.com.py), fuera de este repo. Actualizar ambos en conjunto.
+  VPOS_CONFIRMATION_URL: "https://menu-also-eddie-sas.trycloudflare.com/api/payments/vpos/confirmation"

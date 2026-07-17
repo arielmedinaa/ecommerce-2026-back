@@ -37,7 +37,3 @@ export class VerticalController {
 
 }
 
-
-//{$and:[{estado:1},{imagenes:{$ne:[]}},{cantidad:{$gt:0}},{dias_ultimo_movimiento:{$lt:30}},{web:1},{precio:{$gt:9000}},{$or:[{'marca.nombre':'Midea'},{'marca.nombre':'Carrier'},{'marca.nombre':'Dako'},{'marca.nombre':'Bandeirante'}]}]}
-
-//{$and:[{estado:1},{imagenes:{$ne:[]}},{cantidad:{$gt:0}},{dias_ultimo_movimiento:{$lt:30}},{web:1},{precio:{$gt:9000}},{$or:[{'marca.nombre':'Ariete'},{'marca.nombre':'DeLonghi'},{'marca.nombre':'Gama'},{'marca.nombre':'Parlux'},{'marca.nombre':'Severin'}]}]}

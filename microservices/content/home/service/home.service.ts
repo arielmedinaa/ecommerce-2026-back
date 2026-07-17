@@ -46,7 +46,6 @@ export class HomeService implements OnModuleInit {
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
-
   private readonly FRESH_MS = 60 * 1000;
   private readonly REDIS_TTL_S = 60 * 60;
   private readonly revalidating = new Set<string>();
@@ -476,9 +475,6 @@ export class HomeService implements OnModuleInit {
       });
     };
 
-    // PRODUCTOS config-driven: cada sección PRODUCTOS puede traer productos
-    // puntuales (config.codigos) o un set aleatorio acotado a productos con
-    // stock y precio (config.modo === 'aleatorio', ej. "Lo Más Vendido").
     const productosByKey = new Map<string, any[]>();
     for (const s of sections) {
       const t = s.type as HomeSectionType;
@@ -508,7 +504,7 @@ export class HomeService implements OnModuleInit {
             ),
           );
           const data: any[] = Array.isArray(res?.data) ? [...res.data] : [];
-          // Barajado Fisher-Yates y corte al límite.
+          
           for (let i = data.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [data[i], data[j]] = [data[j], data[i]];
@@ -550,8 +546,7 @@ export class HomeService implements OnModuleInit {
           section.payload = resolveBanners2Payload(s.config);
           break;
         case 'OFERTAS':
-          // Si hay oferta configurada en el admin, se usa ese payload enriquecido
-          // (título/desc/fechas/tema/productos). Si no, fallback al listado general.
+
           section.payload = ofertaPayload
             ? { oferta: ofertaPayload, ofertas: input.ofertas || [] }
             : { ofertas: input.ofertas || [] };
@@ -575,8 +570,7 @@ export class HomeService implements OnModuleInit {
               href: c?.href ?? null,
             };
           };
-          // Layout por filas (cada fila con su nº de columnas). Fallback al
-          // formato viejo (columnas + celdas planas) → una sola fila.
+
           let filas: any[] = [];
           if (Array.isArray(cfgGrid.filas) && cfgGrid.filas.length > 0) {
             filas = cfgGrid.filas.map((f: any) => ({
@@ -614,13 +608,6 @@ export class HomeService implements OnModuleInit {
     });
   }
 
-  /**
-   * Resuelve el carrusel personalizado "Compras de usuarios" para un usuario
-   * concreto. NO pasa por el cache global del Home: se llama desde un endpoint
-   * autenticado aparte. Deriva las marcas más compradas del usuario (cart) y
-   * trae productos de esa marca (products). Si el usuario no tiene compras,
-   * devuelve un set aleatorio como fallback (mismo comportamiento que 'aleatorio').
-   */
   async buildPersonalizedCarousel(
     userId: number | string,
     key: string,
@@ -644,7 +631,6 @@ export class HomeService implements OnModuleInit {
       let productos: any[] = [];
       let marcaNombre: string | null = null;
 
-      // 1) Top marcas del usuario a partir de sus compras finalizadas.
       let top: any = null;
       try {
         top = await firstValueFrom(
@@ -655,7 +641,6 @@ export class HomeService implements OnModuleInit {
       }
       const marcas: Array<{ codigo: string; nombre: string | null }> = top?.data?.marcas ?? [];
 
-      // 2) Traer productos con stock de esas marcas (en orden de preferencia).
       for (const m of marcas) {
         if (productos.length >= limit) break;
         try {
@@ -680,7 +665,6 @@ export class HomeService implements OnModuleInit {
         }
       }
 
-      // 3) Fallback: sin compras (o sin resultados) → aleatorio con stock.
       if (productos.length === 0) {
         try {
           const res: any = await firstValueFrom(

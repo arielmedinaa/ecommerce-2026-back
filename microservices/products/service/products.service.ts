@@ -22,7 +22,6 @@ import { ProductsImagesService } from './products-images.service';
 
 import { ProductsUtils } from '@products/utils/utils-products';
 import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
-//import { Promo } from '../schemas/promo.schemas';
 
 interface CartResponse {
   data: any[];
@@ -168,9 +167,7 @@ export class ProductsService {
 
   private async contarProductos(filters: any = {}): Promise<number> {
     const f = this.productsUtils.buildProcFilters(filters);
-    // Mismas condiciones que proc_obtener_articulos_ecommerce_web: el stock>0 es
-    // OBLIGATORIO siempre (el proc ignora p_solo_con_stock), por eso el total coincide
-    // con las filas que devuelve el listado (~1524 sin filtros).
+
     const rows = await this.productReadRepository.query(
       `SELECT COUNT(*) AS total
          FROM articulo a
@@ -373,7 +370,7 @@ export class ProductsService {
         message: 'SIN CODIGO',
       };
     try {
-      // findAll (proc) trae nombre_subcategoria/nombre_categoria; el proc matchea por código.
+      
       const { data } = await this.findAll({ search: cod, limit: 1, offset: 0 });
       const p: any = Array.isArray(data) ? data[0] : null;
       if (!p)
@@ -552,7 +549,7 @@ export class ProductsService {
     }[] = [];
 
     if (retiro) {
-      // Retiro en local: hoy desde ahora (dentro de ventana) + próximos días completos.
+      
       for (let i = 0; i < 7 && slots.length < 5; i++) {
         const fecha = this.productsUtils.addDaysYmd(ymd, i);
         const ddow = new Date(`${fecha}T12:00:00Z`).getUTCDay();
@@ -571,7 +568,6 @@ export class ProductsService {
       };
     }
 
-    // -------- Delivery --------
     if (interior) {
       avisos.push(
         'Tu ciudad es del interior: la entrega se agenda para el día siguiente o posterior.',
@@ -592,7 +588,6 @@ export class ProductsService {
       };
     }
 
-    // Capital
     const hoy = byDow.get(dow);
     if (hoy && hoy.estado === 1) {
       const ini = this.productsUtils.hmsToMin(hoy.inicial)!;
@@ -601,7 +596,7 @@ export class ProductsService {
       const corte = this.productsUtils.hmsToMin(hoy.corte);
       if (nowMin < ini)
         avisos.push(`Los pedidos se reciben desde las ${hoy.inicial}.`);
-      const earliest = Math.max(nowMin + 240, ini); // +4h de preparación
+      const earliest = Math.max(nowMin + 240, ini); 
       let hoyPosible = false;
       if (nowMin <= fin) {
         if (allInStock) hoyPosible = earliest <= maximo;
@@ -797,7 +792,6 @@ export class ProductsService {
     const productosEnCache: any[] = [];
     const codigosFaltantes: string[] = [];
 
-    // Lecturas de caché en paralelo (una clave Redis por código).
     const cacheHits = await Promise.all(
       ids.map((codigo) => this.cache.get<any>(`products:codigo:${codigo}`)),
     );
@@ -886,7 +880,6 @@ export class ProductsService {
       };
     });
 
-    // Respeta el orden recibido (orden de la promo / del editor).
     const byCod = new Map(enriquecidos.map((d) => [d.codigo_articulo, d]));
     const ordered = lista.map((c) => byCod.get(c)).filter(Boolean);
 

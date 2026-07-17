@@ -124,4 +124,72 @@ export class PaymentsController {
 
     return result;
   }
+
+  @Post('vpos/single-buy')
+  @UsePipes(new ValidationPipe())
+  @UseGuards(JwtAuthGuard)
+  @SneakyThrows('PaymentsService', 'vposSingleBuy')
+  async vposSingleBuy(@Body() body: any) {
+    const payload = {
+      codigoCarrito: body.codigoCarrito,
+      carrito: body.carrito,
+      monto: body.monto,
+      moneda: body.moneda || 'PYG',
+      cliente: body.cliente,
+      descripcion: body.descripcion,
+      zimple: body.zimple,
+      return_url: body.return_url,
+      cancel_url: body.cancel_url,
+      additional_data: body.additional_data,
+    };
+
+    const result = await firstValueFrom(
+      this.paymentsClient.send({ cmd: 'vpos_single_buy' }, payload),
+    );
+    return result;
+  }
+
+  @Post('vpos/rollback')
+  @UsePipes(new ValidationPipe())
+  @UseGuards(JwtAuthGuard)
+  @SneakyThrows('PaymentsService', 'vposRollback')
+  async vposRollback(@Body() body: any) {
+    const result = await firstValueFrom(
+      this.paymentsClient.send({ cmd: 'vpos_rollback' }, body),
+    );
+    return result;
+  }
+
+  @Get('vpos/confirmation/:shopProcessId')
+  @UsePipes(new ValidationPipe())
+  @UseGuards(JwtAuthGuard)
+  @SneakyThrows('PaymentsService', 'vposGetConfirmation')
+  async vposGetConfirmation(@Param('shopProcessId') shopProcessId: string) {
+    const result = await firstValueFrom(
+      this.paymentsClient.send({ cmd: 'vpos_get_confirmation' }, { shopProcessId }),
+    );
+    return result;
+  }
+
+  @Get('vpos/status/:shopProcessId')
+  @UseGuards(JwtAuthGuard)
+  @SneakyThrows('PaymentsService', 'vposGetLocalStatus')
+  async vposGetLocalStatus(@Param('shopProcessId') shopProcessId: string) {
+    const result = await firstValueFrom(
+      this.paymentsClient.send({ cmd: 'vpos_get_local_status' }, { shopProcessId }),
+    );
+    return result;
+  }
+
+  @Post('vpos/confirmation')
+  async vposProcessConfirmation(@Body() body: any) {
+    try {
+      await firstValueFrom(
+        this.paymentsClient.send({ cmd: 'vpos_process_confirmation' }, body || {}),
+      );
+    } catch (error) {
+      console.error('Error procesando confirmación VPOS', error?.message || error);
+    }
+    return { status: 'success' };
+  }
 }

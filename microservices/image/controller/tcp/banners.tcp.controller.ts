@@ -34,6 +34,7 @@ export class BannersController {
     modificadoPor: string;
     meta?: Record<string, any>;
     contentType?: string;
+    keyMobile?: string;
   }) {
     return await this.bannerService.uploadBannerFromS3(
       data.key,
@@ -43,6 +44,7 @@ export class BannersController {
       data.modificadoPor,
       data.meta,
       data.contentType,
+      data.keyMobile,
     );
   }
 

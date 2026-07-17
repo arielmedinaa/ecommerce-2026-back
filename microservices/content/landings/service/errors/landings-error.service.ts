@@ -21,7 +21,7 @@ export class LandingErrorService {
     try {
       let userId: string | undefined;
       if (context?.userId) {
-        // extract string from context if necessary
+        
         userId = typeof context.userId === 'object' && context.userId.toString ? context.userId.toString() : String(context.userId);
       }
 
@@ -174,11 +174,6 @@ export class LandingErrorService {
     if (filters?.userId) {
       query.userId = filters.userId;
     }
-
-    // TypeORM usually handles date ranges with Between or LessThan/GreaterThan
-    // Here we can use simple QueryBuilder approaches instead or skip for simplicity,
-    // but we won't fully map $gte unless using Between
-    // Let's omit date ranges for brevity or use if really needed.
 
     if (filters?.search) {
       return [

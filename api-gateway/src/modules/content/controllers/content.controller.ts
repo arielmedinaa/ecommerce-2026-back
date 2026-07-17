@@ -42,8 +42,6 @@ export class ContentController {
     }
   }
 
-  // Carrusel personalizado "Compras de usuarios": se resuelve por-usuario
-  // (fuera del cache global del Home). Requiere sesión.
   @Get('home/carousel/:key')
   @UseGuards(JwtAuthGuard)
   @SneakyThrows('ContentController', 'getPersonalizedCarousel')
@@ -288,8 +286,6 @@ export class ContentController {
     return stats;
   }
 
-  // ==================== PROMOCIONES (para landings) ====================
-
   @Get('promotions/active')
   @SneakyThrows('ContentController', 'promocionesActivas')
   async getActivePromotions() {
@@ -382,7 +378,7 @@ export class ContentController {
   }
 
   @Post('cuponPorProducto')
-  //@UseGuards(JwtAuthGuard)
+  
   @SneakyThrows('ContentController', 'crearCuponPorProducto')
   async crearCuponPorProducto(@Body() body: any) {
     const cupon = await firstValueFrom(
@@ -461,7 +457,6 @@ export class ContentController {
     return { message: 'Cupón desactivado exitosamente', cupon: result };
   }
 
-  // Eventos
   @Post('event')
   @SneakyThrows('ContentController', 'createEvent')
   async createEvent(@Body() body: any) {
@@ -564,7 +559,6 @@ export class ContentController {
     return result;
   }
 
-  // Condiciones de eventos
   @Post('event/condition')
   @SneakyThrows('ContentController', 'createCondition')
   async createCondition(@Body() body: any) {

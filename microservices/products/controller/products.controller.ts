@@ -4,8 +4,7 @@ import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
 import { ProductsService } from '@products/service/products.service';
 import { ProductsImagesService } from '@products/service/products-images.service';
 import { Product } from '@products/schemas/product.schema';
-// import { CreateComboDto } from '@products/schemas/dto/create-combo.dto';
-// import { Combos } from '@products/schemas/combos.schema';
+
 import { OfertasService } from '@products/service/ofertas.service';
 import { PromosService } from '@products/service/promos.service';
 
@@ -24,11 +23,6 @@ export class ProductsController {
     return this.productsService.create(createProductDto);
   }
 
-  // @MessagePattern({ cmd: 'createCombo' })
-  // public createCombo (createComboDto: CreateComboDto): Promise<Combos> {
-  //   return this.productsService.createCombo(createComboDto);
-  // }
-
   @MessagePattern({ cmd: 'get_products' })
   async findAll(@Body() filters: { offset: number; limit: number }) {
     try {
@@ -39,7 +33,6 @@ export class ProductsController {
     }
   }
 
-  // Catálogo completo (proc v2, ~41k) para el panel "Analizar Artículos" del admin.
   @MessagePattern({ cmd: 'get_catalogo_v2' })
   async getCatalogoV2(@Body() filters: any = {}) {
     try {
@@ -137,21 +130,6 @@ export class ProductsController {
     return await this.productsService.prefetchfindAll(filters);
   }
 
-  // @MessagePattern({ cmd: 'get_products_by_promos' })
-  // async findByPromos(filters: any = {}) {
-  //   try {
-  //     return await this.productsService.findByPromos(filters);
-  //   } catch (error) {
-  //     this.logger.error('Error in findByPromos:', error);
-  //     throw error;
-  //   }
-  // }
-
-  // @MessagePattern({ cmd: 'search_combo_by_codigo' })
-  // async searchComboByCodigo(codigo: string) {
-  //   return await this.productsService.findComboByCodigo(codigo);
-  // }
-
   @MessagePattern({ cmd: 'get_products_jota' })
   async getProductsJota(@Body() filters: { offset: number; limit: number }) {
     return await this.productsService.getProductsJota(filters);
@@ -174,7 +152,7 @@ export class ProductsController {
 
   @MessagePattern({ cmd: 'create_oferta' })
   async createOferta(ofertaData: any) {
-    // Si viene id/codigo, es UPDATE (agregar/quitar productos de una oferta existente).
+    
     const codigo = ofertaData?.id ?? ofertaData?.codigo;
     return await this.ofertasService.createOrUpdateOferta(
       ofertaData,
@@ -197,7 +175,6 @@ export class ProductsController {
     return this.promosService.createPromo(promoData);
   }
 
-  // Message Patterns para imágenes de productos
   @MessagePattern({ cmd: 'upload_product_image' })
   async uploadProductImage(@Payload() payload: { 
     productoCodigo: string; 

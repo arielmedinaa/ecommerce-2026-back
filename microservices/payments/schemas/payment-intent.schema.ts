@@ -17,6 +17,7 @@ export type EstadoIntentoPago =
 
 @Entity('intentos_pago')
 @Index(['idTransaccion'], { unique: true })
+@Index(['shopProcessId'], { unique: true })
 @Index(['codigoCarrito'])
 @Index(['estado'])
 export class PaymentIntent {
@@ -25,6 +26,9 @@ export class PaymentIntent {
 
   @Column({ name: 'id_transaccion', type: 'varchar', length: 100 })
   idTransaccion: string;
+
+  @Column({ name: 'shop_process_id', type: 'varchar', length: 30, nullable: true })
+  shopProcessId: string | null;
 
   @Column({ name: 'codigo_carrito', type: 'int' })
   codigoCarrito: number;

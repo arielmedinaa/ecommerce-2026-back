@@ -276,7 +276,6 @@ export class ProductsUtils {
     const cleanedQuery = searchQuery.trim().toLowerCase();
     const searchTerms = this.expandSearchTerms(cleanedQuery);
 
-    // Check if query is a numeric product code
     let nombre = cleanedQuery;
     const numericRegex = /^\d+$/;
     let exactMatch = false;
@@ -284,7 +283,7 @@ export class ProductsUtils {
     let detectedCategory: string | null = null;
 
     if (numericRegex.test(cleanedQuery)) {
-      // For numeric codes, search both as code and as part of name
+      
       nombre = cleanedQuery;
     } else {
       const exactMatchRegex = /"([^"]+)"/;
@@ -418,7 +417,7 @@ export class ProductsUtils {
         const numericRegex = /^\d+$/;
 
         if (numericRegex.test(searchParams.nombre)) {
-          // For numeric searches, check exact match in codigo_articulo
+          
           matchesNombre =
             productCode === searchParams.nombre ||
             productCode.includes(searchParams.nombre);
@@ -516,7 +515,7 @@ export class ProductsUtils {
       const base = tok.slice(0, -2);
       if (base.length >= 4) return base;
     }
-    // Vocal + "s" → quitar "s": fundas→funda, zapatillas→zapatilla, mesas→mesa.
+    
     if (/[aeiou]s$/i.test(tok)) return tok.slice(0, -1);
     return tok;
   }
@@ -568,7 +567,7 @@ export class ProductsUtils {
     const hh = parts.hour === '24' ? '00' : parts.hour;
     const ymd = `${parts.year}-${parts.month}-${parts.day}`;
     const minutes = Number(hh) * 60 + Number(parts.minute);
-    const dow = new Date(`${ymd}T12:00:00Z`).getUTCDay(); // 0=Dom..6=Sab
+    const dow = new Date(`${ymd}T12:00:00Z`).getUTCDay(); 
     return { ymd, minutes, dow };
   }
 

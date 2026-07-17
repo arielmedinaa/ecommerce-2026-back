@@ -34,7 +34,7 @@ async function bootstrap() {
 
 async function bootstrapWithRetry() {
   let attempt = 0;
-  // eslint-disable-next-line no-constant-condition
+  
   while (true) {
     try {
       attempt++;
@@ -42,7 +42,7 @@ async function bootstrapWithRetry() {
       break;
     } catch (err) {
       const delayMs = Math.min(30000, 1000 * attempt);
-      // eslint-disable-next-line no-console
+      
       console.error(
         `Auth bootstrap failed (attempt ${attempt}). Retrying in ${delayMs}ms`,
         err,

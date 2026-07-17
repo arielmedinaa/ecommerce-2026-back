@@ -37,7 +37,6 @@ export class ProductsImagesService {
     this.ensureDirectoryExists();
   }
 
-  /** S3 key bajo la que se guardan las imágenes de producto (mismo bucket que banners). */
   private productKey(fileName: string): string {
     return `products/images/${fileName}`;
   }
@@ -142,11 +141,6 @@ export class ProductsImagesService {
     });
   }
 
-  /**
-   * Devuelve el binario de una imagen de producto para que el gateway lo sirva.
-   * En S3 lee del bucket; en modo local lee del disco (compatibilidad). Espejo de
-   * `BannerService.getBannerFileBuffer`.
-   */
   async getProductImageFile(
     filename: string,
   ): Promise<{ buffer: Buffer; contentType: string }> {
@@ -227,10 +221,6 @@ export class ProductsImagesService {
     this.logger.log(`Imágenes reordenadas para producto: ${productoCodigo}`);
   }
 
-  /**
-   * Borra el archivo físico de una imagen de producto: del bucket S3 si está en
-   * modo S3, o del disco local en caso contrario. No toca la BD.
-   */
   private async removeStoredFile(fileName?: string): Promise<void> {
     if (!fileName) return;
 

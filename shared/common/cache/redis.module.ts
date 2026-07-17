@@ -3,7 +3,6 @@ import IORedis, { Redis } from 'ioredis';
 import { CachePersistenteService } from '../services/cache-persistente.service';
 import { REDIS_CLIENT } from './redis.constants';
 
-// Re-export para compatibilidad con imports previos `from '.../redis.module'`.
 export { REDIS_CLIENT } from './redis.constants';
 
 function resolveRedisUrl(): string {

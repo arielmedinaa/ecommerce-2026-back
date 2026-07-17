@@ -95,7 +95,6 @@ export class PaymentsSqsWorker implements OnModuleDestroy {
           return;
         }
 
-        // Re-enqueue with exponential backoff (basic)
         const delayMs = Math.min(60000, baseDelayMs * Math.max(1, attempts));
         await this.sqs.sendJsonWithDelay(
           this.queueUrl!,
@@ -116,7 +115,6 @@ export class PaymentsSqsWorker implements OnModuleDestroy {
         return;
       }
 
-      // Simulated success: mark completed + write final payment record
       await this.paymentsService.actualizarEstadoIntentoPago(
         idIntentoPago,
         'completado',
@@ -129,6 +127,15 @@ export class PaymentsSqsWorker implements OnModuleDestroy {
         event: 'payment_intent_completed',
         idIntentoPago,
         paymentId: pago?.id,
+      });
+      return;
+    }
+
+    if (body?.type === 'vpos_confirmation' && body?.confirmation) {
+      await this.paymentsService.processVposConfirmation(body.confirmation);
+      this.logger.log({
+        event: 'vpos_confirmation_processed',
+        shopProcessId: body.confirmation.shop_process_id,
       });
       return;
     }

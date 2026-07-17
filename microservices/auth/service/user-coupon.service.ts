@@ -45,9 +45,7 @@ export class UserCouponService {
 
   async getUserCouponsCount(userId: number, idCupon: number): Promise<number> {
     try {
-      // Conteo explícito por la FK (uc.userId) para evitar el pitfall de count()
-      // con where sobre relación anidada, que puede no aplicar el join y devolver
-      // un conteo incorrecto → el límite por usuario nunca frenaba.
+
       return await this.userCouponRepository
         .createQueryBuilder('uc')
         .where('uc.userId = :uid', { uid: Number(userId) })
@@ -115,8 +113,7 @@ export class UserCouponService {
 
       return await this.userCouponRepository.save(newCoupon);
     } catch (error: any) {
-      // El índice UNIQUE (uq_user_cupon) rechaza el duplicado: lo tratamos como
-      // "ya asignado" (null) en vez de romper.
+
       if (error?.code === 'ER_DUP_ENTRY' || error?.errno === 1062) {
         this.logger.warn(`Cupón ${couponData.idCupon} ya asignado al usuario ${userId} (duplicado bloqueado)`);
         return null;

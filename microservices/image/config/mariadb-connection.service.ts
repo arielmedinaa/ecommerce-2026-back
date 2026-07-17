@@ -6,7 +6,6 @@ import { Connection } from 'typeorm';
 export class MariaDbConnectionService implements OnModuleInit {
   private readonly logger = new Logger(MariaDbConnectionService.name);
 
-  // We inject WRITE_CONNECTION to test basic connectivity
   constructor(@InjectConnection('WRITE_CONNECTION') private readonly connection: Connection) {}
 
   onModuleInit() {

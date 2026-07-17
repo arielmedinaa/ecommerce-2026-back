@@ -22,11 +22,10 @@ async function bootstrap() {
     const server = app.getHttpAdapter();
     await app.listen(4008);
 
-    // Start SQS worker (LocalStack/AWS)
     try {
       await app.get(PaymentsSqsWorker).start();
     } catch (e) {
-      // eslint-disable-next-line no-console
+      
       console.error('Failed to start PaymentsSqsWorker', e);
     }
 
@@ -37,7 +36,7 @@ async function bootstrap() {
 
 async function bootstrapWithRetry() {
   let attempt = 0;
-  // eslint-disable-next-line no-constant-condition
+  
   while (true) {
     try {
       attempt++;
@@ -45,7 +44,7 @@ async function bootstrapWithRetry() {
       break;
     } catch (err) {
       const delayMs = Math.min(30000, 1000 * attempt);
-      // eslint-disable-next-line no-console
+      
       console.error(
         `Payments bootstrap failed (attempt ${attempt}). Retrying in ${delayMs}ms`,
         err,

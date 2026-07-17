@@ -36,7 +36,7 @@ export class OrderItem {
   subtotal: number;
 
   @Column({ type: 'int', nullable: true })
-  evento_id: number | null; // ID del evento si aplica
+  evento_id: number | null; 
 
   @CreateDateColumn()
   fecha_creacion: Date;
