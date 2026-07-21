@@ -1,0 +1,16 @@
+{
+  "name": "bulk-product-images",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Herramienta de una sola vez: busca en Google Images y carga imágenes faltantes de productos (excepto JOTA).",
+  "type": "commonjs",
+  "scripts": {
+    "find-missing": "node find-missing.js",
+    "scrape": "node scrape-and-upload.js"
+  },
+  "dependencies": {
+    "mysql2": "^3.11.0",
+    "puppeteer": "^23.0.0",
+    "sharp": "^0.33.0"
+  }
+}

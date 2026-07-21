@@ -7,15 +7,17 @@ import { Product } from '@products/schemas/product.schema';
 
 import { OfertasService } from '@products/service/ofertas.service';
 import { PromosService } from '@products/service/promos.service';
+import { CombosService } from '@products/service/combos.service';
 
 @Controller()
 export class ProductsController {
   private readonly logger = new Logger(ProductsController.name);
   constructor(
-    private readonly productsService: ProductsService, 
-    private readonly ofertasService: OfertasService, 
+    private readonly productsService: ProductsService,
+    private readonly ofertasService: OfertasService,
     private readonly promosService: PromosService,
-    private readonly productsImagesService: ProductsImagesService
+    private readonly productsImagesService: ProductsImagesService,
+    private readonly combosService: CombosService,
   ) {}
 
   @MessagePattern({ cmd: 'createProducts' })
@@ -268,9 +270,9 @@ export class ProductsController {
   }
 
   @MessagePattern({ cmd: 'reorder_product_images' })
-  async reorderProductImages(@Payload() payload: { 
-    productoCodigo: string; 
-    imageOrders: { id: number; orden: number }[] 
+  async reorderProductImages(@Payload() payload: {
+    productoCodigo: string;
+    imageOrders: { id: number; orden: number }[]
   }) {
     try {
       await this.productsImagesService.reorderImages(
@@ -280,6 +282,141 @@ export class ProductsController {
       return { message: 'Imágenes reordenadas exitosamente' };
     } catch (error) {
       this.logger.error('Error in reorder_product_images:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'get_promo_info_for_codigos' })
+  async getPromoInfoForCodigos(@Payload() payload: { codigos: string[] }) {
+    try {
+      return await this.productsService.getPromoInfoForCodigos(payload?.codigos || []);
+    } catch (error) {
+      this.logger.error('Error in get_promo_info_for_codigos:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'list_econt_promotions' })
+  async listEcontPromotions() {
+    try {
+      const data = await this.productsService.listEcontPromotions();
+      return { data, success: true, message: 'Promociones activas de ECONT' };
+    } catch (error) {
+      this.logger.error('Error in list_econt_promotions:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'get_econt_promotion_products' })
+  async getEcontPromotionProducts(@Payload() payload: { idPromo: number }) {
+    try {
+      return await this.productsService.getEcontPromotionProducts(Number(payload?.idPromo));
+    } catch (error) {
+      this.logger.error('Error in get_econt_promotion_products:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'update_product_sello' })
+  async updateProductSello(@Payload() payload: {
+    productoCodigo: string;
+    file: any;
+    userId?: string;
+    fechaDesde?: string | null;
+    fechaHasta?: string | null;
+  }) {
+    try {
+      return await this.productsService.updateProductSello(
+        payload.productoCodigo,
+        payload.file,
+        payload.userId,
+        payload.fechaDesde,
+        payload.fechaHasta,
+      );
+    } catch (error) {
+      this.logger.error('Error in update_product_sello:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'delete_product_sello' })
+  async deleteProductSello(@Payload() productoCodigo: string) {
+    try {
+      return await this.productsService.deleteProductSello(productoCodigo);
+    } catch (error) {
+      this.logger.error('Error in delete_product_sello:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'create_cms_combo' })
+  async createCmsCombo(@Payload() dto: any) {
+    return await this.combosService.createCmsCombo(dto);
+  }
+
+  @MessagePattern({ cmd: 'update_cms_combo' })
+  async updateCmsCombo(@Payload() payload: { id: number; dto: any }) {
+    return await this.combosService.updateCmsCombo(Number(payload?.id), payload?.dto);
+  }
+
+  @MessagePattern({ cmd: 'get_cms_combos' })
+  async getCmsCombos(@Payload() filters: { limit: number; offset: number; activo?: boolean }) {
+    return await this.combosService.getCmsCombos(filters);
+  }
+
+  @MessagePattern({ cmd: 'get_cms_combo_by_id' })
+  async getCmsComboById(@Payload() payload: { id: number }) {
+    return await this.combosService.getCmsComboById(Number(payload?.id));
+  }
+
+  @MessagePattern({ cmd: 'delete_cms_combo' })
+  async deleteCmsCombo(@Payload() payload: { id: number }) {
+    return await this.combosService.deleteCmsCombo(Number(payload?.id));
+  }
+
+  @MessagePattern({ cmd: 'toggle_cms_combo_status' })
+  async toggleCmsComboStatus(@Payload() payload: { id: number }) {
+    return await this.combosService.toggleCmsComboStatus(Number(payload?.id));
+  }
+
+  @MessagePattern({ cmd: 'upload_combo_image' })
+  async uploadComboImage(@Payload() payload: { id: number; file: any }) {
+    try {
+      return await this.combosService.uploadComboImage(Number(payload?.id), payload?.file);
+    } catch (error) {
+      this.logger.error('Error in upload_combo_image:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'list_econt_combo_promotions' })
+  async listEcontCombosPromotions() {
+    try {
+      const data = await this.combosService.listEcontCombosPromotions();
+      return { data, success: true, message: 'Promociones activas de ECONT con combos' };
+    } catch (error) {
+      this.logger.error('Error in list_econt_combo_promotions:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'get_econt_combos_for_promo' })
+  async getEcontCombosForPromo(@Payload() payload: { idPromo: number }) {
+    try {
+      const data = await this.combosService.getEcontCombosForPromo(Number(payload?.idPromo));
+      return { data, success: true, message: 'Combos de la promoción ECONT' };
+    } catch (error) {
+      this.logger.error('Error in get_econt_combos_for_promo:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'upload_econt_combo_image' })
+  async uploadEcontComboImage(@Payload() payload: { idCombo: number; file: any }) {
+    try {
+      return await this.combosService.uploadEcontComboImage(Number(payload?.idCombo), payload?.file);
+    } catch (error) {
+      this.logger.error('Error in upload_econt_combo_image:', error);
       throw error;
     }
   }

@@ -161,8 +161,10 @@ export class OfertasService {
       }
       const productosConCuotas =
         await this.productsUtils.calculoCreditoProductosOferta(oferta.productos);
+      const productosConPromo =
+        await this.productsUtils.aplicarPreciosPromoOferta(productosConCuotas);
       return {
-        data: { ...oferta, productos: productosConCuotas },
+        data: { ...oferta, productos: productosConPromo },
         message: 'Oferta encontrada',
         success: true,
       };
@@ -190,10 +192,11 @@ export class OfertasService {
 
       const ofertasConCuotas = await Promise.all(ofertas.map(async (oferta) => {
         const productosConCuotas = await this.productsUtils.calculoCreditoProductosOferta(oferta.productos);
-        
+        const productosConPromo = await this.productsUtils.aplicarPreciosPromoOferta(productosConCuotas);
+
         return {
           ...oferta,
-          productos: productosConCuotas
+          productos: productosConPromo
         };
       }));
 

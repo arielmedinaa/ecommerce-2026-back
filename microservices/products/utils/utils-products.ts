@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from '../schemas/product.schemas';
+import { ProductsSello } from '../schemas/products-sello.schema';
 import { Repository } from 'typeorm';
+import { PromoPricingUtil } from './promo-pricing.util';
 
 @Injectable()
 export class ProductsUtils {
@@ -90,6 +92,9 @@ export class ProductsUtils {
   constructor(
     @InjectRepository(Product, 'READ_CONNECTION')
     private readonly productReadRepository: Repository<Product>,
+    @InjectRepository(ProductsSello, 'READ_ECOMMERCE_PRODUCTS_CONNECTION')
+    private readonly productsSelloReadRepository: Repository<ProductsSello>,
+    private readonly promoPricingUtil: PromoPricingUtil,
   ) {}
 
   buildProcFilters(filters: any = {}) {
@@ -140,6 +145,18 @@ export class ProductsUtils {
       });
     }
 
+    const selloMap = new Map<string, string>();
+    if (codigosProductos.length > 0) {
+      const sellos = await this.productsSelloReadRepository
+        .createQueryBuilder('s')
+        .where('s.producto_codigo IN (:...codigos)', {
+          codigos: codigosProductos,
+        })
+        .andWhere('s.activo = :activo', { activo: true })
+        .getMany();
+      sellos.forEach((s) => selloMap.set(s.producto_codigo, s.url_sello));
+    }
+
     const dataWithTrimmedNames = productos.map((item: any) => ({
       ...item,
       codigo_articulo: item.codigo_articulo.trim(),
@@ -150,9 +167,86 @@ export class ProductsUtils {
       codigo_de_barra: item.codigo_de_barra.trim(),
       descripcion: item.nota.trim(),
       imagenes: imagenesMap.get(item.codigo_articulo.trim()) || [],
+      sello: selloMap.get(item.codigo_articulo.trim()) || null,
     }));
 
-    return this.calculoCreditoProductos(dataWithTrimmedNames || []);
+    const conCredito = await this.calculoCreditoProductos(
+      dataWithTrimmedNames || [],
+    );
+    return this.aplicarPreciosPromo(conCredito);
+  }
+
+  async aplicarPreciosPromo(products: any[]): Promise<any[]> {
+    if (!Array.isArray(products) || products.length === 0) return products;
+
+    const codigos = products.map((p: any) => p.codigo_articulo);
+    const promoMap = await this.promoPricingUtil.getPromoInfoForCodigos(codigos);
+    if (promoMap.size === 0) return products;
+
+    return products.map((product: any) => {
+      const promo = promoMap.get(String(product.codigo_articulo).trim());
+      if (!promo) return product;
+
+      const cuotasPromo = promo.cuotas
+        .slice()
+        .sort((a, b) => a.cuota - b.cuota)
+        .map((c) => ({
+          cuota: c.cuota,
+          incremento: null,
+          precio: c.precio,
+          precioFormateado: c.precio.toFixed(0),
+          precioOriginal: c.precioOriginal,
+        }));
+
+      return {
+        ...product,
+        precioventaRedondeado:
+          promo.contado !== null ? promo.contado : product.precioventaRedondeado,
+        precioventa: promo.contado !== null ? promo.contado : product.precioventa,
+        preciotope: promo.original !== null ? promo.original : product.preciotope,
+        cuotas: cuotasPromo.length > 0 ? cuotasPromo : product.cuotas,
+        enPromo: true,
+        idPromo: promo.idPromo,
+        promoDisponibleEcommerce: promo.disponibleEcommerce,
+      };
+    });
+  }
+
+  async aplicarPreciosPromoOferta(productos: any[]): Promise<any[]> {
+    if (!Array.isArray(productos) || productos.length === 0) return productos;
+
+    const codigos = productos.map((p: any) => p.codigo_articulo);
+    const promoMap = await this.promoPricingUtil.getPromoInfoForCodigos(codigos);
+    if (promoMap.size === 0) return productos;
+
+    return productos.map((producto: any) => {
+      const promo = promoMap.get(String(producto.codigo_articulo).trim());
+      if (!promo) return producto;
+
+      const cuotasPromo = promo.cuotas
+        .slice()
+        .sort((a, b) => a.cuota - b.cuota)
+        .map((c) => ({
+          cuota: c.cuota,
+          incremento: null,
+          precio: c.precio,
+          precioFormateado: c.precio.toFixed(0),
+          precioOriginal: c.precioOriginal,
+        }));
+
+      return {
+        ...producto,
+        precioContadoRedondeado:
+          promo.contado !== null ? promo.contado : producto.precioContadoRedondeado,
+        precioContado: promo.contado !== null ? promo.contado : producto.precioContado,
+        precioCredito: promo.contado !== null ? promo.contado : producto.precioCredito,
+        precioOriginal: promo.original !== null ? promo.original : producto.precioOriginal,
+        cuotas: cuotasPromo.length > 0 ? cuotasPromo : producto.cuotas,
+        enPromo: true,
+        idPromo: promo.idPromo,
+        promoDisponibleEcommerce: promo.disponibleEcommerce,
+      };
+    });
   }
 
   async calculoCreditoProductos(products: any[]) {

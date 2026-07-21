@@ -8,6 +8,7 @@ import { JwtModule } from '@nestjs/jwt';
   imports: [
     MicroserviceModule.register('CONTENT_SERVICE'),
     MicroserviceModule.register('IMAGE_SERVICE'),
+    MicroserviceModule.register('PRODUCTS_SERVICE'),
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'default-secret',
       signOptions: { expiresIn: '1d' },

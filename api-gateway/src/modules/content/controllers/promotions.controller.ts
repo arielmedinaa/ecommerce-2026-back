@@ -28,6 +28,7 @@ export class PromotionsController {
   constructor(
     @Inject('CONTENT_SERVICE') private readonly contentClient: ClientProxy,
     @Inject('IMAGE_SERVICE') private readonly imageClient: ClientProxy,
+    @Inject('PRODUCTS_SERVICE') private readonly productsClient: ClientProxy,
   ) {}
 
   @Post()
@@ -171,6 +172,23 @@ export class PromotionsController {
   async getActivePromotions() {
     return await firstValueFrom(
       this.contentClient.send({ cmd: 'promocionesActivas' }, {}),
+    );
+  }
+
+  @Get('econt')
+  @UseGuards(JwtAuthGuard)
+  @SneakyThrows('PromotionsController', 'listEcontPromotions')
+  async listEcontPromotions() {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'list_econt_promotions' }, {}),
+    );
+  }
+
+  @Get('econt/:id/products')
+  @SneakyThrows('PromotionsController', 'getEcontPromotionProducts')
+  async getEcontPromotionProducts(@Param('id', ParseIntPipe) id: number) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_econt_promotion_products' }, { idPromo: id }),
     );
   }
 

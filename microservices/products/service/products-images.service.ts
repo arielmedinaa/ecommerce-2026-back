@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ProductsImage } from '../schemas/products-image.schema';
+import { ProductsSello } from '../schemas/products-sello.schema';
 import { Product } from '../schemas/product.schemas';
 import { ImageStorageService } from '@shared/common/services/image-storage.service';
 import * as fs from 'fs';
@@ -32,6 +33,10 @@ export class ProductsImagesService {
     private readonly productsImagesReadRepository: Repository<ProductsImage>,
     @InjectRepository(Product, 'READ_CONNECTION')
     private readonly productReadRepository: Repository<Product>,
+    @InjectRepository(ProductsSello, 'WRITE_ECOMMERCE_PRODUCTS_CONNECTION')
+    private readonly productsSelloWriteRepository: Repository<ProductsSello>,
+    @InjectRepository(ProductsSello, 'READ_ECOMMERCE_PRODUCTS_CONNECTION')
+    private readonly productsSelloReadRepository: Repository<ProductsSello>,
     private readonly imageStorage: ImageStorageService,
   ) {
     this.ensureDirectoryExists();
@@ -219,6 +224,137 @@ export class ProductsImagesService {
       );
     }
     this.logger.log(`Imágenes reordenadas para producto: ${productoCodigo}`);
+  }
+
+  async uploadProductSello(
+    productoCodigo: string,
+    file: MulterFile,
+    userId?: string,
+    fechaDesde?: string | Date | null,
+    fechaHasta?: string | Date | null,
+  ): Promise<{ data: ProductsSello; message: string; success: boolean }> {
+    const product = await this.productReadRepository.findOne({
+      where: { codigo_articulo: productoCodigo },
+    });
+
+    if (!product) {
+      throw new NotFoundException(`Producto con código ${productoCodigo} no encontrado`);
+    }
+
+    const fileExtension = path.extname(file.originalname);
+    const fileName = `sello_${productoCodigo}_${Date.now()}${fileExtension}`;
+    const filePath = path.join(this.imagesPath, fileName);
+
+    let bufferData: Buffer;
+    if (Buffer.isBuffer(file.buffer)) {
+      bufferData = file.buffer;
+    } else if (file.buffer && typeof file.buffer === 'object' && 'data' in file.buffer) {
+      const dataProperty = (file.buffer as any).data;
+      bufferData = Buffer.isBuffer(dataProperty)
+        ? dataProperty
+        : typeof dataProperty === 'string'
+          ? Buffer.from(dataProperty, 'base64')
+          : Buffer.from(dataProperty);
+    } else if (typeof file.buffer === 'string') {
+      bufferData = Buffer.from(file.buffer, 'base64');
+    } else {
+      throw new Error(`Formato de archivo inválido: ${typeof file.buffer}`);
+    }
+
+    const existing = await this.productsSelloReadRepository.findOne({
+      where: { producto_codigo: productoCodigo },
+    });
+    if (existing?.nombre_archivo) {
+      await this.removeStoredSelloFile(existing.nombre_archivo);
+    }
+
+    if (this.imageStorage.isS3()) {
+      await this.imageStorage.putObject({
+        key: this.productKey(fileName),
+        body: bufferData,
+        contentType: 'image/webp',
+        cacheControl: 'public, max-age=86400',
+      });
+    } else {
+      fs.writeFileSync(filePath, bufferData);
+    }
+    const cdnUrl = `${this.baseUrl}/products/images/${fileName}`;
+    const desde = fechaDesde ? new Date(fechaDesde) : null;
+    const hasta = fechaHasta ? new Date(fechaHasta) : null;
+
+    const saved = existing
+      ? await this.productsSelloWriteRepository.save({
+          ...existing,
+          url_sello: cdnUrl,
+          nombre_archivo: fileName,
+          activo: true,
+          fecha_desde: desde,
+          fecha_hasta: hasta,
+          updated_by: userId,
+        })
+      : await this.productsSelloWriteRepository.save(
+          this.productsSelloWriteRepository.create({
+            producto_codigo: productoCodigo,
+            url_sello: cdnUrl,
+            nombre_archivo: fileName,
+            fecha_desde: desde,
+            fecha_hasta: hasta,
+            created_by: userId,
+          }),
+        );
+
+    this.logger.log(`Sello subido para producto ${productoCodigo}: ${fileName}`);
+    return { data: saved, message: 'Sello subido exitosamente', success: true };
+  }
+
+  async getProductSello(productoCodigo: string): Promise<ProductsSello | null> {
+    const now = new Date();
+    return this.productsSelloReadRepository
+      .createQueryBuilder('s')
+      .where('s.producto_codigo = :productoCodigo', { productoCodigo })
+      .andWhere('s.activo = :activo', { activo: true })
+      .andWhere('(s.fecha_desde IS NULL OR s.fecha_desde <= :now)', { now })
+      .andWhere('(s.fecha_hasta IS NULL OR s.fecha_hasta >= :now)', { now })
+      .getOne();
+  }
+
+  async getSelloMapForCodigos(codigos: string[]): Promise<Map<string, string>> {
+    const map = new Map<string, string>();
+    if (!codigos.length) return map;
+    const now = new Date();
+    const rows = await this.productsSelloReadRepository
+      .createQueryBuilder('s')
+      .where('s.producto_codigo IN (:...codigos)', { codigos })
+      .andWhere('s.activo = :activo', { activo: true })
+      .andWhere('(s.fecha_desde IS NULL OR s.fecha_desde <= :now)', { now })
+      .andWhere('(s.fecha_hasta IS NULL OR s.fecha_hasta >= :now)', { now })
+      .getMany();
+    rows.forEach((r) => map.set(r.producto_codigo, r.url_sello));
+    return map;
+  }
+
+  async deleteProductSello(productoCodigo: string): Promise<{ message: string; success: boolean }> {
+    const existing = await this.productsSelloReadRepository.findOne({
+      where: { producto_codigo: productoCodigo },
+    });
+    if (!existing) {
+      throw new NotFoundException(`Sello no encontrado para producto ${productoCodigo}`);
+    }
+    await this.removeStoredSelloFile(existing.nombre_archivo);
+    await this.productsSelloWriteRepository.delete({ producto_codigo: productoCodigo });
+    return { message: 'Sello eliminado exitosamente', success: true };
+  }
+
+  private async removeStoredSelloFile(fileName?: string): Promise<void> {
+    if (!fileName) return;
+    if (this.imageStorage.isS3()) {
+      await this.imageStorage.deleteObject(this.productKey(fileName));
+      return;
+    }
+    const filePath = path.join(this.imagesPath, fileName);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
   }
 
   private async removeStoredFile(fileName?: string): Promise<void> {

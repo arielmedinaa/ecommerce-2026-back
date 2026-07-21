@@ -8,9 +8,7 @@ import {
 import { Repository, In } from 'typeorm';
 import { PromosService } from './promos.service';
 import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
-import { CreateComboDto } from '@products/schemas/dto/create-combo.dto';
 import { Product } from '../schemas/product.schemas';
-import { Combo } from '../schemas/combo.schemas';
 import { ProductsImage } from '../schemas/products-image.schema';
 import { SearchTerm } from '../schemas/search-term.schema';
 import {
@@ -21,7 +19,9 @@ import {
 import { ProductsImagesService } from './products-images.service';
 
 import { ProductsUtils } from '@products/utils/utils-products';
+import { PromoPricingUtil } from '@products/utils/promo-pricing.util';
 import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
+import { CircuitBreaker } from '@shared/common/decorators/circuit-breaker.decorator';
 
 interface CartResponse {
   data: any[];
@@ -34,19 +34,25 @@ interface CartResponse {
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
 
+  // Familias donde JOTA (marca 257) es prioritaria: 4 Refrigeración, 5 Climatización,
+  // 6 Cocinas y anafes, 7 Lavado.
+  // NOTA: instancia (no static) porque `aplicarPrioridadJota`/`esConsultaJota` en
+  // ProductsUtils reciben `this` (la instancia) como el parámetro "ProductsService".
+  readonly JOTA_MARCA = 257;
+  readonly JOTA_FAMILIAS = new Set([4, 5, 6, 7]);
+  readonly JOTA_KEYWORDS =
+    /(cocina|anafe|heladera|refriger|freezer|climatiz|aire|lavarrop|lavado|lavasecarropas)/i;
+
   constructor(
     @InjectRepository(Product, 'WRITE_CONNECTION')
     private readonly productWriteRepository: Repository<Product>,
     @InjectRepository(Product, 'READ_CONNECTION')
     private readonly productReadRepository: Repository<Product>,
-    @InjectRepository(Combo, 'WRITE_CONNECTION')
-    private readonly comboWriteRepository: Repository<Combo>,
-    @InjectRepository(Combo, 'READ_CONNECTION')
-    private readonly comboReadRepository: Repository<Combo>,
     @InjectRepository(ProductsImage, 'READ_ECOMMERCE_PRODUCTS_CONNECTION')
     private readonly productsImagesReadRepository: Repository<ProductsImage>,
     private readonly promosService: PromosService,
     private readonly productsUtils: ProductsUtils,
+    private readonly promoPricingUtil: PromoPricingUtil,
     private readonly productsImagesService: ProductsImagesService,
     @Inject('CART_SERVICE') private readonly cartClient: ClientProxy,
     private readonly resilientService: ResilientService,
@@ -66,6 +72,49 @@ export class ProductsService {
      WHERE sa.codigo_articulo = a.codigo_articulo
        AND d.habilitado_reserva = 1 AND d.codigo <> 33
        AND sa.cantidad_actual > 0)`;
+
+  // Cache "stale" de larga duración: se refresca en cada consulta exitosa a
+  // ECONT/BD y se sirve como respaldo si la conexión se cae, en vez de
+  // propagar el error y dejar el listado de productos vacío.
+  private readonly STALE_TTL = 24 * 60 * 60 * 1000;
+  private readonly dbBreakers = new Map<string, CircuitBreaker>();
+
+  private getDbBreaker(key: string): CircuitBreaker {
+    if (!this.dbBreakers.has(key)) {
+      this.dbBreakers.set(
+        key,
+        new CircuitBreaker({ failureThreshold: 2, resetTimeout: 20000 }),
+      );
+    }
+    return this.dbBreakers.get(key)!;
+  }
+
+  private async withDbResilience<T>(
+    breakerKey: string,
+    staleCacheKey: string,
+    run: () => Promise<T>,
+  ): Promise<T> {
+    const breaker = this.getDbBreaker(breakerKey);
+    return breaker.execute(
+      async () => {
+        const result = await run();
+        await this.cache.set(staleCacheKey, result, this.STALE_TTL);
+        return result;
+      },
+      async () => {
+        const stale = await this.cache.get<T>(staleCacheKey);
+        if (stale) {
+          this.logger.warn(
+            `Conexión caída (${breakerKey}): sirviendo respuesta desde stale-cache`,
+          );
+          return stale;
+        }
+        throw new Error(
+          `Servicio de productos no disponible: conexión caída y sin cache de respaldo (${breakerKey})`,
+        );
+      },
+    );
+  }
 
   private getCacheKey(filters: any): string {
     return JSON.stringify({
@@ -100,25 +149,29 @@ export class ProductsService {
     const limit = Number(filters.limit) || 50;
     const offset = Number(filters.offset) || 0;
     const f = this.productsUtils.buildProcFilters(filters);
-    const result = await this.productReadRepository.query(
-      'CALL proc_obtener_listado_articulos_ecommerce_v2(?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [
-        limit,
-        offset,
-        f.marca,
-        f.categoria,
-        f.proveedor,
-        f.precioMin,
-        f.precioMax,
-        f.soloStock,
-        f.busqueda,
-      ],
-    );
+    const staleKey = `products:v2:stale:${this.getCacheKey(filters)}`;
 
-    const dataConCuotas = await this.productsUtils.enrichProductRows(result[0] || [], this.productsImagesReadRepository);
-    const total = await this.productsUtils.contarProductosV2(filters, this.WEB_BASE_WHERE, this.STOCK_EXISTS);
+    const payload = await this.withDbResilience('catalogoV2', staleKey, async () => {
+      const result = await this.productReadRepository.query(
+        'CALL proc_obtener_listado_articulos_ecommerce_v2(?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          limit,
+          offset,
+          f.marca,
+          f.categoria,
+          f.proveedor,
+          f.precioMin,
+          f.precioMax,
+          f.soloStock,
+          f.busqueda,
+        ],
+      );
 
-    const payload = { data: dataConCuotas as any[], total };
+      const dataConCuotas = await this.productsUtils.enrichProductRows(result[0] || [], this.productsImagesReadRepository);
+      const total = await this.productsUtils.contarProductosV2(filters, this.WEB_BASE_WHERE, this.STOCK_EXISTS);
+      return { data: dataConCuotas as any[], total };
+    });
+
     await this.cache.set(cacheKey, payload, this.CACHE_TTL);
     return payload;
   }
@@ -742,17 +795,6 @@ export class ProductsService {
     return createdPrismaProduct;
   }
 
-  async createCombo(createCombo: CreateComboDto): Promise<any> {
-    const createdCombo = await this.comboWriteRepository.save({
-      ...createCombo,
-      ruta: 'combo-default-route',
-      descripcion: createCombo.descripcion || 'Combo description',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-    return createdCombo;
-  }
-
   async update(
     id: string,
     updatePrismaProductDto: CreateProductDto,
@@ -849,42 +891,54 @@ export class ProductsService {
     ].slice(0, 200);
     if (lista.length === 0) return { data: [], total: 0 };
 
-    const productos = await this.productReadRepository.find({
-      where: { codigo_articulo: In(lista) },
-    });
+    const staleKey = `products:byCodigos:stale:${lista.slice().sort().join(',')}`;
+    const dataConCuotas = await this.withDbResilience(
+      'byCodigos',
+      staleKey,
+      async () => {
+        const productos = await this.productReadRepository.find({
+          where: { codigo_articulo: In(lista) },
+        });
 
-    const imagenesMap = new Map<string, string[]>();
-    if (productos.length > 0) {
-      const cods = productos.map((p) => String(p.codigo_articulo).trim());
-      const imagenes = await this.productsImagesReadRepository
-        .createQueryBuilder('img')
-        .where('img.producto_codigo IN (:...codigos)', { codigos: cods })
-        .andWhere('img.activo = :activo', { activo: true })
-        .orderBy('img.orden', 'ASC')
-        .getMany();
-      imagenes.forEach((img) => {
-        if (!imagenesMap.has(img.producto_codigo)) {
-          imagenesMap.set(img.producto_codigo, []);
+        const imagenesMap = new Map<string, string[]>();
+        if (productos.length > 0) {
+          const cods = productos.map((p) => String(p.codigo_articulo).trim());
+          const imagenes = await this.productsImagesReadRepository
+            .createQueryBuilder('img')
+            .where('img.producto_codigo IN (:...codigos)', { codigos: cods })
+            .andWhere('img.activo = :activo', { activo: true })
+            .orderBy('img.orden', 'ASC')
+            .getMany();
+          imagenes.forEach((img) => {
+            if (!imagenesMap.has(img.producto_codigo)) {
+              imagenesMap.set(img.producto_codigo, []);
+            }
+            imagenesMap.get(img.producto_codigo).push(img.url_imagen);
+          });
         }
-        imagenesMap.get(img.producto_codigo).push(img.url_imagen);
-      });
-    }
 
-    const enriquecidos = productos.map((p: any) => {
-      const cod = String(p.codigo_articulo).trim();
-      return {
-        ...p,
-        codigo_articulo: cod,
-        nombre_articulo: String(p.nombre ?? '').trim(),
-        imagenes: imagenesMap.get(cod) || [],
-      };
-    });
+        const codsForSello = productos.map((p) => String(p.codigo_articulo).trim());
+        const selloMap = await this.productsImagesService.getSelloMapForCodigos(codsForSello);
 
-    const byCod = new Map(enriquecidos.map((d) => [d.codigo_articulo, d]));
-    const ordered = lista.map((c) => byCod.get(c)).filter(Boolean);
+        const enriquecidos = productos.map((p: any) => {
+          const cod = String(p.codigo_articulo).trim();
+          return {
+            ...p,
+            codigo_articulo: cod,
+            nombre_articulo: String(p.nombre ?? '').trim(),
+            imagenes: imagenesMap.get(cod) || [],
+            sello: selloMap.get(cod) || null,
+          };
+        });
 
-    const dataConCuotas =
-      await this.productsUtils.calculoCreditoProductos(ordered);
+        const byCod = new Map(enriquecidos.map((d) => [d.codigo_articulo, d]));
+        const ordered = lista.map((c) => byCod.get(c)).filter(Boolean);
+
+        const conCredito = await this.productsUtils.calculoCreditoProductos(ordered);
+        return this.productsUtils.aplicarPreciosPromo(conCredito);
+      },
+    );
+
     const lim = Number(limit) || dataConCuotas.length;
     return { data: dataConCuotas.slice(0, lim), total: dataConCuotas.length };
   }
@@ -914,57 +968,116 @@ export class ProductsService {
     }
     const limit = Number(filters.limit) || 0;
     const offset = Number(filters.offset) || 0;
-    const result = await this.productReadRepository.query(
-      'CALL proc_obtener_listado_articulos_ecommerce(?, ?, 257, NULL)',
-      [limit, offset],
+    const staleKey = `products:jota:stale:${this.getCacheKey({ ...filters, type: 'jota' })}`;
+
+    const payload = await this.withDbResilience('jota', staleKey, async () => {
+      const result = await this.productReadRepository.query(
+        'CALL proc_obtener_listado_articulos_ecommerce(?, ?, 257, NULL)',
+        [limit, offset],
+      );
+
+      const productos = result[0] || [];
+      const codigosProductos = productos.map((item: any) =>
+        item.codigo_articulo.trim(),
+      );
+      const imagenesMap = new Map();
+      if (codigosProductos.length > 0) {
+        const imagenes = await this.productsImagesReadRepository
+          .createQueryBuilder('img')
+          .where('img.producto_codigo IN (:...codigos)', {
+            codigos: codigosProductos,
+          })
+          .andWhere('img.activo = :activo', { activo: true })
+          .orderBy('img.orden', 'ASC')
+          .getMany();
+
+        imagenes.forEach((img) => {
+          if (!imagenesMap.has(img.producto_codigo)) {
+            imagenesMap.set(img.producto_codigo, []);
+          }
+          imagenesMap.get(img.producto_codigo).push(img.url_imagen);
+        });
+      }
+
+      const selloMap = await this.productsImagesService.getSelloMapForCodigos(
+        codigosProductos,
+      );
+
+      const dataWithTrimmedNames = productos.map((item: any) => ({
+        ...item,
+        codigo_articulo: item.codigo_articulo.trim(),
+        nombre_articulo: item.nombre_articulo.trim(),
+        nombre_subcategoria: item.nombre_subcategoria.trim(),
+        nombre_marca: item.nombre_marca.trim(),
+        nombre_proveedor: item.nombre_proveedor.trim(),
+        codigo_de_barra: item.codigo_de_barra.trim(),
+        descripcion: item.nota.trim(),
+        imagenes: imagenesMap.get(item.codigo_articulo.trim()) || [],
+        sello: selloMap.get(item.codigo_articulo.trim()) || null,
+      }));
+
+      const data = dataWithTrimmedNames || [];
+      const conCredito = await this.productsUtils.calculoCreditoProductos(data);
+      const dataConCuotas = await this.productsUtils.aplicarPreciosPromo(conCredito);
+      const total = result[1]?.[0]?.total_registros || dataConCuotas.length;
+      return { data: dataConCuotas as any[], total };
+    });
+
+    await this.cache.set(cacheKey, payload, this.CACHE_TTL);
+    return payload;
+  }
+
+  async getPromoInfoForCodigos(codigos: string[]): Promise<Record<string, any>> {
+    const map = await this.promoPricingUtil.getPromoInfoForCodigos(codigos || []);
+    return Object.fromEntries(map);
+  }
+
+  async listEcontPromotions(): Promise<any[]> {
+    const rows = await this.productReadRepository.query(
+      `SELECT id_promo, nombre, fecha_inicio, fecha_fin, canal, tipo_promocion, estado
+         FROM tbl_promos_cabeceras
+        WHERE estado = 1
+          AND canal IN ('ambos', 'ecommerce')
+          AND CURDATE() BETWEEN fecha_inicio AND fecha_fin
+        ORDER BY fecha_fin ASC`,
     );
+    return rows;
+  }
 
-    const productos = result[0] || [];
-    const codigosProductos = productos.map((item: any) =>
-      item.codigo_articulo.trim(),
+  async getEcontPromotionProducts(
+    idPromo: number,
+  ): Promise<{ data: any[]; total: number }> {
+    const detalles = await this.productReadRepository.query(
+      `SELECT DISTINCT d.codigo_identificador AS codigo_articulo
+         FROM tbl_promos_detalles d
+         JOIN tbl_promos_cabeceras c ON c.id_promo = d.id_promo
+        WHERE d.id_promo = ?
+          AND d.tipo_codigo = 1
+          AND c.estado = 1
+          AND c.canal IN ('ambos', 'ecommerce')`,
+      [idPromo],
     );
-    const imagenesMap = new Map();
-    if (codigosProductos.length > 0) {
-      const imagenes = await this.productsImagesReadRepository
-        .createQueryBuilder('img')
-        .where('img.producto_codigo IN (:...codigos)', {
-          codigos: codigosProductos,
-        })
-        .andWhere('img.activo = :activo', { activo: true })
-        .orderBy('img.orden', 'ASC')
-        .getMany();
+    const codigos = (detalles || []).map((r: any) => String(r.codigo_articulo).trim());
+    return this.getProductsByCodigos(codigos, codigos.length);
+  }
 
-      imagenes.forEach((img) => {
-        if (!imagenesMap.has(img.producto_codigo)) {
-          imagenesMap.set(img.producto_codigo, []);
-        }
-        imagenesMap.get(img.producto_codigo).push(img.url_imagen);
-      });
-    }
-
-    const dataWithTrimmedNames = productos.map((item: any) => ({
-      ...item,
-      codigo_articulo: item.codigo_articulo.trim(),
-      nombre_articulo: item.nombre_articulo.trim(),
-      nombre_subcategoria: item.nombre_subcategoria.trim(),
-      nombre_marca: item.nombre_marca.trim(),
-      nombre_proveedor: item.nombre_proveedor.trim(),
-      codigo_de_barra: item.codigo_de_barra.trim(),
-      descripcion: item.nota.trim(),
-      imagenes: imagenesMap.get(item.codigo_articulo.trim()) || [],
-    }));
-
-    const data = dataWithTrimmedNames || [];
-    const dataConCuotas =
-      await this.productsUtils.calculoCreditoProductos(data);
-    const total = result[1]?.[0]?.total_registros || dataConCuotas.length;
-
-    await this.cache.set(
-      cacheKey,
-      { data: dataConCuotas as any[], total },
-      this.CACHE_TTL,
+  async updateProductSello(
+    productoCodigo: string,
+    file: any,
+    userId?: string,
+    fechaDesde?: string | Date | null,
+    fechaHasta?: string | Date | null,
+  ): Promise<{ data: any; message: string; success: boolean }> {
+    return this.productsImagesService.uploadProductSello(
+      productoCodigo,
+      file,
+      userId,
+      fechaDesde,
+      fechaHasta,
     );
+  }
 
-    return { data: dataConCuotas as any[], total };
+  async deleteProductSello(productoCodigo: string) {
+    return this.productsImagesService.deleteProductSello(productoCodigo);
   }
 }

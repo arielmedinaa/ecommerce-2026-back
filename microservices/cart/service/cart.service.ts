@@ -160,6 +160,53 @@ export class CartContadoService {
       });
     }
 
+    try {
+      const promoInfo: Record<string, any> = await firstValueFrom(
+        this.productsService.send(
+          { cmd: 'get_promo_info_for_codigos' },
+          { codigos: [producto.codigo] },
+        ),
+      );
+      const promo = promoInfo?.[String(producto.codigo).trim()];
+      if (promo) {
+        if (promo.disponibleEcommerce !== null && promo.disponibleEcommerce !== undefined) {
+          let cantidadActualEnCarritoPromo = 0;
+          if (carritoExistente && carritoExistente.articulos) {
+            const contado = carritoExistente.articulos.contado || [];
+            const credito = carritoExistente.articulos.credito || [];
+            cantidadActualEnCarritoPromo = [...contado, ...credito]
+              .filter((item: any) => String(item.codigo) === String(producto.codigo))
+              .reduce((sum, item) => sum + (item.cantidad || 1), 0);
+          }
+          const cantidadNuevaPromo = producto.cantidad || 1;
+          if (cantidadActualEnCarritoPromo + cantidadNuevaPromo > promo.disponibleEcommerce) {
+            return {
+              data: [],
+              success: false,
+              message: `Stock de promoción agotado para este producto. Disponible: ${promo.disponibleEcommerce} unidades. Ya tienes ${cantidadActualEnCarritoPromo} en tu carrito.`,
+            };
+          }
+        }
+
+        // El precio de promo gana sobre el precio de catálogo enviado por el
+        // cliente — nunca debe guardarse en el carrito un precio stale.
+        if (promo.contado !== null && promo.contado !== undefined) {
+          producto.precio = promo.contado;
+          if (producto.credito) {
+            const cuotaPromo = Array.isArray(promo.cuotas)
+              ? promo.cuotas.find((c: any) => c.cuota === producto.credito.cuota)
+              : null;
+            producto.credito.precio = cuotaPromo ? cuotaPromo.precio : promo.contado;
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.warn(
+        'Error al validar stock de promoción, permitiendo añadir producto',
+        error,
+      );
+    }
+
     if (eventoValidation.limite && eventoValidation.limite > 0) {
       let cantidadActualEnCarrito = 0;
       if (carritoExistente && carritoExistente.articulos) {
@@ -1565,6 +1612,52 @@ export class CartContadoService {
       throw error;
     }
 
+    try {
+      const articulosCarrito = [
+        ...(carrito.articulos?.contado || []),
+        ...(carrito.articulos?.credito || []),
+      ];
+      const codigosCarrito = [
+        ...new Set(articulosCarrito.map((item: any) => String(item.codigo))),
+      ];
+      if (codigosCarrito.length > 0) {
+        const promoInfo: Record<string, any> = await firstValueFrom(
+          this.productsService.send(
+            { cmd: 'get_promo_info_for_codigos' },
+            { codigos: codigosCarrito },
+          ),
+        );
+        const cantidadPorCodigo = new Map<string, number>();
+        articulosCarrito.forEach((item: any) => {
+          const cod = String(item.codigo);
+          cantidadPorCodigo.set(
+            cod,
+            (cantidadPorCodigo.get(cod) || 0) + (item.cantidad || 1),
+          );
+        });
+        for (const codigo of codigosCarrito) {
+          const promo = promoInfo?.[codigo];
+          if (
+            promo &&
+            promo.disponibleEcommerce !== null &&
+            promo.disponibleEcommerce !== undefined &&
+            (cantidadPorCodigo.get(codigo) || 0) > promo.disponibleEcommerce
+          ) {
+            return {
+              data: [],
+              success: false,
+              message: `Stock de promoción agotado para el producto ${codigo}. Disponible: ${promo.disponibleEcommerce} unidades.`,
+            };
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.warn(
+        'Error al revalidar stock de promoción en finishCart, continuando',
+        error,
+      );
+    }
+
     let metodoPago = '';
     let montoTotal = 0;
     let descripcion = '';
@@ -1616,6 +1709,16 @@ export class CartContadoService {
         {
           ...carrito.cliente,
           ...process.cliente,
+          datosCredito:
+            process.cliente?.datosCredito || carrito.cliente?.datosCredito,
+          datosLaborales:
+            process.cliente?.datosLaborales ||
+            carrito.cliente?.datosLaborales,
+          referencias:
+            process.cliente?.referencias ||
+            process.referencias ||
+            carrito.cliente?.referencias ||
+            [],
         },
       );
 
@@ -1808,81 +1911,50 @@ export class CartContadoService {
         });
       }
 
-      const resultados: {
-        cuotas: number;
-        success: boolean;
-        articulosCount: number;
-      }[] = [];
+      const mapPromoInfo = (item: any) => {
+        if (item.isCombo && !item.isPromo) {
+          return { is_combo: 1, is_promo: 0, id_promo: null, nombrePromo: null };
+        }
+        if (!item.isCombo && item.isPromo) {
+          return { is_combo: 0, is_promo: 1, id_promo: item.promoCodigo || null, nombrePromo: item.promoNombre || null };
+        }
+        if (item.isCombo && item.isPromo) {
+          return { is_combo: 1, is_promo: 1, id_promo: item.promoCodigo || null, nombrePromo: item.promoNombre || null };
+        }
+        return { is_combo: 0, is_promo: 0, id_promo: null, nombrePromo: null };
+      };
 
-      if (
-        datos.articulos &&
-        datos.articulos.contado &&
-        Array.isArray(datos.articulos.contado) &&
-        datos.articulos.contado.length > 0
-      ) {
-        const solicitudContado = NEW_SOLICITUD_INITIAL_STATE(
-          codigo!,
-          clienteToken,
-          cuenta || '',
-          Number(datos.cliente?.id_usuario || 0),
-          datos.cliente,
-        );
+      const contadoItems = (
+        datos.articulos?.contado && Array.isArray(datos.articulos.contado)
+          ? datos.articulos.contado
+          : []
+      ).map((item: any) => ({ ...item, ...mapPromoInfo(item) }));
+      const [cuotasCredito, articulosCredito] =
+        solicitudesPorCuota.entries().next().value || [0, []];
 
-        solicitudContado.cliente = {
-          ...solicitudContado.cliente!,
-          equipo:
-            datos.cliente?.equipo ||
-            solicitudContado.cliente?.equipo ||
-            clienteToken,
+      const creditoItems = (articulosCredito || []).map((articulo: any) => ({
+        codigo: articulo.codigo,
+        nombre: articulo.nombre,
+        ruta: articulo.ruta,
+        imagen: articulo.imagen,
+        cantidad: articulo.cantidad,
+        precio: articulo.credito?.precio || articulo.precio,
+        cuota: cuotasCredito,
+        ...mapPromoInfo(articulo),
+      }));
+
+      if (contadoItems.length === 0 && creditoItems.length === 0) {
+        return {
+          data: [],
+          success: false,
+          message: 'No hay artículos para procesar',
         };
-        solicitudContado.pago = datos.pago;
-        solicitudContado.estado = datos.estado;
-        solicitudContado.envio =
-          solicitud['envio'] || datos.envio || solicitudContado.envio;
-        solicitudContado.codigo = Number(codigo);
-
-        solicitudContado.articulos = {
-          contado: datos.articulos.contado.map((item: any) => {
-            const processedItem: any = { ...item };
-            if (item.isCombo && !item.isPromo) {
-              processedItem.is_combo = 1;
-              processedItem.is_promo = 0;
-              processedItem.id_promo = null;
-              processedItem.nombrePromo = null;
-            } else if (!item.isCombo && item.isPromo) {
-              processedItem.is_combo = 0;
-              processedItem.is_promo = 1;
-              processedItem.id_promo = item.promoCodigo || null;
-              processedItem.nombrePromo = item.promoNombre || null;
-            } else if (item.isCombo && item.isPromo) {
-              processedItem.is_combo = 1;
-              processedItem.is_promo = 1;
-              processedItem.id_promo = item.promoCodigo || null;
-              processedItem.nombrePromo = item.promoNombre || null;
-            } else {
-              processedItem.is_combo = 0;
-              processedItem.is_promo = 0;
-              processedItem.id_promo = null;
-              processedItem.nombrePromo = null;
-            }
-
-            return processedItem;
-          }),
-          credito: [],
-        };
-
-        const resultadoContado =
-          await this.utilsCart.insertarCarritos(solicitudContado);
-        resultados.push({
-          cuotas: 0,
-          success: resultadoContado === 1,
-          articulosCount: datos.articulos.contado.length,
-        });
       }
 
-      for (const [cuotas, articulos] of solicitudesPorCuota.entries()) {
-        if (cuotas === 0) continue;
-
+      const buildSolicitud = (
+        articulos: { contado: any[]; credito: any[] },
+        esCredito: boolean,
+      ) => {
         const nuevaSolicitud = NEW_SOLICITUD_INITIAL_STATE(
           codigo!,
           clienteToken,
@@ -1898,69 +1970,88 @@ export class CartContadoService {
             nuevaSolicitud.cliente?.equipo ||
             clienteToken,
         };
+        nuevaSolicitud.pago = esCredito
+          ? datos.pago
+          : {
+              tipo: datos.pago?.tipo,
+              condicion: datos.pago?.condicion,
+              periodicidad: datos.pago?.periodicidad,
+              moneda: datos.pago?.moneda,
+              monto: datos.pago?.monto,
+              primerpago: datos.pago?.primerpago,
+              entregainicial: datos.pago?.entregainicial,
+            };
         nuevaSolicitud.estado = datos.estado;
-        nuevaSolicitud.pago = datos.pago;
         nuevaSolicitud.envio =
           solicitud['envio'] || datos.envio || nuevaSolicitud.envio;
         nuevaSolicitud.codigo = Number(codigo);
+        nuevaSolicitud.articulos = articulos;
+        return nuevaSolicitud;
+      };
 
-        nuevaSolicitud.articulos = {
-          contado: [],
-          credito: articulos.map((articulo: any) => {
-            const processedItem: any = {
-              codigo: articulo.codigo,
-              nombre: articulo.nombre,
-              ruta: articulo.ruta,
-              imagen: articulo.imagen,
-              cantidad: articulo.cantidad,
-              precio: articulo.credito?.precio || articulo.precio,
-              cuota: cuotas,
-            };
+      const resultados: {
+        tipo: 'contado' | 'credito';
+        success: boolean;
+        count: number;
+        secuencia: number | null;
+      }[] = [];
 
-            if (articulo.isCombo && !articulo.isPromo) {
-              processedItem.is_combo = 1;
-              processedItem.is_promo = 0;
-              processedItem.id_promo = null;
-              processedItem.nombrePromo = null;
-            } else if (!articulo.isCombo && articulo.isPromo) {
-              processedItem.is_combo = 0;
-              processedItem.is_promo = 1;
-              processedItem.id_promo = articulo.promoCodigo || null;
-              processedItem.nombrePromo = articulo.promoNombre || null;
-            } else if (articulo.isCombo && articulo.isPromo) {
-              processedItem.is_combo = 1;
-              processedItem.is_promo = 1;
-              processedItem.id_promo = articulo.promoCodigo || null;
-              processedItem.nombrePromo = articulo.promoNombre || null;
-            } else {
-              processedItem.is_combo = 0;
-              processedItem.is_promo = 0;
-              processedItem.id_promo = null;
-              processedItem.nombrePromo = null;
-            }
-
-            return processedItem;
-          }),
-        };
-
-        const resultado = await this.utilsCart.insertarCarritos(nuevaSolicitud);
+      if (contadoItems.length > 0) {
+        const solicitudContado = buildSolicitud(
+          {
+            contado: contadoItems,
+            credito: [],
+          },
+          false,
+        );
+        const resultado = await this.utilsCart.insertarCarritos(
+          solicitudContado,
+        );
         resultados.push({
-          cuotas,
-          success: resultado === 1,
-          articulosCount: articulos.length,
+          tipo: 'contado',
+          success: resultado.success === 1,
+          count: contadoItems.length,
+          secuencia: resultado.secuencia,
         });
       }
 
-      const successCount = resultados.filter((r) => r.success).length;
-      const totalCount = resultados.length;
+      if (creditoItems.length > 0) {
+        const solicitudCredito = buildSolicitud(
+          {
+            contado: [],
+            credito: creditoItems,
+          },
+          true,
+        );
+        const resultado = await this.utilsCart.insertarCarritos(
+          solicitudCredito,
+        );
+        resultados.push({
+          tipo: 'credito',
+          success: resultado.success === 1,
+          count: creditoItems.length,
+          secuencia: resultado.secuencia,
+        });
+      }
+
+      const success = resultados.every((r) => r.success);
+
+      const erpSecuencias = resultados
+        .filter((r) => r.secuencia !== null)
+        .map((r) => ({ tipo: r.tipo, secuencia: r.secuencia }));
+      if (erpSecuencias.length > 0) {
+        await this.carritoWrite.update(
+          { codigo: Number(codigo) },
+          { erpSecuencias },
+        );
+      }
 
       return {
         data: resultados,
-        success: successCount === totalCount && totalCount > 0,
-        message:
-          totalCount > 0
-            ? `${successCount}/${totalCount} solicitudes insertadas en Central App`
-            : 'No hay artículos de crédito para procesar',
+        success,
+        message: success
+          ? 'Solicitud(es) insertada(s) en Central App'
+          : 'Error al insertar una o más solicitudes en Central App',
       };
     } catch (error) {
       return {

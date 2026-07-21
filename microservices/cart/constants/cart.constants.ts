@@ -56,7 +56,10 @@ export const DEFAULT_SOLICITUD: Partial<Cart> = {
     correo: '',
     telefono: '',
     tipodocumento: '',
-    id_usuario: 0
+    id_usuario: 0,
+    datosCredito: null,
+    datosLaborales: null,
+    referencias: [],
   },
   tiempo: moment().tz('America/Asuncion').format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
   envio: {

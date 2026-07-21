@@ -5,10 +5,12 @@ import { ProductsService } from './service/products.service';
 import { ProductsImagesService } from './service/products-images.service';
 import { PromosService } from './service/promos.service';
 import { OfertasService } from './service/ofertas.service';
+import { CombosService } from './service/combos.service';
 import { OfertasValidationService } from './service/errors/ofertas.spec';
 import { PromosValidationService } from './service/errors/promos.spec';
 import { MariaDbModule } from './config/mariadb.module';
 import { ProductsUtils } from './utils/utils-products';
+import { PromoPricingUtil } from './utils/promo-pricing.util';
 import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
 import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
 import { ImageStorageService } from '@shared/common/services/image-storage.service';
@@ -34,6 +36,10 @@ import { RedisModule } from '@shared/common/cache/redis.module';
     MariaDbModule.forOfertasRead(),
     MariaDbModule.forOfertasFeature(),
     MariaDbModule.forOfertasFeatureRead(),
+    MariaDbModule.forCombosWrite(),
+    MariaDbModule.forCombosRead(),
+    MariaDbModule.forCombosFeature(),
+    MariaDbModule.forCombosFeatureRead(),
   ],
   controllers: [ProductsController],
   providers: [
@@ -41,12 +47,14 @@ import { RedisModule } from '@shared/common/cache/redis.module';
     ProductsImagesService,
     PromosService,
     OfertasService,
+    CombosService,
     OfertasValidationService,
     PromosValidationService,
     ProductsUtils,
+    PromoPricingUtil,
     ResilientService,
     ImageStorageService,
   ],
-  exports: [ProductsService, ProductsImagesService, PromosService, OfertasService],
+  exports: [ProductsService, ProductsImagesService, PromosService, OfertasService, CombosService],
 })
 export class ProductsModule { }

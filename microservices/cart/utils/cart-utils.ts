@@ -1,16 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ESTADO_SOLICITUD_MAP } from '@cart/constants/cart.constants';
+import * as http from 'http';
 import * as https from 'https';
 import * as mysql from 'mysql2/promise';
 
 @Injectable()
 export class UtilsCart {
   private logger = new Logger();
-  async insertarCarritos(parametros: any): Promise<number> {
+  async insertarCarritos(
+    parametros: any,
+  ): Promise<{ success: number; secuencia: number | null }> {
     return new Promise((resolve, reject) => {
       const postData = JSON.stringify(parametros);
+      const useHttps = (process.env.CENTRAL_APP_PROTOCOL || 'https').toLowerCase() !== 'http';
+      const client = useHttps ? https : http;
 
-      const options = {
+      const options: any = {
         hostname: `${process.env.CENTRAL_APP_HOST}`,
         port: 3055,
         path: '/api/solicitud_ecommerce/insert_ecommerce_solicitudes',
@@ -19,11 +24,15 @@ export class UtilsCart {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(postData),
         },
-        rejectUnauthorized: false,
-        checkServerIdentity: () => undefined,
       };
+      if (useHttps) {
+        options.rejectUnauthorized = false;
+        options.checkServerIdentity = () => undefined;
+      }
 
-      const req = https.request(options, (res) => {
+      this.logger.log(`ERP solicitud enviada a ${useHttps ? 'https' : 'http'}://${options.hostname}:${options.port}${options.path}: ${postData}`);
+
+      const req = client.request(options, (res) => {
         let data = '';
 
         res.on('data', (chunk) => {
@@ -32,17 +41,24 @@ export class UtilsCart {
 
         res.on('end', () => {
           if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-            resolve(1);
+            this.logger.log(`ERP respuesta ${res.statusCode}: ${data}`);
+            let secuencia: number | null = null;
+            try {
+              secuencia = JSON.parse(data)?.secuencia ?? null;
+            } catch {
+              secuencia = null;
+            }
+            resolve({ success: 1, secuencia });
           } else {
             console.error(`Error HTTP: ${res.statusCode}`, data);
-            resolve(0);
+            resolve({ success: 0, secuencia: null });
           }
         });
       });
 
       req.on('error', (error) => {
         console.error('Hubo un error al realizar la petición:', error);
-        resolve(0);
+        resolve({ success: 0, secuencia: null });
       });
 
       req.write(postData);

@@ -3,7 +3,6 @@ import { ClientProxy, Payload } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { timeout, catchError } from 'rxjs/operators';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
-import { CreateComboDto } from '@products/schemas/dto/create-combo.dto';
 import { JwtAuthGuard } from '@gateway/common/guards/jwt-auth.guard';
 import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
 import { Response } from 'express';
@@ -20,18 +19,38 @@ interface MulterFile {
   buffer: Buffer;
 }
 
-export const ImageFileInterceptor = () => 
+export const ImageFileInterceptor = () =>
   UseInterceptors(
     FilesInterceptor('files', 10, {
       fileFilter: (req, file, callback) => {
         if (!file.originalname.toLowerCase().endsWith('.webp')) {
           return callback(new BadRequestException('Solo se permiten archivos .webp'), false);
         }
-        
+
         if (file.mimetype !== 'image/webp') {
           return callback(new BadRequestException('El archivo debe ser de tipo image/webp'), false);
         }
-        
+
+        callback(null, true);
+      },
+      limits: {
+        fileSize: 1 * 1024 * 1024,
+      }
+    })
+  );
+
+export const SelloFileInterceptor = () =>
+  UseInterceptors(
+    FileInterceptor('file', {
+      fileFilter: (req, file, callback) => {
+        if (!file.originalname.toLowerCase().endsWith('.webp')) {
+          return callback(new BadRequestException('Solo se permiten archivos .webp'), false);
+        }
+
+        if (file.mimetype !== 'image/webp') {
+          return callback(new BadRequestException('El archivo debe ser de tipo image/webp'), false);
+        }
+
         callback(null, true);
       },
       limits: {
@@ -51,14 +70,6 @@ export class ProductsController {
   async createProduct(@Body() createProductDto: CreateProductDto) {
     return await firstValueFrom(
       this.productsClient.send({ cmd: 'createProducts' }, createProductDto)
-    )
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post('/combos')
-  async createCombos(@Body() createComboDto: CreateComboDto) {
-    return await firstValueFrom(
-      this.productsClient.send({ cmd: 'createCombo' }, createComboDto)
     )
   }
 
@@ -299,15 +310,6 @@ export class ProductsController {
     }
   }
 
-  @Get('/searchComboByCodigo')
-  async searchComboByCodigo(@Payload() payload: {
-    codigo: string;
-  }) {
-    return await firstValueFrom(
-      this.productsClient.send({ cmd: 'search_combo_by_codigo' }, payload)
-    )
-  }
-  
   @UseGuards(JwtAuthGuard)
   @Post('/createOferta')
   async createOferta(@Body() ofertaData: any) {
@@ -328,6 +330,110 @@ export class ProductsController {
     return await firstValueFrom(
       this.productsClient.send({ cmd: 'get_oferta_by_id' }, { id: Number(id) })
     )
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('/combos')
+  async createCmsCombo(@Body() dto: any) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'create_cms_combo' }, dto)
+    )
+  }
+
+  @Post('/combos/list')
+  async getCmsCombos(@Body() filters: { limit: number; offset: number; activo?: boolean }) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_cms_combos' }, filters)
+    )
+  }
+
+  @Get('/combos/econt/promotions')
+  async listEcontCombosPromotions() {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'list_econt_combo_promotions' }, {})
+    )
+  }
+
+  @Get('/combos/econt/:idPromo')
+  async getEcontCombosForPromo(@Param('idPromo') idPromo: string) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_econt_combos_for_promo' }, { idPromo: Number(idPromo) })
+    )
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('/combos/econt/:idCombo/imagen')
+  @SelloFileInterceptor()
+  async uploadEcontComboImage(@Param('idCombo') idCombo: string, @UploadedFile() file: MulterFile) {
+    try {
+      return await firstValueFrom(
+        this.productsClient.send({ cmd: 'upload_econt_combo_image' }, { idCombo: Number(idCombo), file }).pipe(
+          timeout(15000),
+          catchError((error) => {
+            console.error('Error in upload_econt_combo_image:', error);
+            throw error;
+          }),
+        ),
+      );
+    } catch (error) {
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        throw new BadRequestException('El archivo excede el tamaño máximo de 1MB');
+      }
+      throw new Error('Error al subir la imagen del combo: ' + error.message);
+    }
+  }
+
+  @Get('/combos/:id')
+  async getCmsComboById(@Param('id') id: string) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_cms_combo_by_id' }, { id: Number(id) })
+    )
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('/combos/:id')
+  async updateCmsCombo(@Param('id') id: string, @Body() dto: any) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'update_cms_combo' }, { id: Number(id), dto })
+    )
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('/combos/:id')
+  async deleteCmsCombo(@Param('id') id: string) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'delete_cms_combo' }, { id: Number(id) })
+    )
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('/combos/:id/toggle')
+  async toggleCmsComboStatus(@Param('id') id: string) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'toggle_cms_combo_status' }, { id: Number(id) })
+    )
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('/combos/:id/imagen')
+  @SelloFileInterceptor()
+  async uploadComboImage(@Param('id') id: string, @UploadedFile() file: MulterFile) {
+    try {
+      return await firstValueFrom(
+        this.productsClient.send({ cmd: 'upload_combo_image' }, { id: Number(id), file }).pipe(
+          timeout(15000),
+          catchError((error) => {
+            console.error('Error in upload_combo_image:', error);
+            throw error;
+          }),
+        ),
+      );
+    } catch (error) {
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        throw new BadRequestException('El archivo excede el tamaño máximo de 1MB');
+      }
+      throw new Error('Error al subir la imagen del combo: ' + error.message);
+    }
   }
 
   @Post('/by-codigos')
@@ -532,6 +638,64 @@ export class ProductsController {
     } catch (error) {
       console.error('Error en reorderProductImages:', error);
       throw new Error('Error al reordenar las imágenes: ' + error.message);
+    }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('/:productoCodigo/sello')
+  @SelloFileInterceptor()
+  async uploadProductSello(
+    @Param('productoCodigo') productoCodigo: string,
+    @UploadedFile() file: MulterFile,
+    @Body() body: { fechaDesde?: string; fechaHasta?: string },
+  ) {
+    try {
+      const payload = {
+        productoCodigo,
+        file,
+        userId: 'current_user',
+        fechaDesde: body?.fechaDesde || null,
+        fechaHasta: body?.fechaHasta || null,
+      };
+
+      return await firstValueFrom(
+        this.productsClient.send({ cmd: 'update_product_sello' }, payload).pipe(
+          timeout(15000),
+          catchError((error) => {
+            console.error('Error in update_product_sello:', error);
+            throw error;
+          }),
+        ),
+      );
+    } catch (error) {
+      console.error('Error en uploadProductSello:', error);
+
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        throw new BadRequestException('El archivo excede el tamaño máximo de 1MB');
+      }
+      if (error.message?.includes('Solo se permiten archivos .webp')) {
+        throw new BadRequestException('Solo se permiten archivos .webp');
+      }
+      if (error.message?.includes('El archivo debe ser de tipo image/webp')) {
+        throw new BadRequestException('El archivo debe ser de tipo image/webp');
+      }
+
+      throw new Error('Error al subir el sello: ' + error.message);
+    }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('/:productoCodigo/sello')
+  async deleteProductSello(@Param('productoCodigo') productoCodigo: string) {
+    try {
+      return await firstValueFrom(
+        this.productsClient.send({ cmd: 'delete_product_sello' }, productoCodigo).pipe(
+          timeout(10000),
+        ),
+      );
+    } catch (error) {
+      console.error('Error en deleteProductSello:', error);
+      throw new Error('Error al eliminar el sello: ' + error.message);
     }
   }
 

@@ -288,13 +288,20 @@ export class HomeService implements OnModuleInit {
             const cat = catalogoByCod.get(cod) || {};
             const sinInteres18 =
               cod in sin18Override ? !!sin18Override[cod] : sin18General;
+            // Si el producto está en una promo ECONT activa (aplicada en getOfertaById
+            // vía aplicarPreciosPromoOferta), esa promo gana sobre el precio guardado
+            // de la oferta — nunca debe mostrarse un precio de oferta stale.
+            const enPromo = !!p?.enPromo;
             return {
               ...p,
               imagenes: Array.isArray(cat?.imagenes) ? cat.imagenes : [],
               nombre_marca: cat?.nombre_marca ?? null,
               nombre_subcategoria: cat?.nombre_subcategoria ?? null,
+              sello: cat?.sello ?? null,
               precioCatalogo: cat?.precioventaRedondeado ?? cat?.precioventa ?? null,
               precioTope: cat?.preciotope ?? null,
+              precioContado: enPromo ? p.precioContadoRedondeado : p.precioContado,
+              precioCredito: enPromo ? p.precioContadoRedondeado : p.precioCredito,
               cuotas: Array.isArray(cat?.cuotas) ? cat.cuotas : undefined,
               sinInteres18,
             };
