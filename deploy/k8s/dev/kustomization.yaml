@@ -11,5 +11,6 @@ resources:
   - image.yaml
   - payments.yaml
   - products.yaml
+  - mail.yaml
   - api-gateway.yaml
   - ingress.yaml

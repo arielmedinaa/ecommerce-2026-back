@@ -6,10 +6,12 @@ import { BannerValidationService } from './service/errors/image.spec';
 import { BannerErrorService } from './service/errors/banner-error.service';
 import { MariaDbModule } from './config/mariadb.module';
 import { ImageStorageService } from '@shared/common/services/image-storage.service';
+import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
 
 @Module({
   imports: [
-    MariaDbModule
+    MariaDbModule,
+    MicroserviceModule.register('MAIL_SERVICE'),
   ],
   controllers: [BannersController, ImageHttpController],
   providers: [

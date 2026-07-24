@@ -69,6 +69,33 @@ export class CartController {
     );
   }
 
+  @Post('orders/:codigo/rating')
+  @UseGuards(JwtAuthGuard)
+  @SneakyThrows('CartService', 'rateOrder')
+  async rateOrder(
+    @Param('codigo') codigo: string,
+    @Body() body: any,
+    @Req() request: any,
+  ) {
+    const userId = request.user?.sub;
+    return await firstValueFrom(
+      this.cartClient.send({ cmd: 'rate_order' }, { userId, codigo, body }),
+    );
+  }
+
+  @Get('orders/:codigo/rating-eligibility')
+  @UseGuards(JwtAuthGuard)
+  @SneakyThrows('CartService', 'shouldPromptRating')
+  async shouldPromptRating(
+    @Param('codigo') codigo: string,
+    @Req() request: any,
+  ) {
+    const userId = request.user?.sub;
+    return await firstValueFrom(
+      this.cartClient.send({ cmd: 'should_prompt_rating' }, { userId, codigo }),
+    );
+  }
+
   @Get('orders/byUser/:userId')
   @SneakyThrows('CartService', 'getOrdersByUserAdmin')
   async getOrdersByUserAdmin(@Param('userId') userId: string) {
@@ -82,6 +109,14 @@ export class CartController {
   async getOrdersByProduct(@Param('codigo') codigo: string) {
     return await firstValueFrom(
       this.cartClient.send({ cmd: 'get_orders_by_product' }, { codigo }),
+    );
+  }
+
+  @Get(':codigo/estado-pedido')
+  @SneakyThrows('CartService', 'getEstadoPedido')
+  async getEstadoPedido(@Param('codigo') codigo: string) {
+    return await firstValueFrom(
+      this.cartClient.send({ cmd: 'get_estado_pedido' }, { codigo }),
     );
   }
 

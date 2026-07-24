@@ -411,12 +411,43 @@ export class ProductsController {
     }
   }
 
+  @MessagePattern({ cmd: 'search_econt_combos' })
+  async searchEcontCombos(@Payload() payload: { term: string; limit?: number }) {
+    try {
+      const data = await this.combosService.searchEcontCombos(payload?.term ?? '', Number(payload?.limit) || 6);
+      return { data, success: true, message: 'Combos encontrados' };
+    } catch (error) {
+      this.logger.error('Error in search_econt_combos:', error);
+      throw error;
+    }
+  }
+
   @MessagePattern({ cmd: 'upload_econt_combo_image' })
   async uploadEcontComboImage(@Payload() payload: { idCombo: number; file: any }) {
     try {
       return await this.combosService.uploadEcontComboImage(Number(payload?.idCombo), payload?.file);
     } catch (error) {
       this.logger.error('Error in upload_econt_combo_image:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'list_econt_combo_images' })
+  async listEcontComboImages(@Payload() payload: { idCombo: number }) {
+    try {
+      return await this.combosService.listEcontComboImages(Number(payload?.idCombo));
+    } catch (error) {
+      this.logger.error('Error in list_econt_combo_images:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'delete_econt_combo_image' })
+  async deleteEcontComboImage(@Payload() payload: { idCombo: number; imagenId: number }) {
+    try {
+      return await this.combosService.deleteEcontComboImage(Number(payload?.idCombo), Number(payload?.imagenId));
+    } catch (error) {
+      this.logger.error('Error in delete_econt_combo_image:', error);
       throw error;
     }
   }

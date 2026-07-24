@@ -106,11 +106,30 @@ export class CartController {
     return this.cartService.getUserOrders(payload?.userId);
   }
 
+  @MessagePattern({ cmd: 'get_estado_pedido' })
+  async getEstadoPedido(@Payload() payload: { codigo: number }) {
+    return this.cartService.obtenerEstadoPedido(Number(payload?.codigo));
+  }
+
   @MessagePattern({ cmd: 'update_order' })
   async updateOrder(
     @Payload() payload: { userId: number | string; codigo: string; patch: any },
   ) {
     return this.cartService.updateOrder(payload?.userId, payload?.codigo, payload?.patch || {});
+  }
+
+  @MessagePattern({ cmd: 'rate_order' })
+  async rateOrder(
+    @Payload() payload: { userId: number | string; codigo: string; body: any },
+  ) {
+    return this.cartService.rateOrder(payload?.userId, payload?.codigo, payload?.body || {});
+  }
+
+  @MessagePattern({ cmd: 'should_prompt_rating' })
+  async shouldPromptRating(
+    @Payload() payload: { userId: number | string; codigo: string },
+  ) {
+    return this.cartService.shouldPromptRating(payload?.userId, payload?.codigo);
   }
 
   @MessagePattern({ cmd: 'get_orders_by_product' })

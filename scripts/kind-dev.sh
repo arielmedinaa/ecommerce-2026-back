@@ -14,6 +14,7 @@ SERVICES=(
   "image-service"
   "payments-service"
   "products-service"
+  "mail-service"
   "api-gateway"
 )
 
@@ -30,7 +31,7 @@ Usage:
   scripts/kind-dev.sh port-forward
 
 Services:
-  auth-service cart-service content-service image-service payments-service products-service api-gateway
+  auth-service cart-service content-service image-service payments-service products-service mail-service api-gateway
 EOF
 }
 
@@ -48,6 +49,7 @@ dockerfile_for() {
     image-service) printf 'microservices/image/container/Dockerfile.dev' ;;
     payments-service) printf 'microservices/payments/container/Dockerfile.dev' ;;
     products-service) printf 'microservices/products/container/Dockerfile.dev' ;;
+    mail-service) printf 'microservices/mail/container/Dockerfile.dev' ;;
     api-gateway) printf 'api-gateway/container/Dockerfile' ;;
     *) return 1 ;;
   esac
@@ -62,6 +64,7 @@ manifest_for() {
     image-service) printf 'deploy/k8s/dev/image.yaml' ;;
     payments-service) printf 'deploy/k8s/dev/payments.yaml' ;;
     products-service) printf 'deploy/k8s/dev/products.yaml' ;;
+    mail-service) printf 'deploy/k8s/dev/mail.yaml' ;;
     api-gateway) printf 'deploy/k8s/dev/api-gateway.yaml' ;;
     *) return 1 ;;
   esac
@@ -82,6 +85,7 @@ resolve_services() {
       image|image-service) printf '%s\n' 'image-service' ;;
       payments|payments-service) printf '%s\n' 'payments-service' ;;
       products|products-service) printf '%s\n' 'products-service' ;;
+      mail|mail-service) printf '%s\n' 'mail-service' ;;
       gateway|api-gateway) printf '%s\n' 'api-gateway' ;;
       *)
         printf 'Unknown service: %s\n' "$requested" >&2

@@ -23,6 +23,7 @@ export interface EcontComboCuota {
 
 export interface EcontComboDetalleRow {
   codigoArticulo: string;
+  nombreArticulo: string | null;
   cantidad: number;
 }
 
@@ -37,6 +38,22 @@ export interface EcontCombo {
   cuotas: EcontComboCuota[];
   disponibleEcommerce: number | null;
   imagen: string | null;
+  imagenes: { id: number; imagen: string }[];
+}
+
+// Shape análogo a SearchProduct ({codigo, nombre, precio, imagen, imagenes}) para
+// que el storefront reutilice la misma lógica de captura de atributos que usa
+// para productos. Se usa solo en la búsqueda de combos, no reemplaza EcontCombo
+// (que sigue consumiendo el panel admin tal cual).
+export interface EcontComboSearchResult {
+  codigo: string;
+  nombre: string;
+  precio: number | null;
+  imagen: string | null;
+  imagenes: string[];
+  precioOriginal: number | null;
+  cuotas: EcontComboCuota[];
+  productos: { codigo: string; nombre: string }[];
 }
 
 @Injectable()
@@ -146,9 +163,9 @@ export class CombosService {
       });
 
       const imagen = `${this.baseUrl}/products/images/${fileName}`;
-      const existing = await this.econtComboImagenReadRepository.findOne({ where: { idCombo } });
+      const count = await this.econtComboImagenReadRepository.count({ where: { idCombo } });
       const saved = await this.econtComboImagenWriteRepository.save(
-        this.econtComboImagenWriteRepository.create({ ...existing, idCombo, imagen }),
+        this.econtComboImagenWriteRepository.create({ idCombo, imagen, orden: count }),
       );
 
       this.econtCache.clear();
@@ -157,6 +174,41 @@ export class CombosService {
     } catch (error) {
       this.logger.error('Error uploadEcontComboImage', error);
       return { data: null, message: `Error al subir la imagen del combo: ${error.message}`, success: false };
+    }
+  }
+
+  async listEcontComboImages(
+    idCombo: number,
+  ): Promise<{ data: EcontComboImagen[]; message: string; success: boolean }> {
+    try {
+      const data = await this.econtComboImagenReadRepository.find({
+        where: { idCombo },
+        order: { orden: 'ASC' },
+      });
+      return { data, message: 'Imágenes del combo obtenidas exitosamente', success: true };
+    } catch (error) {
+      this.logger.error('Error listEcontComboImages', error);
+      return { data: [], message: `Error al obtener las imágenes del combo: ${error.message}`, success: false };
+    }
+  }
+
+  async deleteEcontComboImage(
+    idCombo: number,
+    imagenId: number,
+  ): Promise<{ data: null; message: string; success: boolean }> {
+    try {
+      const existing = await this.econtComboImagenReadRepository.findOne({
+        where: { id: imagenId, idCombo },
+      });
+      if (!existing) {
+        return { data: null, message: 'Imagen no encontrada para este combo', success: false };
+      }
+      await this.econtComboImagenWriteRepository.remove(existing);
+      this.econtCache.clear();
+      return { data: null, message: 'Imagen del combo eliminada exitosamente', success: true };
+    } catch (error) {
+      this.logger.error('Error deleteEcontComboImage', error);
+      return { data: null, message: `Error al eliminar la imagen del combo: ${error.message}`, success: false };
     }
   }
 
@@ -351,10 +403,11 @@ export class CombosService {
       async () => {
         const rows = await this.productReadRepository.query(
           `SELECT cc.id_combo, cc.nombre_combo, cc.precio_venta AS precio_regular, cc.categoria,
-                  cd.codigo_articulo, cd.cantidad,
+                  cd.codigo_articulo, a.nombre AS nombre_articulo, cd.cantidad,
                   pd.cantidad_cuotas, pd.precio_venta AS precio_promo, pd.precio_original, pd.disponible_ecommerce
              FROM tbl_combo_cabecera cc
              JOIN tbl_combo_detalle cd ON cd.id_combo = cc.id_combo AND cd.estado = 1
+             LEFT JOIN articulo a ON a.codigo_articulo = cd.codigo_articulo
              JOIN tbl_promos_detalles pd ON pd.codigo_identificador = cc.id_combo AND pd.tipo_codigo = 2 AND pd.estado = 1
              JOIN tbl_promos_cabeceras pc ON pc.id_promo = pd.id_promo
             WHERE pd.id_promo = ?
@@ -382,15 +435,73 @@ export class CombosService {
     );
   }
 
+  async searchEcontCombos(term: string, limit = 6): Promise<EcontComboSearchResult[]> {
+    const normalizedTerm = String(term || '').trim();
+    if (!normalizedTerm) return [];
+
+    const cacheKey = `search:${normalizedTerm.toLowerCase()}:${limit}`;
+    const cached = this.econtCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < this.ECONT_CACHE_TTL) {
+      return cached.data;
+    }
+
+    return this.econtBreaker.execute(
+      async () => {
+        const result = await this.productReadRepository.query(
+          'CALL proc_buscar_combos_ecommerce(?, ?, ?)',
+          [normalizedTerm, limit * 10, 0],
+        );
+        const rows = (result && result[0]) || [];
+        const combos = this.groupEcontComboRows(rows as any[]).slice(0, limit);
+        await this.attachEcontComboImages(combos);
+        const data = combos.map(c => this.toSearchResult(c));
+        this.econtCache.set(cacheKey, { data, timestamp: Date.now() });
+        return data;
+      },
+      async () => {
+        const stale = this.econtCache.get(cacheKey);
+        if (stale) {
+          this.logger.warn(`ECONT no disponible: sirviendo combos de búsqueda "${normalizedTerm}" desde cache`);
+          return stale.data;
+        }
+        this.logger.warn(`ECONT no disponible y sin cache previa para búsqueda "${normalizedTerm}": se devuelve lista vacía`);
+        return [];
+      },
+    );
+  }
+
   private async attachEcontComboImages(combos: EcontCombo[]): Promise<void> {
     if (combos.length === 0) return;
-    const imagenes = await this.econtComboImagenReadRepository.find({
+    const rows = await this.econtComboImagenReadRepository.find({
       where: combos.map(c => ({ idCombo: c.idCombo })),
+      order: { orden: 'ASC' },
     });
-    const imagenPorCombo = new Map(imagenes.map(i => [i.idCombo, i.imagen]));
-    for (const combo of combos) {
-      combo.imagen = imagenPorCombo.get(combo.idCombo) ?? null;
+    const imagenesPorCombo = new Map<number, { id: number; imagen: string }[]>();
+    for (const row of rows) {
+      const arr = imagenesPorCombo.get(row.idCombo) ?? [];
+      arr.push({ id: row.id, imagen: row.imagen });
+      imagenesPorCombo.set(row.idCombo, arr);
     }
+    for (const combo of combos) {
+      const imagenes = imagenesPorCombo.get(combo.idCombo) ?? [];
+      combo.imagenes = imagenes;
+      combo.imagen = imagenes[0]?.imagen ?? null;
+    }
+  }
+
+  private toSearchResult(combo: EcontCombo): EcontComboSearchResult {
+    return {
+      codigo: String(combo.idCombo),
+      nombre: combo.nombreCombo,
+      precio: combo.contado ?? combo.precioRegular ?? null,
+      imagen: combo.imagen,
+      imagenes: combo.imagenes.map(i => i.imagen),
+      precioOriginal: combo.original,
+      cuotas: combo.cuotas,
+      productos: combo.detalles
+        .filter(d => d.nombreArticulo)
+        .map(d => ({ codigo: d.codigoArticulo, nombre: d.nombreArticulo as string })),
+    };
   }
 
   private groupEcontComboRows(rows: any[]): EcontCombo[] {
@@ -412,6 +523,7 @@ export class CombosService {
           cuotas: [],
           disponibleEcommerce: null,
           imagen: null,
+          imagenes: [],
         };
         map.set(idCombo, combo);
         detallesSeen.set(idCombo, new Set());
@@ -423,6 +535,7 @@ export class CombosService {
         seen.add(detalleKey);
         combo.detalles.push({
           codigoArticulo: detalleKey,
+          nombreArticulo: row.nombre_articulo ?? null,
           cantidad: Number(row.cantidad),
         });
       }

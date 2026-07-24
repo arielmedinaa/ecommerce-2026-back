@@ -383,6 +383,28 @@ export class ProductsController {
     }
   }
 
+  @Get('/combos/econt/:idCombo/imagenes')
+  async listEcontComboImages(@Param('idCombo') idCombo: string) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'list_econt_combo_images' }, { idCombo: Number(idCombo) })
+    )
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('/combos/econt/:idCombo/imagenes/:imagenId')
+  async deleteEcontComboImage(@Param('idCombo') idCombo: string, @Param('imagenId') imagenId: string) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'delete_econt_combo_image' }, { idCombo: Number(idCombo), imagenId: Number(imagenId) })
+    )
+  }
+
+  @Get('/combos/search')
+  async searchEcontCombos(@Query('q') q: string, @Query('limit') limit?: string) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'search_econt_combos' }, { term: q ?? '', limit: Number(limit) || 6 })
+    )
+  }
+
   @Get('/combos/:id')
   async getCmsComboById(@Param('id') id: string) {
     return await firstValueFrom(

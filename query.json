@@ -1,0 +1,114 @@
+{
+    "success": true,
+    "message": "Combos encontrados",
+    "data": [
+        {
+            "idCombo": 83074,
+            "nombreCombo": "COMBO CELULAR XIAOMI POCO C71 4/128GB NEGRO + SMARTWATCH KOLKE KVR-671 NEGRO",
+            "categoria": null,
+            "precioRegular": 968000,
+            "detalles": [
+                {
+                    "codigoArticulo": "30850",
+                    "nombreArticulo": "SMARTWATCH KOLKE KVR-671 NEGRO",
+                    "cantidad": 1
+                },
+                {
+                    "codigoArticulo": "38940",
+                    "nombreArticulo": "CELULAR XIAOMI POCO C71 4/128GB NEGRO",
+                    "cantidad": 1
+                }
+            ],
+            "contado": 995000,
+            "original": 1294000,
+            "cuotas": [
+                {
+                    "cuota": 12,
+                    "precio": 1500000,
+                    "precioOriginal": 1950000
+                },
+                {
+                    "cuota": 6,
+                    "precio": 1230000,
+                    "precioOriginal": 1599000
+                },
+                {
+                    "cuota": 15,
+                    "precio": 1725000,
+                    "precioOriginal": 2243000
+                },
+                {
+                    "cuota": 9,
+                    "precio": 1395000,
+                    "precioOriginal": 1814000
+                },
+                {
+                    "cuota": 3,
+                    "precio": 1065000,
+                    "precioOriginal": 1385000
+                },
+                {
+                    "cuota": 18,
+                    "precio": 1890000,
+                    "precioOriginal": 2457000
+                }
+            ],
+            "disponibleEcommerce": 100,
+            "imagen": null
+        },
+        {
+            "idCombo": 83075,
+            "nombreCombo": "COMBO CELULAR XIAOMI REDMI 15C 4/128GB + SMARTWATCH KOLKE KVR-671 NEGRO",
+            "categoria": null,
+            "precioRegular": 993000,
+            "detalles": [
+                {
+                    "codigoArticulo": "30850",
+                    "nombreArticulo": "SMARTWATCH KOLKE KVR-671 NEGRO",
+                    "cantidad": 1
+                },
+                {
+                    "codigoArticulo": "39319",
+                    "nombreArticulo": "CELULAR XIAOMI REDMI 15C 4/128GB",
+                    "cantidad": 1
+                }
+            ],
+            "contado": null,
+            "original": null,
+            "cuotas": [
+                {
+                    "cuota": 15,
+                    "precio": 1725000,
+                    "precioOriginal": 2243000
+                },
+                {
+                    "cuota": 9,
+                    "precio": 1440000,
+                    "precioOriginal": 1872000
+                },
+                {
+                    "cuota": 3,
+                    "precio": 1095000,
+                    "precioOriginal": 1424000
+                },
+                {
+                    "cuota": 18,
+                    "precio": 1890000,
+                    "precioOriginal": 2457000
+                },
+                {
+                    "cuota": 12,
+                    "precio": 1560000,
+                    "precioOriginal": 2028000
+                },
+                {
+                    "cuota": 6,
+                    "precio": 1260000,
+                    "precioOriginal": 1638000
+                }
+            ],
+            "disponibleEcommerce": 200,
+            "imagen": null
+        }
+    ]
+}

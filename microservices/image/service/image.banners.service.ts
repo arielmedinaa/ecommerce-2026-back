@@ -3,9 +3,11 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
+  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ClientProxy } from '@nestjs/microservices';
 import { Banners } from '../schemas/banners/banners.schema';
 import { BannerValidationService } from './errors/image.spec';
 import { BannerErrorService } from './errors/banner-error.service';
@@ -33,6 +35,7 @@ export class BannerService {
     private readonly bannerValidationService: BannerValidationService,
     private readonly bannerErrorService: BannerErrorService,
     private readonly imageStorage: ImageStorageService,
+    @Inject('MAIL_SERVICE') private readonly mailClient: ClientProxy,
   ) {
     const configured =
       process.env.DIR_IMAGE ||
@@ -132,6 +135,8 @@ export class BannerService {
       const newEntity = this.bannerRepository.create(bannerData);
       const newBanner = await this.bannerRepository.save(newEntity);
 
+      this.notifyNewPromo(newBanner);
+
       return {
         data: newBanner,
         message: 'BANNER SUBIDO EXITOSAMENTE',
@@ -191,7 +196,7 @@ export class BannerService {
       }
 
       const isVideo =
-        /video\
+        /^video\//.test(contentType || '') || /\.(mp4|mov|webm)$/i.test(originalKey);
       if (isVideo) {
         return await this.saveVideoBannerFromS3(
           originalKey,
@@ -238,6 +243,8 @@ export class BannerService {
       const newBanner = await this.bannerRepository.save(newEntity);
       await this.imageStorage.deleteObject(originalKey);
       if (originalKeyMobile) await this.imageStorage.deleteObject(originalKeyMobile);
+
+      this.notifyNewPromo(newBanner);
 
       return {
         data: newBanner,
@@ -314,11 +321,31 @@ export class BannerService {
     const newBanner = await this.bannerRepository.save(newEntity);
     await this.imageStorage.deleteObject(originalKey);
 
+    this.notifyNewPromo(newBanner);
+
     return {
       data: newBanner,
       message: 'BANNER (VIDEO) SUBIDO EXITOSAMENTE',
       success: true,
     };
+  }
+
+  private notifyNewPromo(banner: Banners): void {
+    const gatewayUrl = (process.env.API_GATEWAY_URL || '').replace(/\/+$/, '');
+    const storefrontUrl = (process.env.STOREFRONT_URL || '').replace(/\/+$/, '');
+    this.mailClient
+      .send(
+        { cmd: 'send_promo_notification' },
+        {
+          titulo: banner.nombre,
+          bannerImageUrl: `${gatewayUrl}/image/banner/${encodeURIComponent(banner.nombre)}/desktop`,
+          link: storefrontUrl,
+        },
+      )
+      .subscribe({
+        error: (mailError) =>
+          this.logger.error(`Error enviando notificación de promo para banner ${banner.nombre}:`, mailError),
+      });
   }
 
   private async processAndSaveImages(

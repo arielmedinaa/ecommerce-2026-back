@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { CartContadoService } from './service/cart.service';
 import { CartErrorService } from './service/errors/cart-error.service';
 import { CartValidationService } from './service/cart.service.spec';
@@ -14,6 +15,7 @@ import { UtilsCart } from './utils/cart-utils';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     JwtModule.register({
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1d' },
@@ -28,6 +30,7 @@ import { UtilsCart } from './utils/cart-utils';
       'PAYMENTS_SERVICE',
       'CONTENT_SERVICE',
       'AUTH_SERVICE',
+      'MAIL_SERVICE',
     ]),
   ],
   controllers: [CartController],

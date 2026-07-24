@@ -11,7 +11,7 @@ data:
   
   PORT: "3100"
   GATEWAY_PORT: "3100"
-  CORS_ORIGIN: "http://localhost:5173"
+  CORS_ORIGIN: "http://localhost:3000"
   # Base pública del API Gateway (sin slash final). La usan products (url_imagen) y content (URLs de banners).
   API_GATEWAY_URL: "https://api.localhost.localstack.cloud:8443/api"
   
@@ -21,6 +21,7 @@ data:
   PAYMENTS_PORT: "3105"
   PRODUCTS_PORT: "3106"
   IMAGE_PORT: "3107"
+  MAIL_PORT: "3108"
 
   AUTH_SERVICE_URL: "auth-service"
   CART_SERVICE_URL: "cart-service"
@@ -28,6 +29,12 @@ data:
   PAYMENTS_SERVICE_URL: "payments-service"
   PRODUCTS_SERVICE_URL: "products-service"
   IMAGE_SERVICE_URL: "image-service"
+  MAIL_SERVICE_URL: "mail-service"
+
+  # Dominio público del storefront: usado por mail-service para armar links de
+  # tracking/carrito y por products/combos para la imagen del logo en los correos.
+  STOREFRONT_URL: "http://localhost:3000"
+  LOCALSTACK: "ls-MoSawUhI-vOQO-3749-9232-buHonIgE48ce"
 
   DATABASE_HOST: "mariadb"
   DATABASE_PORT: "3306"
@@ -45,6 +52,12 @@ data:
 
   CENTRAL_APP_HOST: "192.168.121.144"
   CENTRAL_APP_PROTOCOL: "http"
+  
+  CORREO_SERVER: "smtp.gmail.com"
+  CORREO_PORT: "587"
+  CORREO_NOMBRE: "Central Shop"
+  CORREO_CUENTA: "ecommercentralshop@gmail.com"
+  CORREO_PASS: "zigz eovg sbwc owop"
 
   SYNCRONICE: "false"
   DB_RETRY_ATTEMPTS: "30"

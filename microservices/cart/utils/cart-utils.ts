@@ -1,5 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ESTADO_SOLICITUD_MAP } from '@cart/constants/cart.constants';
+import {
+  ESTADO_SOLICITUD_MAP,
+  ESTADO_SOLICITUD_FASE_MAP,
+} from '@cart/constants/cart.constants';
 import * as http from 'http';
 import * as https from 'https';
 import * as mysql from 'mysql2/promise';
@@ -81,21 +84,25 @@ export class UtilsCart {
     }
   }
 
+  private async abrirConexionErp(): Promise<mysql.Connection> {
+    const dbName = process.env.ECONT_DB_DATABASE;
+    if (!dbName) {
+      this.logger.error('ECONT_DB_DATABASE environment variable is not set');
+      throw new Error('ECONT_DB_DATABASE environment variable is not set');
+    }
+    return mysql.createConnection({
+      host: process.env.ECONT_DB_HOST,
+      port: parseInt(process.env.ECONT_DB_PORT || '3306'),
+      user: process.env.ECONT_DB_USER,
+      password: process.env.ECONT_DB_PASSWORD,
+      database: dbName,
+    });
+  }
+
   async consultarEstadoEcontDB(secuencia: number): Promise<string> {
     let connection: mysql.Connection | null = null;
     try {
-      const dbName = process.env.ECONT_DB_DATABASE;
-      if (!dbName) {
-        this.logger.error('ECONT_DB_DATABASE environment variable is not set');
-        throw new Error('ECONT_DB_DATABASE environment variable is not set');
-      }
-      connection = await mysql.createConnection({
-        host: process.env.ECONT_DB_HOST,
-        port: parseInt(process.env.ECONT_DB_PORT || '3306'),
-        user: process.env.ECONT_DB_USER,
-        password: process.env.ECONT_DB_PASSWORD,
-        database: dbName,
-      });
+      connection = await this.abrirConexionErp();
 
       const [rows] = await connection.query(
         'Select estado_soli from solicitudcab sb inner join cs_solicitud_ecommerce_cabecera csec on csec.solicitudcab_secuencia = sb.secuencia where csec.mongo_id = ?',
@@ -111,6 +118,73 @@ export class UtilsCart {
       }
       console.error('Error consultando base de datos Econt:', error);
       return '00';
+    }
+  }
+
+  async resolverEstadoPedido(secuencia: number): Promise<{
+    fase: string;
+    estadoSoli?: string;
+    mensaje?: string;
+    estadoDispatch?: string;
+    rutaId?: number | null;
+    tipoDespacho?: number | null;
+    fechaEstimada?: string | null;
+    historial?: { estado: string; fecha: string }[];
+  }> {
+    let connection: mysql.Connection | null = null;
+    try {
+      connection = await this.abrirConexionErp();
+
+      const [dispatchRows] = await connection.query(
+        `SELECT cdo.estado, cdo.ruta_id, cdo.tipo_despacho, cdo.fecha_estimada, edo.nombre
+           FROM cs_dispatchtrack_orden cdo
+           JOIN cs_estados_dispatchtrack_orden edo ON edo.id = cdo.estado
+          WHERE cdo.orden_id = ?`,
+        [String(secuencia)],
+      );
+      const dispatch = (dispatchRows as any[])[0];
+
+      if (dispatch) {
+        const [historialRows] = await connection.query(
+          `SELECT edo.nombre AS estado, cdho.update_at AS fecha
+             FROM cs_historial_dispatchtrack_orden cdho
+             JOIN cs_estados_dispatchtrack_orden edo ON edo.id = cdho.estado
+            WHERE cdho.orden_id = ?
+            ORDER BY cdho.id ASC`,
+          [String(secuencia)],
+        );
+        await connection.end();
+        return {
+          fase: 'dispatch',
+          estadoDispatch: dispatch.nombre,
+          rutaId: dispatch.ruta_id,
+          tipoDespacho: dispatch.tipo_despacho,
+          fechaEstimada: dispatch.fecha_estimada,
+          historial: historialRows as any[],
+        };
+      }
+
+      const [solicitudRows] = await connection.query(
+        'SELECT estado_soli FROM solicitudcab WHERE secuencia = ?',
+        [secuencia],
+      );
+      await connection.end();
+      const result = solicitudRows as any[];
+      if (result.length === 0) {
+        return { fase: 'no_encontrado' };
+      }
+      const estadoSoli = result[0].estado_soli;
+      return {
+        fase: ESTADO_SOLICITUD_FASE_MAP[estadoSoli] || 'desconocido',
+        estadoSoli,
+        mensaje: ESTADO_SOLICITUD_MAP[estadoSoli] || 'Estado no identificado',
+      };
+    } catch (error) {
+      if (connection) {
+        await connection.end().catch(() => {});
+      }
+      console.error('Error resolviendo estado de pedido en ERP:', error);
+      return { fase: 'error' };
     }
   }
 

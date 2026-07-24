@@ -13,6 +13,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { JwtAuthGuard } from '@gateway/common/guards/jwt-auth.guard';
 import { ImageController } from './modules/image/controller/image.controller';
 import { ImageModule } from './modules/image/image.module';
+import { MailController } from './modules/mail/controller/mail.controller';
+import { MailModule } from './modules/mail/mail.module';
 
 @Module({
   imports: [
@@ -32,11 +34,13 @@ import { ImageModule } from './modules/image/image.module';
       'PAYMENTS_SERVICE',
       'PRODUCTS_SERVICE',
       'IMAGE_SERVICE',
+      'MAIL_SERVICE',
     ]),
     PaymentsModule,
     AuthModule,
     ContentModule,
     ImageModule,
+    MailModule,
   ],
   controllers: [
     AppController,
@@ -45,6 +49,7 @@ import { ImageModule } from './modules/image/image.module';
     PaymentsController,
     AuthController,
     ImageController,
+    MailController,
   ],
   providers: [JwtAuthGuard],
 })

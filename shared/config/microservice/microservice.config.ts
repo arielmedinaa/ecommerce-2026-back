@@ -17,6 +17,7 @@ export const SERVICE_PORTS = {
   PAYMENTS: 3105,
   PRODUCTS: 3106,
   IMAGE: 3107,
+  MAIL: 3108,
 };
 
 export const getNatsServers = (): string[] => [

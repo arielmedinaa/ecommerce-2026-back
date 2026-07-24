@@ -649,15 +649,23 @@ export class ProductsService {
       const corte = this.productsUtils.hmsToMin(hoy.corte);
       if (nowMin < ini)
         avisos.push(`Los pedidos se reciben desde las ${hoy.inicial}.`);
-      const earliest = Math.max(nowMin + 240, ini); 
+      const earliest = Math.max(nowMin + 240, ini);
+      const maximoLimite = maximo - 30;
+      const corteLimite = corte != null ? corte - 30 : null;
       let hoyPosible = false;
       if (nowMin <= fin) {
-        if (allInStock) hoyPosible = earliest <= maximo;
-        else hoyPosible = corte != null && nowMin <= corte && earliest <= maximo;
+        const dentroDeMaximo = nowMin <= maximoLimite;
+        const dentroDeCorte = corteLimite == null || nowMin <= corteLimite;
+        hoyPosible = dentroDeMaximo && dentroDeCorte;
       }
       if (hoyPosible) {
         const horas = horasEntre(earliest, fin);
         if (horas.length) slots.push({ fecha: ymd, dia: dow, horas, horaMin: hoy.inicial, horaMax: hoy.final });
+        else if (!allInStock) {
+          avisos.push(
+            'Uno de tus artículos está teniendo mucha demanda 🙌 así que vamos a necesitar un poquito más de tiempo para preparar tu envío.',
+          );
+        }
       } else if (!allInStock) {
         avisos.push(
           'Uno de tus artículos está teniendo mucha demanda 🙌 así que vamos a necesitar un poquito más de tiempo para preparar tu envío.',

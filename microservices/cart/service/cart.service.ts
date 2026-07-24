@@ -3,8 +3,9 @@ import { Transaccion } from '@cart/schemas/transaccion.schemas';
 import { Order } from '@cart/schemas/order.schemas';
 import { OrderItem } from '@cart/schemas/order-item.schemas';
 import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, In, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
+import { Between, In, IsNull, LessThanOrEqual, MoreThan, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { JwtService } from '@nestjs/jwt';
@@ -17,6 +18,8 @@ import { ResilientService } from '@shared/common/decorators/resilient-client.dec
 import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
 import { CartValidationService } from './cart.service.spec';
 import { CartErrorService } from './errors/cart-error.service';
+
+const STOREFRONT_URL = process.env.STOREFRONT_URL;
 
 @Injectable()
 export class CartContadoService {
@@ -42,6 +45,7 @@ export class CartContadoService {
     @Inject('PAYMENTS_SERVICE') private readonly paymentsService: ClientProxy,
     @Inject('CONTENT_SERVICE') private readonly contentService: ClientProxy,
     @Inject('AUTH_SERVICE') private readonly authService: ClientProxy,
+    @Inject('MAIL_SERVICE') private readonly mailClient: ClientProxy,
     private readonly cartValidationService: CartValidationService,
     private readonly cartErrorService: CartErrorService,
     private readonly resilientService: ResilientService,
@@ -1260,6 +1264,82 @@ export class CartContadoService {
     }
   }
 
+  async rateOrder(
+    userId: number | string,
+    codigo: string,
+    body: { estrellas: number; motivos?: string[]; comentario?: string },
+  ): Promise<{ data: any; success: boolean; message: string }> {
+    try {
+      const id = String(userId ?? '').trim();
+      const estrellas = Number(body?.estrellas);
+      if (!Number.isFinite(estrellas) || estrellas < 1 || estrellas > 5) {
+        return { data: null, success: false, message: 'CALIFICACION INVALIDA' };
+      }
+
+      const order = await this.orderWrite.findOne({ where: { codigo, cliente_documento: id } });
+      if (!order) {
+        return { data: null, success: false, message: 'ORDEN NO ENCONTRADA' };
+      }
+      if (order.calificacion) {
+        return { data: order.calificacion, success: false, message: 'LA ORDEN YA FUE CALIFICADA' };
+      }
+
+      order.calificacion = {
+        estrellas,
+        motivos: estrellas <= 3 && Array.isArray(body?.motivos) ? body.motivos.filter(Boolean) : undefined,
+        comentario: estrellas <= 3 ? (body?.comentario || undefined) : undefined,
+        fecha: new Date().toISOString(),
+      };
+      await this.orderWrite.save(order);
+
+      return { data: order.calificacion, success: true, message: 'CALIFICACION REGISTRADA' };
+    } catch (error) {
+      this.logger.error('Error al calificar orden:', error);
+      return { data: null, success: false, message: 'ERROR AL CALIFICAR ORDEN' };
+    }
+  }
+
+  // Decide si corresponde ofrecer la encuesta de calificación para esta orden:
+  // no si ya fue calificada, no si el cliente ya calificó una orden y todavía
+  // no completó 40 compras desde entonces (no guardamos contador propio, se
+  // deriva de `ordenes.calificacion`/`fecha_creacion`).
+  private readonly RATING_COOLDOWN_ORDERS = 40;
+
+  async shouldPromptRating(
+    userId: number | string,
+    codigo: string,
+  ): Promise<{ data: { shouldPrompt: boolean; codigo: string | null }; success: boolean; message: string }> {
+    try {
+      const id = String(userId ?? '').trim();
+      const order = await this.orderWrite.findOne({ where: { codigo, cliente_documento: id } });
+      if (!order || order.calificacion) {
+        return { data: { shouldPrompt: false, codigo: null }, success: true, message: 'NO APLICA' };
+      }
+
+      const lastRated = await this.orderWrite.findOne({
+        where: { cliente_documento: id, calificacion: Not(IsNull()) },
+        order: { fecha_creacion: 'DESC' },
+      });
+
+      let shouldPrompt = true;
+      if (lastRated) {
+        const ordersSinceRating = await this.orderWrite.count({
+          where: { cliente_documento: id, fecha_creacion: MoreThan(lastRated.fecha_creacion) },
+        });
+        shouldPrompt = ordersSinceRating >= this.RATING_COOLDOWN_ORDERS;
+      }
+
+      return {
+        data: { shouldPrompt, codigo: shouldPrompt ? order.codigo : null },
+        success: true,
+        message: 'OK',
+      };
+    } catch (error) {
+      this.logger.error('Error al evaluar elegibilidad de calificación:', error);
+      return { data: { shouldPrompt: false, codigo: null }, success: false, message: 'ERROR' };
+    }
+  }
+
   async getOrdersByProduct(
     productoCodigo: string,
   ): Promise<{ data: any; success: boolean; message: string }> {
@@ -1829,8 +1909,37 @@ export class CartContadoService {
         }
       });
 
+      setImmediate(() => {
+        const correo = carrito.cliente?.correo;
+        if (!correo) return;
+        const items = [
+          ...(carrito.articulos?.contado || []),
+          ...(carrito.articulos?.credito || []),
+        ].map((item: any) => ({
+          nombre: item.nombre,
+          cantidad: item.cantidad,
+          precio: item.precio,
+        }));
+        this.mailClient
+          .send(
+            { cmd: 'send_order_confirmation' },
+            {
+              correo,
+              nombre: carrito.cliente?.razonsocial,
+              items,
+              total: montoTotal,
+              trackingUrl: `${STOREFRONT_URL}/tracking/${encodeURIComponent(savedOrder.codigo)}`,
+              codigo: savedOrder.codigo,
+            },
+          )
+          .subscribe({
+            error: (mailError) =>
+              console.error('Error enviando correo de confirmación de pedido:', mailError),
+          });
+      });
+
       return {
-        data: [pagoResponse.data],
+        data: [{ ...pagoResponse.data, ordenCodigo: savedOrder.codigo }],
         success: true,
         message: 'CARRITO FINALIZADO E INTENTO DE PAGO ENCOLADO',
       };
@@ -1851,6 +1960,64 @@ export class CartContadoService {
         success: false,
         message: `ERROR AL FINALIZAR CARRITO: ${error.message}`,
       };
+    }
+  }
+
+  @Cron('*/5 * * * *')
+  async notifyAbandonedCarts(): Promise<void> {
+    const ABANDONO_MIN = 20;
+    const ageExpr = `TIMESTAMPDIFF(MINUTE, COALESCE(c.updatedAt, c.createdAt), NOW())`;
+    const finalizadoExpr = `(c.estado = '0' OR COALESCE(c.finished, '') = '1')`;
+    const abandonadoExpr = `(NOT ${finalizadoExpr} AND ${ageExpr} > ${ABANDONO_MIN})`;
+
+    let carritos: Cart[] = [];
+    try {
+      carritos = await this.carritoRead
+        .createQueryBuilder('c')
+        .where(abandonadoExpr)
+        .andWhere('c.abandonedEmailSent = false')
+        .andWhere("JSON_UNQUOTE(JSON_EXTRACT(c.cliente, '$.correo')) IS NOT NULL")
+        .andWhere("JSON_UNQUOTE(JSON_EXTRACT(c.cliente, '$.correo')) <> ''")
+        .getMany();
+    } catch (error) {
+      this.logger.error('Error consultando carritos abandonados para notificar:', error);
+      return;
+    }
+
+    for (const carrito of carritos) {
+      const correo = carrito.cliente?.correo;
+      if (!correo) continue;
+      const items = [
+        ...(carrito.articulos?.contado || []),
+        ...(carrito.articulos?.credito || []),
+      ].map((item: any) => ({
+        nombre: item.nombre,
+        cantidad: item.cantidad,
+        precio: item.precio,
+      }));
+      const total = items.reduce(
+        (acc: number, item: any) => acc + (item.precio || 0) * (item.cantidad || 0),
+        0,
+      );
+
+      this.mailClient
+        .send(
+          { cmd: 'send_abandoned_cart' },
+          {
+            correo,
+            nombre: carrito.cliente?.razonsocial,
+            items,
+            total,
+            recoverUrl: `${STOREFRONT_URL}/cart?c=${encodeURIComponent(carrito.codigo)}`,
+            codigo: carrito.codigo,
+          },
+        )
+        .subscribe({
+          error: (mailError) =>
+            this.logger.error(`Error enviando correo de carrito abandonado ${carrito.codigo}:`, mailError),
+        });
+
+      await this.carritoWrite.update({ codigo: carrito.codigo }, { abandonedEmailSent: true });
     }
   }
 
@@ -2060,6 +2227,41 @@ export class CartContadoService {
         message: `ERROR AL INSERTAR EN CENTRAL APP: ${error.message}`,
       };
     }
+  }
+
+  async obtenerEstadoPedido(codigo: number): Promise<{
+    data: any[];
+    success: boolean;
+    message: string;
+  }> {
+    const carrito = await this.carritoRead.findOne({ where: { codigo } });
+    if (!carrito) {
+      return { data: [], success: false, message: 'Carrito no encontrado' };
+    }
+
+    const erpSecuencias: { tipo: string; secuencia: number }[] =
+      carrito.erpSecuencias || [];
+    if (erpSecuencias.length === 0) {
+      return {
+        data: [],
+        success: false,
+        message: 'Este carrito aún no fue enviado al ERP',
+      };
+    }
+
+    const estados = await Promise.all(
+      erpSecuencias.map(async ({ tipo, secuencia }) => ({
+        tipo,
+        secuencia,
+        ...(await this.utilsCart.resolverEstadoPedido(secuencia)),
+      })),
+    );
+
+    return {
+      data: estados,
+      success: true,
+      message: 'Estado de pedido resuelto',
+    };
   }
 
   async countDailyFinishedCarts(clienteDocumento: number): Promise<number> {

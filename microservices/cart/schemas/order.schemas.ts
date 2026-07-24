@@ -39,7 +39,10 @@ export class Order {
   estado: number; 
 
   @Column({ type: 'json', nullable: true })
-  cambios: any[]; 
+  cambios: any[];
+
+  @Column({ type: 'json', nullable: true })
+  calificacion: { estrellas: number; motivos?: string[]; comentario?: string; fecha: string } | null;
 
   @CreateDateColumn()
   fecha_creacion: Date;
