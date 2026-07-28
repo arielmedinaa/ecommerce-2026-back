@@ -345,7 +345,7 @@ export class ProductsService {
       res,
       filters,
       this,
-      this.getCachedPrismaProductos,
+      this.getCachedPrismaProductos.bind(this),
     );
   }
 

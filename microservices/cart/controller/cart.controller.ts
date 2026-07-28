@@ -137,6 +137,11 @@ export class CartController {
     return this.cartService.getOrdersByProduct(payload?.codigo);
   }
 
+  @MessagePattern({ cmd: 'get_top_pedidos_hoy' })
+  async getTopPedidosHoy(@Payload() payload: { limit?: number }) {
+    return this.cartService.getTopPedidosHoy(payload?.limit);
+  }
+
   @MessagePattern({ cmd: 'sync_cart_cliente' })
   async syncCartCliente(
     @Payload() payload: { userId: number | string; cliente: { razonsocial?: string; correo?: string; telefono?: string; documento?: string } },

@@ -112,6 +112,17 @@ export class CartController {
     );
   }
 
+  @Get('top-pedidos-hoy')
+  @SneakyThrows('CartService', 'getTopPedidosHoy')
+  async getTopPedidosHoy(@Query('limit') limit?: string) {
+    return await firstValueFrom(
+      this.cartClient.send(
+        { cmd: 'get_top_pedidos_hoy' },
+        { limit: limit ? Number(limit) : undefined },
+      ),
+    );
+  }
+
   @Get(':codigo/estado-pedido')
   @SneakyThrows('CartService', 'getEstadoPedido')
   async getEstadoPedido(@Param('codigo') codigo: string) {

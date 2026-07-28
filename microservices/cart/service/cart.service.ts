@@ -192,8 +192,6 @@ export class CartContadoService {
           }
         }
 
-        // El precio de promo gana sobre el precio de catálogo enviado por el
-        // cliente — nunca debe guardarse en el carrito un precio stale.
         if (promo.contado !== null && promo.contado !== undefined) {
           producto.precio = promo.contado;
           if (producto.credito) {
@@ -1375,6 +1373,40 @@ export class CartContadoService {
     } catch (error) {
       this.logger.error('Error al obtener tracking por producto:', error);
       return { data: { total: 0, unidades: 0, ordenes: [] }, success: false, message: 'ERROR TRACKING PRODUCTO' };
+    }
+  }
+
+  // "Lo más pedido hoy": agrega unidades vendidas por producto entre el inicio
+  // del día actual y ahora, solo de órdenes confirmadas (estado 0). Usado por el
+  // filtro de "más pedido hoy" en el storefront.
+  async getTopPedidosHoy(
+    limit = 50,
+  ): Promise<{ data: Array<{ codigo: string; cantidad: number }>; success: boolean; message: string }> {
+    try {
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
+
+      const rows = await this.orderItemWrite
+        .createQueryBuilder('it')
+        .innerJoin('it.orden', 'o')
+        .select('it.producto_codigo', 'codigo')
+        .addSelect('SUM(it.cantidad)', 'cantidad')
+        .where('o.estado = :estado', { estado: 0 })
+        .andWhere('o.fecha_creacion BETWEEN :start AND :end', { start: todayStart, end: todayEnd })
+        .groupBy('it.producto_codigo')
+        .orderBy('cantidad', 'DESC')
+        .limit(limit)
+        .getRawMany();
+
+      const data = (rows || []).map((r: any) => ({
+        codigo: String(r.codigo),
+        cantidad: Number(r.cantidad) || 0,
+      }));
+      return { data, success: true, message: 'TOP PEDIDOS DE HOY' };
+    } catch (error) {
+      this.logger.error('Error al obtener top pedidos de hoy:', error);
+      return { data: [], success: false, message: 'ERROR AL OBTENER TOP PEDIDOS DE HOY' };
     }
   }
 
