@@ -8,9 +8,12 @@ import { ProductoOferta } from '../schemas/producto-oferta.schemas';
 import { ProductsImage } from '../schemas/products-image.schema';
 import { SearchTerm } from '../schemas/search-term.schema';
 import { ProductsSello } from '../schemas/products-sello.schema';
+import { ProductsSeller } from '../schemas/products-seller.schema';
+import { Proveedor } from '../schemas/proveedor.schema';
 import { CmsCombo } from '../schemas/cms-combo.schemas';
 import { CmsComboDetalle } from '../schemas/cms-combo-detalle.schemas';
 import { EcontComboImagen } from '../schemas/econt-combo-imagen.schemas';
+import { Notification } from '../schemas/notification.schema';
 
 @Module({
   imports: [],
@@ -53,7 +56,7 @@ export class MariaDbModule {
         username: configService.get<string>('DATABASE_USER'),
         password: configService.get<string>('DATABASE_PASSWORD'),
         database: configService.get<string>('DATABASE_NAME'),
-        entities: [ProductsImage, SearchTerm, ProductsSello],
+        entities: [ProductsImage, SearchTerm, ProductsSello, ProductsSeller, Proveedor, Notification],
         synchronize: process.env.SYNCRONICE === 'true',
         logging: process.env.SYNCRONICE === 'true',
         keepConnectionAlive: true,
@@ -78,7 +81,7 @@ export class MariaDbModule {
         username: configService.get<string>('DATABASE_USER'),
         password: configService.get<string>('DATABASE_PASSWORD'),
         database: configService.get<string>('DATABASE_NAME'),
-        entities: [ProductsImage, SearchTerm, ProductsSello],
+        entities: [ProductsImage, SearchTerm, ProductsSello, ProductsSeller, Proveedor, Notification],
         synchronize: process.env.SYNCRONICE === 'true',
         logging: process.env.SYNCRONICE === 'true',
         keepConnectionAlive: true,
@@ -230,11 +233,11 @@ export class MariaDbModule {
   }
 
   static forEcommerceProductsFeature(): DynamicModule {
-    return TypeOrmModule.forFeature([ProductsImage, SearchTerm, ProductsSello], 'WRITE_ECOMMERCE_PRODUCTS_CONNECTION');
+    return TypeOrmModule.forFeature([ProductsImage, SearchTerm, ProductsSello, ProductsSeller, Proveedor, Notification], 'WRITE_ECOMMERCE_PRODUCTS_CONNECTION');
   }
 
   static forEcommerceProductsFeatureRead(): DynamicModule {
-    return TypeOrmModule.forFeature([ProductsImage, SearchTerm, ProductsSello], 'READ_ECOMMERCE_PRODUCTS_CONNECTION');
+    return TypeOrmModule.forFeature([ProductsImage, SearchTerm, ProductsSello, ProductsSeller, Proveedor, Notification], 'READ_ECOMMERCE_PRODUCTS_CONNECTION');
   }
   
   static forOfertasFeature(): DynamicModule {

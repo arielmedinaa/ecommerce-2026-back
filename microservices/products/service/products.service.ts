@@ -17,7 +17,6 @@ import {
   type ComplementoNiveles,
 } from '../utils/complementos';
 import { ProductsImagesService } from './products-images.service';
-
 import { ProductsUtils } from '@products/utils/utils-products';
 import { PromoPricingUtil } from '@products/utils/promo-pricing.util';
 import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
@@ -33,11 +32,6 @@ interface CartResponse {
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
-
-  // Familias donde JOTA (marca 257) es prioritaria: 4 Refrigeración, 5 Climatización,
-  // 6 Cocinas y anafes, 7 Lavado.
-  // NOTA: instancia (no static) porque `aplicarPrioridadJota`/`esConsultaJota` en
-  // ProductsUtils reciben `this` (la instancia) como el parámetro "ProductsService".
   readonly JOTA_MARCA = 257;
   readonly JOTA_FAMILIAS = new Set([4, 5, 6, 7]);
   readonly JOTA_KEYWORDS =
@@ -70,12 +64,8 @@ export class ProductsService {
     SELECT 1 FROM tbl_stock_actual sa
       JOIN deposito d ON d.codigo = sa.deposito
      WHERE sa.codigo_articulo = a.codigo_articulo
-       AND d.habilitado_reserva = 1 AND d.codigo <> 33
+       AND d.habilitado_reserva = 1 AND d.codigo NOT IN (19,20,26,27,28,33) AND d.codigo_proveedor = 0
        AND sa.cantidad_actual > 0)`;
-
-  // Cache "stale" de larga duración: se refresca en cada consulta exitosa a
-  // ECONT/BD y se sirve como respaldo si la conexión se cae, en vez de
-  // propagar el error y dejar el listado de productos vacío.
   private readonly STALE_TTL = 24 * 60 * 60 * 1000;
   private readonly dbBreakers = new Map<string, CircuitBreaker>();
 

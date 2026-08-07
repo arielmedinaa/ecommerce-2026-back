@@ -15,6 +15,8 @@ import { HomeSection } from '@content/home/schemas/home-section.schema';
 import { Promotion } from '@content/promotions/schemas/promotion.schema';
 import { PromotionProduct } from '@content/promotions/schemas/promotion-product.schema';
 import { PromotionVisit } from '@content/promotions/schemas/promotion-visit.schema';
+import { MetaVentas } from '@content/dashboard/schemas/meta-ventas.schema';
+import { IngresoExterno } from '@content/dashboard/schemas/ingreso-externo.schema';
 
 @Module({
   imports: [
@@ -51,6 +53,8 @@ export class MariaDbModule {
           Promotion,
           PromotionProduct,
           PromotionVisit,
+          MetaVentas,
+          IngresoExterno,
         ],
         synchronize: process.env.SYNCRONICE === 'true',
         logging: process.env.SYNCRONICE === 'true',
@@ -92,6 +96,8 @@ export class MariaDbModule {
           Promotion,
           PromotionProduct,
           PromotionVisit,
+          MetaVentas,
+          IngresoExterno,
         ],
         synchronize: process.env.SYNCRONICE === 'true',
         logging: process.env.SYNCRONICE === 'true',

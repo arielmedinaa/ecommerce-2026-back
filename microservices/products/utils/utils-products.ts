@@ -207,6 +207,7 @@ export class ProductsUtils {
         cuotas: cuotasPromo.length > 0 ? cuotasPromo : product.cuotas,
         enPromo: true,
         idPromo: promo.idPromo,
+        promoTieneContado: promo.contado !== null,
         promoDisponibleEcommerce: promo.disponibleEcommerce,
       };
     });
@@ -244,6 +245,7 @@ export class ProductsUtils {
         cuotas: cuotasPromo.length > 0 ? cuotasPromo : producto.cuotas,
         enPromo: true,
         idPromo: promo.idPromo,
+        promoTieneContado: promo.contado !== null,
         promoDisponibleEcommerce: promo.disponibleEcommerce,
       };
     });
@@ -293,6 +295,9 @@ export class ProductsUtils {
 
       return {
         ...product,
+        // El redondeado al millar es la fuente de la verdad — Contado (precioventa)
+        // debe coincidir con Crédito (precioventaRedondeado), no con el crudo del ERP.
+        precioventa: precioVentaRedondeado,
         precioventaRedondeado: precioVentaRedondeado,
         cuotas: cuotasCalculadas,
       };
@@ -344,6 +349,7 @@ export class ProductsUtils {
 
       return {
         ...producto,
+        precioContado: precioContadoRedondeado,
         precioContadoRedondeado: precioContadoRedondeado,
         cuotas: cuotasCalculadas,
       };

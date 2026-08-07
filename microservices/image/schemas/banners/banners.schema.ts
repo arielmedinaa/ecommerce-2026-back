@@ -40,6 +40,12 @@ export class Banners {
   @Column('json', { nullable: true })
   meta?: Record<string, any>;
 
+  @Column({ type: 'datetime', nullable: true })
+  fechaDesde: Date | null;
+
+  @Column({ type: 'datetime', nullable: true })
+  fechaHasta: Date | null;
+
   @Column()
   creadoPor: string;
 

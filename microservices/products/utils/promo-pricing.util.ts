@@ -24,9 +24,6 @@ export class PromoPricingUtil {
   private promoMapCache: Map<string, PromoPriceInfo> | null = null;
   private promoMapCacheTimestamp = 0;
   private readonly PROMO_CACHE_TTL = 5 * 60 * 1000;
-  // Circuit breaker propio para la conexión a ECONT: si se cae, no seguimos
-  // reintentando la query en cada request — servimos el último mapa conocido
-  // (aunque esté vencido) hasta que la conexión se recupere.
   private readonly breaker = new CircuitBreaker({
     failureThreshold: 2,
     resetTimeout: 20000,
@@ -72,7 +69,10 @@ export class PromoPricingUtil {
               d.precio_venta,
               d.precio_original,
               d.disponible_ecommerce,
-              d.id_promo
+              d.id_promo,
+              d.aplica_precio_diferenciado,
+              d.modo_precio_diferenciado,
+              d.precio_venta_ecommerce
          FROM tbl_promos_detalles d
          JOIN tbl_promos_cabeceras c ON c.id_promo = d.id_promo
         WHERE c.estado = 1
@@ -86,7 +86,14 @@ export class PromoPricingUtil {
     for (const row of rows as any[]) {
       const codigo = String(row.codigo_articulo).trim();
       const cuota = Number(row.cantidad_cuotas);
-      const precio = Number(row.precio_venta);
+      const usaPrecioEcommerce =
+        Number(row.aplica_precio_diferenciado) === 1 &&
+        (row.modo_precio_diferenciado === 'ECOMMERCE' || row.modo_precio_diferenciado === 'AMBOS') &&
+        row.precio_venta_ecommerce !== null &&
+        row.precio_venta_ecommerce !== undefined;
+      const precio = usaPrecioEcommerce
+        ? Number(row.precio_venta_ecommerce)
+        : Number(row.precio_venta);
       const precioOriginal =
         row.precio_original === null || row.precio_original === undefined
           ? null

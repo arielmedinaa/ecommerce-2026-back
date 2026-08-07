@@ -83,6 +83,8 @@ export class ImageController {
       creadoPor: string;
       modificadoPor: string;
       meta?: any;
+      fechaDesde?: string;
+      fechaHasta?: string;
     }
   ) {
     const file = files?.file?.[0];
@@ -150,6 +152,8 @@ export class ImageController {
         modificadoPor: body.modificadoPor,
         meta,
         contentType: file.mimetype,
+        fechaDesde: body.fechaDesde || null,
+        fechaHasta: body.fechaHasta || null,
       };
 
       const pattern = { cmd: 'upload_banner_from_s3' };
@@ -354,6 +358,112 @@ export class ImageController {
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
         message: 'Error al cambiar el estado del banner',
         error: error.message
+      };
+    }
+  }
+
+  @Post('cart-screenshot/upload')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: './temp',
+        filename: (req, file, cb) => {
+          const randomName = Array(32)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('');
+          cb(null, `${randomName}${extname(file.originalname)}`);
+        },
+      }),
+      fileFilter: (req, file, cb) => {
+        const allowedMimes = ['image/png', 'image/jpeg', 'image/webp'];
+        if (allowedMimes.includes(file.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(new Error('Solo se permiten imágenes .png, .jpeg o .webp'), false);
+        }
+      },
+      limits: {
+        fileSize: 10 * 1024 * 1024,
+      },
+    }),
+  )
+  @ApiOperation({ summary: 'Subir captura silenciosa de la pantalla de éxito del checkout' })
+  @ApiConsumes('multipart/form-data')
+  async uploadCartScreenshot(
+    @UploadedFile() file: any,
+    @Body() body: { cartCodigo: string },
+  ) {
+    try {
+      if (!file) {
+        return { success: false, message: 'Falta el archivo' };
+      }
+      if (!body?.cartCodigo) {
+        try { fs.unlinkSync(file.path); } catch {}
+        return { success: false, message: 'Falta cartCodigo' };
+      }
+
+      const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || 'us-east-1';
+      const endpoint = process.env.IMAGE_S3_ENDPOINT || process.env.S3_ENDPOINT || process.env.AWS_ENDPOINT;
+      const bucket = process.env.IMAGE_S3_BUCKET || 'ecommerce-images';
+      const keyPrefix = (process.env.IMAGE_S3_CART_SCREENSHOT_KEY_PREFIX || 'cart-screenshots').replace(/^\/+|\/+$/g, '');
+
+      if (!endpoint) {
+        throw new Error('IMAGE_S3_ENDPOINT no está configurado (necesario para LocalStack)');
+      }
+
+      const s3 = new S3Client({
+        region,
+        endpoint,
+        forcePathStyle: true,
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'test',
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'test',
+        },
+      });
+
+      const key = `${keyPrefix}/${encodeURIComponent(body.cartCodigo)}/${uuidv4()}${extname(file.originalname)}`;
+      const buffer = fs.readFileSync(file.path);
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          Body: buffer,
+          ContentType: file.mimetype || 'image/png',
+          CacheControl: 'private, max-age=0, no-cache',
+        }),
+      );
+
+      const pattern = { cmd: 'upload_cart_screenshot' };
+      const result = await firstValueFrom(
+        this.imageClient.send(pattern, { key, cartCodigo: body.cartCodigo }),
+      );
+
+      try { fs.unlinkSync(file.path); } catch {}
+      return result;
+    } catch (error) {
+      this.logger.error(`Error uploading cart screenshot: ${error.message}`);
+      try { if (file?.path) fs.unlinkSync(file.path); } catch {}
+      return {
+        success: false,
+        message: 'Error al subir la captura',
+        error: error.message,
+      };
+    }
+  }
+
+  @Get('cart-screenshot/:codigo')
+  @ApiOperation({ summary: 'Obtener la captura de la pantalla de éxito asociada a un carrito' })
+  async getCartScreenshot(@Param('codigo') codigo: string) {
+    try {
+      const pattern = { cmd: 'get_cart_screenshot' };
+      return await firstValueFrom(this.imageClient.send(pattern, { cartCodigo: codigo }));
+    } catch (error) {
+      this.logger.error(`Error getting cart screenshot: ${error.message}`);
+      return {
+        success: false,
+        message: 'Error al obtener la captura',
+        error: error.message,
       };
     }
   }

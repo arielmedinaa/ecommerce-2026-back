@@ -167,6 +167,8 @@ export class BannerService {
     meta?: Record<string, any>,
     contentType?: string,
     originalKeyMobile?: string,
+    fechaDesde?: string | Date | null,
+    fechaHasta?: string | Date | null,
   ): Promise<{ data: Banners; message: string; success: boolean }> {
     try {
       const existingBanner = await this.bannerRepository.findOne({
@@ -237,6 +239,8 @@ export class BannerService {
         modificadoPor,
         dimensiones: savedImages,
         meta: meta || undefined,
+        fechaDesde: fechaDesde ? new Date(fechaDesde) : null,
+        fechaHasta: fechaHasta ? new Date(fechaHasta) : null,
       };
 
       const newEntity = this.bannerRepository.create(bannerData);
@@ -728,24 +732,26 @@ export class BannerService {
     }
   }
 
-  async getAllBanners(fields?: string[]): Promise<{
+  async getAllBanners(fields?: string[], activeOnly = false): Promise<{
     data: Banners[];
     message: string;
     success: boolean;
   }> {
     try {
-      let selectOptions: any = undefined;
+      let query = this.bannerRepository.createQueryBuilder('b').orderBy('b.createdAt', 'DESC');
+
       if (fields && fields.length > 0) {
-        selectOptions = fields.reduce((acc, field) => {
-          acc[field] = true;
-          return acc;
-        }, {} as any);
+        query = query.select(fields.map((field) => `b.${field}`));
       }
 
-      const banners = await this.bannerRepository.find({
-        select: selectOptions,
-        order: { createdAt: 'DESC' },
-      });
+      if (activeOnly) {
+        query = query
+          .andWhere('b.estado = :estado', { estado: 'activo' })
+          .andWhere('(b.fechaDesde IS NULL OR b.fechaDesde <= NOW())')
+          .andWhere('(b.fechaHasta IS NULL OR b.fechaHasta >= NOW())');
+      }
+
+      const banners = await query.getMany();
 
       return {
         data: banners,
@@ -957,6 +963,53 @@ export class BannerService {
       return {
         data: null as any,
         message: `Error al cambiar el estado del banner: ${error}`,
+        success: false,
+      };
+    }
+  }
+
+  async updateBanner(
+    id: string,
+    updateData: {
+      nombre?: string;
+      variante?: string;
+      fechaDesde?: string | Date | null;
+      fechaHasta?: string | Date | null;
+      meta?: Record<string, any>;
+      modificadoPor?: string;
+    },
+  ): Promise<{ data: Banners | null; message: string; success: boolean }> {
+    try {
+      const banner = await this.bannerRepository.findOne({ where: { id } });
+      if (!banner) {
+        return { data: null, message: 'Banner no encontrado', success: false };
+      }
+
+      const patch: Partial<Banners> = {};
+      if (updateData.nombre !== undefined) patch.nombre = updateData.nombre;
+      if (updateData.variante !== undefined) patch.variante = updateData.variante;
+      if (updateData.meta !== undefined) patch.meta = updateData.meta;
+      if (updateData.modificadoPor !== undefined) patch.modificadoPor = updateData.modificadoPor;
+      if (updateData.fechaDesde !== undefined) {
+        patch.fechaDesde = updateData.fechaDesde ? new Date(updateData.fechaDesde) : null;
+      }
+      if (updateData.fechaHasta !== undefined) {
+        patch.fechaHasta = updateData.fechaHasta ? new Date(updateData.fechaHasta) : null;
+      }
+
+      await this.bannerRepository.update(id, patch);
+      const updatedBanner = await this.bannerRepository.findOne({ where: { id } });
+
+      return {
+        data: updatedBanner,
+        message: 'Banner actualizado exitosamente',
+        success: true,
+      };
+    } catch (error) {
+      await this.bannerErrorService.logMicroserviceError(error, id, 'updateBanner');
+      return {
+        data: null,
+        message: `Error al actualizar el banner: ${error}`,
         success: false,
       };
     }

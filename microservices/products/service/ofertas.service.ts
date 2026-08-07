@@ -1,9 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OfertasValidationService } from './errors/ofertas.spec';
 import { Oferta } from '../schemas/oferta.schemas';
 import { ProductoOferta } from '../schemas/producto-oferta.schemas';
+import { ProductsImage } from '../schemas/products-image.schema';
 import { ProductsUtils } from '../utils/utils-products';
 
 @Injectable()
@@ -19,9 +21,41 @@ export class OfertasService {
     private readonly productoOfertaWriteRepository: Repository<ProductoOferta>,
     @InjectRepository(ProductoOferta, 'OFERTAS_CONNECTION_READ')
     private readonly productoOfertaReadRepository: Repository<ProductoOferta>,
+    @InjectRepository(ProductsImage, 'READ_ECOMMERCE_PRODUCTS_CONNECTION')
+    private readonly productsImagesReadRepository: Repository<ProductsImage>,
     private readonly ofertasValidationService: OfertasValidationService,
     private readonly productsUtils: ProductsUtils,
   ) { }
+
+  // Adjunta `imagenes: string[]` a cada producto de oferta — ProductoOferta no
+  // tiene columna de imagen propia, así que se resuelven contra la tabla real
+  // de imágenes de producto (misma fuente que usa el catálogo normal).
+  private async attachImagenes(productos: any[]): Promise<any[]> {
+    if (!Array.isArray(productos) || productos.length === 0) return productos;
+    const codigos = Array.from(
+      new Set(productos.map((p) => String(p?.codigo_articulo ?? '').trim()).filter(Boolean)),
+    );
+    if (codigos.length === 0) return productos;
+
+    const imagenes = await this.productsImagesReadRepository
+      .createQueryBuilder('img')
+      .where('img.producto_codigo IN (:...codigos)', { codigos })
+      .andWhere('img.activo = :activo', { activo: true })
+      .orderBy('img.orden', 'ASC')
+      .getMany();
+
+    const imagenesMap = new Map<string, string[]>();
+    for (const img of imagenes) {
+      const codigo = img.producto_codigo;
+      if (!imagenesMap.has(codigo)) imagenesMap.set(codigo, []);
+      imagenesMap.get(codigo)!.push(img.url_imagen);
+    }
+
+    return productos.map((p) => ({
+      ...p,
+      imagenes: imagenesMap.get(String(p?.codigo_articulo ?? '').trim()) || [],
+    }));
+  }
 
   async createOrUpdateOferta(
     createData: any,
@@ -128,10 +162,12 @@ export class OfertasService {
     success: boolean;
   }> {
     try {
-      const oferta = await this.ofertaReadRepository.findOne({
-        where: { activo: true },
-        relations: ['productos'],
-      });
+      const oferta = await this.ofertaReadRepository
+        .createQueryBuilder('o')
+        .leftJoinAndSelect('o.productos', 'productos')
+        .where('o.activo = :activo', { activo: true })
+        .andWhere('TIMESTAMPADD(SECOND, o.tiempoActivo, o.createdAt) > NOW()')
+        .getOne();
       return {
         data: oferta,
         message: oferta ? 'Oferta activa encontrada' : 'No hay ofertas activas',
@@ -183,20 +219,24 @@ export class OfertasService {
     success: boolean;
   }> {
     try {
-      const ofertas = await this.ofertaReadRepository.find({
-        relations: ['productos'],
-        order: { createdAt: 'DESC' },
-        take: filters.limit,
-        skip: filters.offset,
-      });
+      const ofertas = await this.ofertaReadRepository
+        .createQueryBuilder('o')
+        .leftJoinAndSelect('o.productos', 'productos')
+        .where('o.activo = :activo', { activo: true })
+        .andWhere('TIMESTAMPADD(SECOND, o.tiempoActivo, o.createdAt) > NOW()')
+        .orderBy('o.createdAt', 'DESC')
+        .take(filters.limit)
+        .skip(filters.offset)
+        .getMany();
 
       const ofertasConCuotas = await Promise.all(ofertas.map(async (oferta) => {
         const productosConCuotas = await this.productsUtils.calculoCreditoProductosOferta(oferta.productos);
         const productosConPromo = await this.productsUtils.aplicarPreciosPromoOferta(productosConCuotas);
+        const productosConImagenes = await this.attachImagenes(productosConPromo);
 
         return {
           ...oferta,
-          productos: productosConPromo
+          productos: productosConImagenes
         };
       }));
 
@@ -288,6 +328,25 @@ export class OfertasService {
         message: `Error al cambiar el estado de la oferta: ${error.message}`,
         success: false,
       };
+    }
+  }
+
+  // Apaga automáticamente ofertas cuya ventana (createdAt + tiempoActivo segundos)
+  // ya venció, para que el CMS admin también refleje el estado real sin
+  // intervención manual (el storefront ya se protege con el filtro inline de
+  // getActiveOferta/getAllOfertas, este cron es la segunda capa).
+  @Cron('*/5 * * * *')
+  async deactivateExpiredOfertas(): Promise<void> {
+    try {
+      await this.ofertaWriteRepository
+        .createQueryBuilder()
+        .update(Oferta)
+        .set({ activo: false })
+        .where('activo = :activo', { activo: true })
+        .andWhere('TIMESTAMPADD(SECOND, tiempoActivo, createdAt) <= NOW()')
+        .execute();
+    } catch (error) {
+      this.logger.error(`Error desactivando ofertas vencidas: ${error.message}`);
     }
   }
 }

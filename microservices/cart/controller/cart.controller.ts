@@ -37,6 +37,11 @@ export class CartController {
     }
   }
 
+  @MessagePattern({ cmd: 'get_ventas_por_codigos' })
+  async getVentasPorCodigos(@Payload() payload: { codigos: string[] }) {
+    return this.cartService.getVentasPorCodigos(payload?.codigos || []);
+  }
+
   @MessagePattern({ cmd: 'get_cart' })
   async getCart(@Payload() payload: any) {
     const { token, cuenta, codigo } = payload;
@@ -157,6 +162,28 @@ export class CartController {
   @MessagePattern({ cmd: 'remove_cart_items' })
   async removeCartItems(@Payload() payload: { token: string; items: Array<{ codigo: string | number; tipo?: 'contado' | 'credito' }> }) {
     return this.cartService.removeCartItems(payload?.token, payload?.items);
+  }
+
+  @MessagePattern({ cmd: 'change_cart_item_condition' })
+  async changeCartItemCondition(
+    @Payload()
+    payload: {
+      token: string;
+      productoCodigo: string | number;
+      fromTipo: 'contado' | 'credito';
+      toTipo: 'contado' | 'credito';
+      precio: number;
+      cuota?: number;
+    },
+  ) {
+    return this.cartService.changeCartItemCondition(
+      payload?.token,
+      payload?.productoCodigo,
+      payload?.fromTipo,
+      payload?.toTipo,
+      payload?.precio,
+      payload?.cuota,
+    );
   }
 
   @MessagePattern({ cmd: 'clear_cart' })

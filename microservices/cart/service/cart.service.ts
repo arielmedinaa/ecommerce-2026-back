@@ -506,6 +506,76 @@ export class CartContadoService {
     }
   }
 
+  // Cambia contado↔crédito de un ítem del carrito en UNA sola lectura-mutación-escritura
+  // (evita la ventana de carrera del anterior "agregar nuevo tipo" + "borrar tipo viejo"
+  // como dos llamadas de red independientes, que podía dejar el ítem duplicado con precio
+  // incorrecto en ambos arrays).
+  async changeCartItemCondition(
+    clienteToken: string,
+    productoCodigo: string | number,
+    fromTipo: 'contado' | 'credito',
+    toTipo: 'contado' | 'credito',
+    precio: number,
+    cuota?: number,
+  ): Promise<{ data: Cart[]; success: boolean; message: string }> {
+    try {
+      const carrito = await this.getCarritoActivoDeToken(clienteToken);
+      if (!carrito) return { data: [], success: false, message: 'NO HAY CARRITO ACTIVO' };
+      const art: any = carrito.articulos || { contado: [], credito: [] };
+      const origen = art[fromTipo] || [];
+      const articulo = origen.find((i: any) => String(i.codigo) === String(productoCodigo));
+      if (!articulo) {
+        return { data: [carrito], success: false, message: 'ITEM NO ENCONTRADO EN EL CARRITO' };
+      }
+
+      // Reprecio autoritativo si hay una promo activa (misma fuente que addCart).
+      let precioFinal = Number(precio) || Number(articulo.precio) || 0;
+      let cuotaFinal = toTipo === 'credito' ? Number(cuota) || articulo.credito?.cuota || 12 : undefined;
+      try {
+        const promoInfo: Record<string, any> = await firstValueFrom(
+          this.productsService.send(
+            { cmd: 'get_promo_info_for_codigos' },
+            { codigos: [productoCodigo] },
+          ),
+        );
+        const promo = promoInfo?.[String(productoCodigo).trim()];
+        if (promo && promo.contado !== null && promo.contado !== undefined) {
+          if (toTipo === 'contado') {
+            precioFinal = promo.contado;
+          } else {
+            const cuotaPromo = Array.isArray(promo.cuotas)
+              ? promo.cuotas.find((c: any) => c.cuota === cuotaFinal)
+              : null;
+            precioFinal = cuotaPromo ? cuotaPromo.precio : promo.contado;
+          }
+        }
+      } catch (error) {
+        this.logger.warn('No se pudo revalidar promo en cambio de condición, se usa el precio enviado', error);
+      }
+
+      art[fromTipo] = origen.filter((i: any) => String(i.codigo) !== String(productoCodigo));
+      const movido: any = {
+        codigo: articulo.codigo,
+        nombre: articulo.nombre,
+        cantidad: articulo.cantidad,
+        ruta: articulo.ruta,
+        imagen: articulo.imagen,
+        precio: precioFinal,
+      };
+      if (toTipo === 'credito') {
+        movido.credito = { precio: precioFinal, cuota: cuotaFinal };
+      }
+      art[toTipo] = this.utilsCart.eliminarDuplicados([...(art[toTipo] || []), movido], toTipo);
+
+      carrito.articulos = art;
+      await this.carritoWrite.save(carrito);
+      return { data: [carrito], success: true, message: 'CONDICIÓN DE PAGO ACTUALIZADA' };
+    } catch (error) {
+      this.logger.error('Error al cambiar condición del carrito:', error);
+      return { data: [], success: false, message: 'ERROR AL CAMBIAR CONDICIÓN' };
+    }
+  }
+
   async removeCartItems(
     clienteToken: string,
     items: Array<{ codigo: string | number; tipo?: 'contado' | 'credito' }>,
@@ -1410,6 +1480,43 @@ export class CartContadoService {
     }
   }
 
+  // Agrega unidades vendidas y monto por producto_codigo, sobre órdenes
+  // confirmadas (estado 0), para un set puntual de códigos — usado por el
+  // dashboard de ventas del panel de proveedores.
+  async getVentasPorCodigos(
+    codigos: string[],
+  ): Promise<{ data: Record<string, { unidades: number; monto: number }>; success: boolean; message: string }> {
+    try {
+      if (!codigos || codigos.length === 0) {
+        return { data: {}, success: true, message: 'Sin códigos' };
+      }
+
+      const rows = await this.orderItemWrite
+        .createQueryBuilder('it')
+        .innerJoin('it.orden', 'o')
+        .select('it.producto_codigo', 'codigo')
+        .addSelect('SUM(it.cantidad)', 'unidades')
+        .addSelect('SUM(it.subtotal)', 'monto')
+        .where('o.estado = :estado', { estado: 0 })
+        .andWhere('it.producto_codigo IN (:...codigos)', { codigos })
+        .groupBy('it.producto_codigo')
+        .getRawMany();
+
+      const data: Record<string, { unidades: number; monto: number }> = {};
+      for (const row of rows || []) {
+        data[String(row.codigo)] = {
+          unidades: Number(row.unidades) || 0,
+          monto: Number(row.monto) || 0,
+        };
+      }
+
+      return { data, success: true, message: 'Ok' };
+    } catch (error) {
+      this.logger.error('Error al obtener ventas por códigos:', error);
+      return { data: {}, success: false, message: 'ERROR AL OBTENER VENTAS POR CODIGOS' };
+    }
+  }
+
   async getMissingCart(
     limit: number,
     skip: number,
@@ -2032,6 +2139,14 @@ export class CartContadoService {
         0,
       );
 
+      if (items.length === 0) {
+        // El cliente vació el carrito antes de que se cumpliera el tiempo de
+        // abandono — ya no corresponde notificar, pero se marca igual para no
+        // volver a evaluarlo en cada corrida del cron.
+        await this.carritoWrite.update({ codigo: carrito.codigo }, { abandonedEmailSent: true });
+        continue;
+      }
+
       this.mailClient
         .send(
           { cmd: 'send_abandoned_cart' },
@@ -2040,7 +2155,7 @@ export class CartContadoService {
             nombre: carrito.cliente?.razonsocial,
             items,
             total,
-            recoverUrl: `${STOREFRONT_URL}/cart?c=${encodeURIComponent(carrito.codigo)}`,
+            recoverUrl: `${STOREFRONT_URL}/checkout?codigo=${encodeURIComponent(carrito.codigo)}&step=datos`,
             codigo: carrito.codigo,
           },
         )

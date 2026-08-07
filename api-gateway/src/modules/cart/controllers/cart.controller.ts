@@ -167,6 +167,25 @@ export class CartController {
     );
   }
 
+  @Post('changeCondition')
+  @SneakyThrows('CartService', 'changeCartItemCondition')
+  async changeCondition(@Body() body: any, @Req() request: Request) {
+    const token = request.headers.authorization?.split(' ')[1] || '';
+    return await firstValueFrom(
+      this.cartClient.send(
+        { cmd: 'change_cart_item_condition' },
+        {
+          token,
+          productoCodigo: body?.productoCodigo,
+          fromTipo: body?.fromTipo,
+          toTipo: body?.toTipo,
+          precio: body?.precio,
+          cuota: body?.cuota,
+        },
+      ),
+    );
+  }
+
   @Post('clear')
   @SneakyThrows('CartService', 'clearCart')
   async clear(@Req() request: Request) {

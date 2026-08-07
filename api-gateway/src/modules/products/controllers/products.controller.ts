@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Inject, Get, UseGuards, UseInterceptors, UploadedFile, UploadedFiles, Param, Delete, Patch, BadRequestException, Res, Query } from '@nestjs/common';
+import { Body, Controller, Post, Inject, Get, UseGuards, UseInterceptors, UploadedFile, UploadedFiles, Param, Delete, Patch, BadRequestException, Res, Query, Req } from '@nestjs/common';
 import { ClientProxy, Payload } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { timeout, catchError } from 'rxjs/operators';
@@ -6,6 +6,7 @@ import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '@gateway/common/guards/jwt-auth.guard';
 import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
 import { Response } from 'express';
+import { assertSafeExternalUrl, UnsafeUrlError } from '@gateway/modules/products/utils/ssrf-guard';
 
 interface MulterFile {
   fieldname: string;
@@ -35,6 +36,22 @@ export const ImageFileInterceptor = () =>
       },
       limits: {
         fileSize: 1 * 1024 * 1024,
+      }
+    })
+  );
+
+export const SellerExcelFileInterceptor = () =>
+  UseInterceptors(
+    FileInterceptor('file', {
+      fileFilter: (req, file, callback) => {
+        const allowed = ['.xlsx', '.xls'];
+        if (!allowed.some((ext) => file.originalname.toLowerCase().endsWith(ext))) {
+          return callback(new BadRequestException('Solo se permiten archivos .xlsx o .xls'), false);
+        }
+        callback(null, true);
+      },
+      limits: {
+        fileSize: 10 * 1024 * 1024,
       }
     })
   );
@@ -71,6 +88,179 @@ export class ProductsController {
     return await firstValueFrom(
       this.productsClient.send({ cmd: 'createProducts' }, createProductDto)
     )
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('sellers/template')
+  async getProductsSellersTemplate(@Res() res: Response) {
+    const result = await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_products_sellers_template' }, {}),
+    );
+    const buf = Buffer.isBuffer(result?.data) ? result.data : Buffer.from(result?.data?.data || result?.data);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="plantilla-productos-proveedores.xlsx"');
+    return res.send(buf);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('sellers/import')
+  @SellerExcelFileInterceptor()
+  async importProductsSellers(
+    @UploadedFile() file: any,
+    @Body() body: { idProveedor: string },
+    @Req() request: any,
+  ) {
+    if (!file) return { success: false, message: 'Falta el archivo' };
+    const creadoPor = request.user?.email || request.user?.sub || 'proveedor';
+    return await firstValueFrom(
+      this.productsClient.send(
+        { cmd: 'import_products_sellers_excel' },
+        { buffer: file.buffer, idProveedor: Number(body.idProveedor), creadoPor },
+      ),
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('sellers/pendientes')
+  async listProductsSellersPendientes(@Query('idProveedor') idProveedor?: string) {
+    return await firstValueFrom(
+      this.productsClient.send(
+        { cmd: 'list_products_sellers_pendientes' },
+        { idProveedor: idProveedor ? Number(idProveedor) : undefined },
+      ),
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('sellers/:id/approve')
+  async approveProductSeller(
+    @Param('id') id: string,
+    @Body() body: { codigo_marca?: string; codigo_categoria?: string; codigo_subcategoria?: string },
+    @Req() request: any,
+  ) {
+    const modificadoPor = request.user?.email || request.user?.sub || 'admin';
+    return await firstValueFrom(
+      this.productsClient.send(
+        { cmd: 'approve_product_seller' },
+        { id: Number(id), modificadoPor, correccion: body || {} },
+      ),
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('sellers/:id/reject')
+  async rejectProductSeller(
+    @Param('id') id: string,
+    @Body() body: { codigoRechazo?: number; notaAdicional?: string },
+    @Req() request: any,
+  ) {
+    const modificadoPor = request.user?.email || request.user?.sub || 'admin';
+    return await firstValueFrom(
+      this.productsClient.send(
+        { cmd: 'reject_product_seller' },
+        { id: Number(id), codigoRechazo: Number(body?.codigoRechazo), notaAdicional: body?.notaAdicional, modificadoPor },
+      ),
+    );
+  }
+
+  // Sin guard: se consulta en el login, antes de tener token — solo confirma
+  // si el email pertenece a un proveedor, no expone datos sensibles.
+  @Get('sellers/resolve-proveedor')
+  async resolveProveedorPublic(@Query('email') email: string) {
+    const idProveedor = await this.resolveIdProveedor(email);
+    return { data: { idProveedor, esProveedor: !!idProveedor }, message: 'Ok', success: true };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('sellers/mine')
+  async listMySellers(@Query('email') email: string) {
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) return { data: [], message: 'Proveedor no encontrado', success: false };
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'list_products_sellers_by_proveedor' }, { idProveedor }),
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('rejection-codes')
+  async getRejectionCodes() {
+    return await firstValueFrom(this.productsClient.send({ cmd: 'get_rejection_codes' }, {}));
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('sellers/bulk-resubmit')
+  async bulkResubmitProductsSellers(
+    @Body() body: { ids: number[]; correcciones?: Record<number, any>; email: string },
+  ) {
+    const idProveedor = await this.resolveIdProveedor(body.email);
+    if (!idProveedor) {
+      return { data: null, message: 'Proveedor no encontrado', success: false };
+    }
+    return await firstValueFrom(
+      this.productsClient.send(
+        { cmd: 'bulk_resubmit_products_sellers' },
+        { ids: body.ids, correcciones: body.correcciones || {}, idProveedor },
+      ),
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('sellers/dashboard')
+  async getProviderDashboard(@Query('email') email: string) {
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) {
+      return { data: null, message: 'Proveedor no encontrado', success: false };
+    }
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_provider_dashboard_stats' }, { idProveedor }),
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('notifications')
+  async getNotifications(
+    @Query('destinatarioTipo') destinatarioTipo: 'admin' | 'provider',
+    @Query('email') email?: string,
+  ) {
+    let idProveedor: number | undefined;
+    if (destinatarioTipo === 'provider') {
+      idProveedor = (await this.resolveIdProveedor(email)) || undefined;
+      if (!idProveedor) return { data: [], message: 'Proveedor no encontrado', success: false };
+    }
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_notifications' }, { destinatarioTipo, idProveedor }),
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('notifications/:id/read')
+  async markNotificationRead(@Param('id') id: string) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'mark_notification_read' }, { id: Number(id) }),
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('notifications/read-all')
+  async markAllNotificationsRead(@Body() body: { destinatarioTipo: 'admin' | 'provider'; email?: string }) {
+    let idProveedor: number | undefined;
+    if (body.destinatarioTipo === 'provider') {
+      idProveedor = (await this.resolveIdProveedor(body.email)) || undefined;
+    }
+    return await firstValueFrom(
+      this.productsClient.send(
+        { cmd: 'mark_all_notifications_read' },
+        { destinatarioTipo: body.destinatarioTipo, idProveedor },
+      ),
+    );
+  }
+
+  private async resolveIdProveedor(email?: string): Promise<number | null> {
+    if (!email) return null;
+    const result: any = await firstValueFrom(
+      this.productsClient.send({ cmd: 'resolve_proveedor_by_email' }, { email }),
+    );
+    return result?.data?.idProveedor ?? null;
   }
 
   @Post()
@@ -718,6 +908,60 @@ export class ProductsController {
     } catch (error) {
       console.error('Error en deleteProductSello:', error);
       throw new Error('Error al eliminar el sello: ' + error.message);
+    }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('/image-proxy')
+  async proxyExternalImage(@Query('url') url: string, @Res() res: Response) {
+    const MAX_BYTES = 8 * 1024 * 1024;
+    const TIMEOUT_MS = 8000;
+
+    if (!url) {
+      return res.status(400).json({ message: 'Falta el parámetro url.' });
+    }
+
+    let safeUrl: URL;
+    try {
+      safeUrl = await assertSafeExternalUrl(url);
+    } catch (error) {
+      if (error instanceof UnsafeUrlError) {
+        return res.status(400).json({ message: error.message });
+      }
+      return res.status(400).json({ message: 'No se pudo validar la URL.' });
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+    try {
+      const upstream = await fetch(safeUrl.toString(), { signal: controller.signal });
+      if (!upstream.ok) {
+        return res.status(502).json({ message: 'No se pudo descargar la imagen.' });
+      }
+
+      const contentType = upstream.headers.get('content-type') || '';
+      if (!contentType.startsWith('image/')) {
+        return res.status(415).json({ message: 'La URL no apunta a una imagen.' });
+      }
+
+      const contentLength = Number(upstream.headers.get('content-length') || 0);
+      if (contentLength && contentLength > MAX_BYTES) {
+        return res.status(413).json({ message: 'La imagen supera el tamaño máximo permitido (8MB).' });
+      }
+
+      const arrayBuffer = await upstream.arrayBuffer();
+      if (arrayBuffer.byteLength > MAX_BYTES) {
+        return res.status(413).json({ message: 'La imagen supera el tamaño máximo permitido (8MB).' });
+      }
+
+      res.setHeader('Content-Type', contentType);
+      return res.send(Buffer.from(arrayBuffer));
+    } catch (error) {
+      console.error('Error en proxyExternalImage:', error);
+      return res.status(502).json({ message: 'No se pudo descargar la imagen desde la URL.' });
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 

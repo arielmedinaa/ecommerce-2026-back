@@ -8,6 +8,8 @@ import { Product } from '@products/schemas/product.schema';
 import { OfertasService } from '@products/service/ofertas.service';
 import { PromosService } from '@products/service/promos.service';
 import { CombosService } from '@products/service/combos.service';
+import { ProductsSellersService } from '@products/service/products-sellers.service';
+import { NotificationsService } from '@products/service/notifications.service';
 
 @Controller()
 export class ProductsController {
@@ -18,7 +20,83 @@ export class ProductsController {
     private readonly promosService: PromosService,
     private readonly productsImagesService: ProductsImagesService,
     private readonly combosService: CombosService,
+    private readonly productsSellersService: ProductsSellersService,
+    private readonly notificationsService: NotificationsService,
   ) {}
+
+  @MessagePattern({ cmd: 'import_products_sellers_excel' })
+  importProductsSellersExcel(@Payload() data: { buffer: any; idProveedor: number; creadoPor: string }) {
+    const buffer = Buffer.isBuffer(data.buffer) ? data.buffer : Buffer.from(data.buffer);
+    return this.productsSellersService.importExcel(buffer, data.idProveedor, data.creadoPor);
+  }
+
+  @MessagePattern({ cmd: 'get_products_sellers_template' })
+  async getProductsSellersTemplate() {
+    const buffer = await this.productsSellersService.generateTemplate();
+    return { data: buffer, message: 'Plantilla generada', success: true };
+  }
+
+  @MessagePattern({ cmd: 'list_products_sellers_pendientes' })
+  listProductsSellersPendientes(@Payload() data: { idProveedor?: number }) {
+    return this.productsSellersService.listPendientes(data?.idProveedor);
+  }
+
+  @MessagePattern({ cmd: 'list_products_sellers_by_proveedor' })
+  listProductsSellersByProveedor(@Payload() data: { idProveedor: number }) {
+    return this.productsSellersService.listByProveedor(data.idProveedor);
+  }
+
+  @MessagePattern({ cmd: 'approve_product_seller' })
+  approveProductSeller(@Payload() data: {
+    id: number;
+    modificadoPor: string;
+    correccion?: { codigo_marca?: string; codigo_categoria?: string; codigo_subcategoria?: string };
+  }) {
+    return this.productsSellersService.approve(data.id, data.modificadoPor, data.correccion);
+  }
+
+  @MessagePattern({ cmd: 'reject_product_seller' })
+  rejectProductSeller(@Payload() data: { id: number; codigoRechazo: number; notaAdicional?: string; modificadoPor: string }) {
+    return this.productsSellersService.reject(data.id, data.codigoRechazo, data.notaAdicional, data.modificadoPor);
+  }
+
+  @MessagePattern({ cmd: 'get_rejection_codes' })
+  getRejectionCodes() {
+    return this.productsSellersService.getRejectionCodes();
+  }
+
+  @MessagePattern({ cmd: 'resolve_proveedor_by_email' })
+  async resolveProveedorByEmail(@Payload() data: { email: string }) {
+    const idProveedor = await this.productsSellersService.resolveProveedorIdByEmail(data.email);
+    return { data: { idProveedor }, message: 'Ok', success: true };
+  }
+
+  @MessagePattern({ cmd: 'get_provider_dashboard_stats' })
+  getProviderDashboardStats(@Payload() data: { idProveedor: number }) {
+    return this.productsSellersService.getDashboardStats(data.idProveedor);
+  }
+
+  @MessagePattern({ cmd: 'bulk_resubmit_products_sellers' })
+  bulkResubmitProductsSellers(@Payload() data: { ids: number[]; correcciones: Record<number, any>; idProveedor: number }) {
+    return this.productsSellersService.bulkResubmit(data.ids, data.correcciones || {}, data.idProveedor);
+  }
+
+  @MessagePattern({ cmd: 'get_notifications' })
+  getNotifications(@Payload() data: { destinatarioTipo: 'admin' | 'provider'; idProveedor?: number }) {
+    return this.notificationsService.list(data.destinatarioTipo, data.idProveedor).then((data) => ({ data, message: 'Ok', success: true }));
+  }
+
+  @MessagePattern({ cmd: 'mark_notification_read' })
+  markNotificationRead(@Payload() data: { id: number }) {
+    return this.notificationsService.markRead(data.id).then(() => ({ data: null, message: 'Ok', success: true }));
+  }
+
+  @MessagePattern({ cmd: 'mark_all_notifications_read' })
+  markAllNotificationsRead(@Payload() data: { destinatarioTipo: 'admin' | 'provider'; idProveedor?: number }) {
+    return this.notificationsService
+      .markAllRead(data.destinatarioTipo, data.idProveedor)
+      .then(() => ({ data: null, message: 'Ok', success: true }));
+  }
 
   @MessagePattern({ cmd: 'createProducts' })
   public createProduct (createProductDto: CreateProductDto): Promise<Product> {

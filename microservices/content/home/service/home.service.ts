@@ -141,7 +141,7 @@ export class HomeService implements OnModuleInit {
         this.resilientService.sendWithResilience(
           this.imageClient,
           { cmd: 'get_all_banners' },
-          { fields: this.fieldsImage },
+          { fields: this.fieldsImage, activeOnly: true },
           bannerOptions,
         ) as Promise<BannerResponse>,
         this.resilientService.sendWithResilience(
@@ -288,9 +288,6 @@ export class HomeService implements OnModuleInit {
             const cat = catalogoByCod.get(cod) || {};
             const sinInteres18 =
               cod in sin18Override ? !!sin18Override[cod] : sin18General;
-            // Si el producto está en una promo ECONT activa (aplicada en getOfertaById
-            // vía aplicarPreciosPromoOferta), esa promo gana sobre el precio guardado
-            // de la oferta — nunca debe mostrarse un precio de oferta stale.
             const enPromo = !!p?.enPromo;
             return {
               ...p,
@@ -308,8 +305,8 @@ export class HomeService implements OnModuleInit {
           });
           ofertaPayload = {
             ofertaId: oferta.id,
-            titulo: oferta.titulo,
-            descripcion: oferta.descripcion,
+            titulo: ofertasCfg.titulo || oferta.titulo,
+            descripcion: ofertasCfg.descripcion || oferta.descripcion,
             fechaInicio: ofertasCfg.fechaInicio ?? null,
             fechaFin: ofertasCfg.fechaFin ?? null,
             tema: ofertasCfg.tema ?? null,

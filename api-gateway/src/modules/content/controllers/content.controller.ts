@@ -5,6 +5,7 @@ import {
   Inject,
   Post,
   Put,
+  Patch,
   Delete,
   Param,
   Body,
@@ -22,6 +23,54 @@ export class ContentController {
   constructor(
     @Inject('CONTENT_SERVICE') private readonly contentClient: ClientProxy,
   ) {}
+
+  @UseGuards(JwtAuthGuard)
+  @Get('dashboard/facturacion-mensual')
+  async getDashboardFacturacion() {
+    return await firstValueFrom(
+      this.contentClient.send({ cmd: 'get_dashboard_facturacion' }, {}),
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('dashboard/meta-ventas')
+  async setMetaVentas(@Body() body: { monto: number }, @Req() request: any) {
+    const actualizadoPor = request.user?.email || request.user?.sub || 'admin';
+    return await firstValueFrom(
+      this.contentClient.send(
+        { cmd: 'set_meta_ventas' },
+        { monto: Number(body?.monto), actualizadoPor },
+      ),
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('dashboard/ingresos-externos')
+  async createIngresoExterno(
+    @Body() body: { monto: number; concepto: string; fecha: string },
+    @Req() request: any,
+  ) {
+    const creadoPor = request.user?.email || request.user?.sub || 'admin';
+    return await firstValueFrom(
+      this.contentClient.send(
+        { cmd: 'create_ingreso_externo' },
+        {
+          monto: Number(body?.monto),
+          concepto: body?.concepto,
+          fecha: body?.fecha,
+          creadoPor,
+        },
+      ),
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('dashboard/ingresos-externos/:id')
+  async deleteIngresoExterno(@Param('id', ParseIntPipe) id: number) {
+    return await firstValueFrom(
+      this.contentClient.send({ cmd: 'delete_ingreso_externo' }, { id }),
+    );
+  }
 
   @Post('home')
   @SneakyThrows()

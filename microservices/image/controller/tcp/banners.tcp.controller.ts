@@ -35,6 +35,8 @@ export class BannersController {
     meta?: Record<string, any>;
     contentType?: string;
     keyMobile?: string;
+    fechaDesde?: string | null;
+    fechaHasta?: string | null;
   }) {
     return await this.bannerService.uploadBannerFromS3(
       data.key,
@@ -45,7 +47,24 @@ export class BannersController {
       data.meta,
       data.contentType,
       data.keyMobile,
+      data.fechaDesde,
+      data.fechaHasta,
     );
+  }
+
+  @MessagePattern({ cmd: 'update_banner' })
+  async updateBanner(@Payload() data: {
+    id: string;
+    updateData: {
+      nombre?: string;
+      variante?: string;
+      fechaDesde?: string | null;
+      fechaHasta?: string | null;
+      meta?: Record<string, any>;
+      modificadoPor?: string;
+    };
+  }) {
+    return await this.bannerService.updateBanner(data.id, data.updateData || {});
   }
 
   @MessagePattern({ cmd: 'get_banner_image' })
@@ -84,8 +103,8 @@ export class BannersController {
   }
 
   @MessagePattern({ cmd: 'get_all_banners' })
-  async getAllBanners(@Payload() data: { fields?: string[] }) {
-    const result = await this.bannerService.getAllBanners(data.fields);
+  async getAllBanners(@Payload() data: { fields?: string[]; activeOnly?: boolean }) {
+    const result = await this.bannerService.getAllBanners(data.fields, data.activeOnly);
     return result;
   }
 
