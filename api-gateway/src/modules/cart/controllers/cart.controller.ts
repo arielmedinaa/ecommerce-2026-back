@@ -1,6 +1,7 @@
 import { Controller, Post, Patch, Body, UsePipes, ValidationPipe, Inject, Req, Query, Get, Param, UseGuards } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import { timeout } from 'rxjs/operators';
 import { Request } from 'express';
 import { SneakyThrows } from '@decorators/sneaky-throws-new.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
@@ -248,13 +249,13 @@ export class CartController {
       this.cartClient.send({
         cmd: 'get_all_cart'
       }, {
-        token: token, 
-        limit: body.limit, 
-        skip: body.skip, 
-        sort: body.sort, 
+        token: token,
+        limit: body.limit,
+        skip: body.skip,
+        sort: body.sort,
         order: body.order,
         estado: body.estado
-      })
+      }).pipe(timeout(15000))
     )
   }
 

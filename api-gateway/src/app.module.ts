@@ -11,6 +11,8 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ContentModule } from './modules/content/content.module';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtAuthGuard } from '@gateway/common/guards/jwt-auth.guard';
+import { ProviderAuthGuard } from '@gateway/common/guards/provider-auth.guard';
+import { RolesGuard } from '@gateway/common/guards/roles.guard';
 import { ImageController } from './modules/image/controller/image.controller';
 import { ImageModule } from './modules/image/image.module';
 import { MailController } from './modules/mail/controller/mail.controller';
@@ -35,6 +37,7 @@ import { MailModule } from './modules/mail/mail.module';
       'PRODUCTS_SERVICE',
       'IMAGE_SERVICE',
       'MAIL_SERVICE',
+      'ETL_SERVICE',
     ]),
     PaymentsModule,
     AuthModule,
@@ -51,6 +54,6 @@ import { MailModule } from './modules/mail/mail.module';
     ImageController,
     MailController,
   ],
-  providers: [JwtAuthGuard],
+  providers: [JwtAuthGuard, ProviderAuthGuard, RolesGuard],
 })
 export class AppModule {}

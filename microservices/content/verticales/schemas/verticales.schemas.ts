@@ -21,6 +21,9 @@ export class Vertical {
   activo: boolean;
 
   @Column({ nullable: true })
+  logo_url: string;
+
+  @Column({ nullable: true })
   created_by: string;
 
   @CreateDateColumn()

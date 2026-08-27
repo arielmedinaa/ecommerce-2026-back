@@ -1,8 +1,25 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Vertical } from '../schemas/verticales.schemas';
 import { Repository } from 'typeorm';
 import { VerticalValidation } from './valid/vertical.validation';
+import { ImageStorageService } from '@shared/common/services/image-storage.service';
+import * as sharp from 'sharp';
+import { v4 as uuidv4 } from 'uuid';
+import * as fs from 'fs';
+import * as path from 'path';
+
+interface MulterFile {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  destination: string;
+  filename: string;
+  path: string;
+  buffer: Buffer;
+}
 
 @Injectable()
 export class VerticalesService {
@@ -10,6 +27,8 @@ export class VerticalesService {
   private verticalCache: Map<string, { data: Vertical[]; timestamp: number }> =
     new Map();
   private readonly cacheTTL = 30 * 1000;
+  private readonly imagesPath = '/home/appuser/Documents/projects/newEcommerce2026/imagesEcommerce/verticales';
+  private readonly baseUrl = String(process.env.API_GATEWAY_URL || '').replace(/\/+$/, '');
 
   constructor(
     @InjectRepository(Vertical, 'WRITE_CONNECTION')
@@ -17,6 +36,7 @@ export class VerticalesService {
     @InjectRepository(Vertical, 'READ_CONNECTION')
     private readonly verticalRepositoryRead: Repository<Vertical>,
     private readonly verticalValidation: VerticalValidation,
+    private readonly imageStorage: ImageStorageService,
   ) {}
 
   async create(
@@ -215,6 +235,89 @@ export class VerticalesService {
         success: false,
       };
     }
+  }
+
+  async uploadLogo(
+    id: number,
+    file: MulterFile,
+  ): Promise<{ data: Vertical; message: string; success: boolean }> {
+    const vertical = await this.verticalRepositoryRead.findOne({ where: { id } });
+    if (!vertical) {
+      throw new NotFoundException(`Vertical con id ${id} no encontrada`);
+    }
+
+    let bufferData: Buffer;
+    if (Buffer.isBuffer(file.buffer)) {
+      bufferData = file.buffer;
+    } else if (file.buffer && typeof file.buffer === 'object' && 'data' in file.buffer) {
+      const dataProperty = (file.buffer as any).data;
+      bufferData = Buffer.isBuffer(dataProperty)
+        ? dataProperty
+        : typeof dataProperty === 'string'
+          ? Buffer.from(dataProperty, 'base64')
+          : Buffer.from(dataProperty);
+    } else if (typeof file.buffer === 'string') {
+      bufferData = Buffer.from(file.buffer, 'base64');
+    } else {
+      throw new Error(`Formato de archivo inválido: ${typeof file.buffer}`);
+    }
+
+    const webpBuffer = await sharp(bufferData)
+      .resize({ width: 800, height: 800, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 90 })
+      .toBuffer();
+
+    const nombreSanitizado = vertical.nombre.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+    const fileName = `${uuidv4()}.webp`;
+
+    let url: string;
+    if (this.imageStorage.isS3()) {
+      const keyPrefix = (process.env.IMAGE_S3_VERTICALES_KEY_PREFIX || 'verticales').replace(/^\/+|\/+$/g, '');
+      const key = `${keyPrefix}/${nombreSanitizado}/${fileName}`;
+      const result = await this.imageStorage.putObject({
+        key,
+        body: webpBuffer,
+        contentType: 'image/webp',
+        cacheControl: 'public, max-age=86400',
+      });
+      url = result.url;
+    } else {
+      const dir = path.join(this.imagesPath, nombreSanitizado);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(path.join(dir, fileName), webpBuffer);
+      url = `${this.baseUrl}/content/vertical/logo/${nombreSanitizado}/${fileName}`;
+    }
+
+    await this.verticalRepository.update(id, { logo_url: url });
+    this.invalidateCache();
+    const updated = await this.verticalRepositoryRead.findOne({ where: { id } });
+
+    return { data: updated, message: 'LOGO SUBIDO CON ÉXITO', success: true };
+  }
+
+  async getLogoFile(
+    nombreSanitizado: string,
+    fileName: string,
+  ): Promise<{ buffer: Buffer; contentType: string }> {
+    if (
+      !nombreSanitizado ||
+      !fileName ||
+      nombreSanitizado.includes('..') ||
+      fileName.includes('..') ||
+      fileName.includes('/') ||
+      fileName.includes('\\')
+    ) {
+      throw new NotFoundException('Archivo no encontrado');
+    }
+
+    const filePath = path.join(this.imagesPath, nombreSanitizado, fileName);
+    if (!fs.existsSync(filePath)) {
+      throw new NotFoundException('Logo no encontrado');
+    }
+
+    return { buffer: fs.readFileSync(filePath), contentType: 'image/webp' };
   }
 
   private invalidateCache(): void {

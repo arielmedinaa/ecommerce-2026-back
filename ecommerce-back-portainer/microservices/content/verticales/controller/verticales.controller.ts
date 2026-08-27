@@ -35,9 +35,17 @@ export class VerticalController {
         return this.verticalesService.remove(Number(id));
     }
 
+    @MessagePattern({ cmd: 'upload_vertical_logo' })
+    async uploadVerticalLogo(@Payload() payload: any) {
+        const { id, file } = payload;
+        return this.verticalesService.uploadLogo(Number(id), file);
+    }
+
+    @MessagePattern({ cmd: 'get_vertical_logo_file' })
+    async getVerticalLogoFile(@Payload() payload: any) {
+        const { nombreSanitizado, fileName } = payload;
+        return this.verticalesService.getLogoFile(nombreSanitizado, fileName);
+    }
+
 }
 
-
-//{$and:[{estado:1},{imagenes:{$ne:[]}},{cantidad:{$gt:0}},{dias_ultimo_movimiento:{$lt:30}},{web:1},{precio:{$gt:9000}},{$or:[{'marca.nombre':'Midea'},{'marca.nombre':'Carrier'},{'marca.nombre':'Dako'},{'marca.nombre':'Bandeirante'}]}]}
-
-//{$and:[{estado:1},{imagenes:{$ne:[]}},{cantidad:{$gt:0}},{dias_ultimo_movimiento:{$lt:30}},{web:1},{precio:{$gt:9000}},{$or:[{'marca.nombre':'Ariete'},{'marca.nombre':'DeLonghi'},{'marca.nombre':'Gama'},{'marca.nombre':'Parlux'},{'marca.nombre':'Severin'}]}]}

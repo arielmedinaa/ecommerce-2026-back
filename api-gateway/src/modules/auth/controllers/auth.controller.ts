@@ -1,14 +1,26 @@
-import { BadRequestException, Body, Controller, Post, Get, Inject, Req, Res, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Post, Get, Inject, Param, Req, Res, UseGuards } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import { JwtService } from '@nestjs/jwt';
 import { firstValueFrom } from 'rxjs';
 import { Request, Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard, RequireModulo } from '@gateway/common/guards/roles.guard';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     @Inject('AUTH_SERVICE') private readonly authClient: ClientProxy,
+    @Inject('PRODUCTS_SERVICE') private readonly productsClient: ClientProxy,
+    private readonly jwtService: JwtService,
   ) {}
+
+  private async resolveIdProveedor(email?: string): Promise<number | null> {
+    if (!email) return null;
+    const result: any = await firstValueFrom(
+      this.productsClient.send({ cmd: 'resolve_proveedor_by_email' }, { email }),
+    );
+    return result?.data?.idProveedor ?? null;
+  }
 
   @Post('guest')
   async createGuestSession(@Req() req: Request) {
@@ -128,6 +140,19 @@ export class AuthController {
         this.authClient.send({ cmd: 'validate_basic_user' }, payload)
       );
 
+      if (result?.success && result?.token) {
+        const idProveedor = await this.resolveIdProveedor(body.email);
+        if (idProveedor) {
+          const decoded = this.jwtService.decode(result.token) as Record<string, any>;
+          const { exp, iat, ...decodedClaims } = decoded;
+          const providerToken = this.jwtService.sign(
+            { ...decodedClaims, tipo: 'provider', idProveedor },
+            { expiresIn: '24h' },
+          );
+          return { ...result, token: providerToken };
+        }
+      }
+
       return result;
     } catch (error) {
       console.error('Error in validateBasicUser:', error);
@@ -185,5 +210,63 @@ export class AuthController {
     return await firstValueFrom(
       this.authClient.send({ cmd: 'verify_email_code' }, { email: body?.email, code: body?.code }),
     );
+  }
+
+  @UseGuards(RolesGuard)
+  @RequireModulo('panel')
+  @Post('admins')
+  async createAdminUser(@Body() body: { nombre: string; email: string; rolId: number }) {
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'create_admin_user' }, body),
+    );
+  }
+
+  @UseGuards(RolesGuard)
+  @RequireModulo('panel')
+  @Get('admins')
+  async listAdmins() {
+    return await firstValueFrom(this.authClient.send({ cmd: 'list_admin_users' }, {}));
+  }
+
+  @UseGuards(RolesGuard)
+  @RequireModulo('panel')
+  @Get('roles')
+  async listRoles() {
+    return await firstValueFrom(this.authClient.send({ cmd: 'list_roles' }, {}));
+  }
+
+  @UseGuards(RolesGuard)
+  @RequireModulo('panel')
+  @Post('roles')
+  async createRol(@Body() body: { nombre: string; descripcion?: string; modulos: string[] }) {
+    return await firstValueFrom(this.authClient.send({ cmd: 'create_rol' }, body));
+  }
+
+  @UseGuards(RolesGuard)
+  @RequireModulo('panel')
+  @Post('roles/:id')
+  async updateRol(
+    @Param('id') id: string,
+    @Body() body: { descripcion?: string; modulos?: string[] },
+  ) {
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'update_rol' }, { id: Number(id), ...body }),
+    );
+  }
+
+  @UseGuards(RolesGuard)
+  @RequireModulo('panel')
+  @Post('proveedores')
+  async createProveedor(@Body() body: { nombre: string; email: string }) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'create_proveedor' }, body),
+    );
+  }
+
+  @UseGuards(RolesGuard)
+  @RequireModulo('panel')
+  @Get('proveedores')
+  async listProveedores() {
+    return await firstValueFrom(this.productsClient.send({ cmd: 'list_proveedores' }, {}));
   }
 }

@@ -6,9 +6,11 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { User } from './user.schemas';
 
+@Index('uq_user_cupon', ['userId', 'idCupon'], { unique: true })
 @Entity('usuarios_cupones')
 export class UserCoupon {
   @PrimaryGeneratedColumn()

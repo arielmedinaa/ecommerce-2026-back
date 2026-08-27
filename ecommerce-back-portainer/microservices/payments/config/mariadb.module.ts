@@ -13,7 +13,7 @@ import { PaymentIntent } from '../schemas/payment-intent.schema';
     MariaDbModule.forFeatureRead(),
   ],
   providers: [
-    // MariaDbConnectionService, // Temporalmente deshabilitado - causa conflicto de dependencias
+    
   ],
   exports: [TypeOrmModule],
 })

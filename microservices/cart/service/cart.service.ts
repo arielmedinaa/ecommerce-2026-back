@@ -146,7 +146,7 @@ export class CartContadoService {
     let carritoExistente = await this.carritoRead
       .createQueryBuilder('cart')
       .where(
-        "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id_usuario",
+        "cart.id_usuario_gen = :id_usuario",
         {
           id_usuario: usuario_id,
         },
@@ -445,7 +445,7 @@ export class CartContadoService {
     try {
       const count = await this.carritoRead
         .createQueryBuilder('cart')
-        .where("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id", { id: String(userId) })
+        .where("cart.id_usuario_gen = :id", { id: String(userId) })
         .andWhere('cart.updatedAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)')
         .getCount();
       return { hasMovements: count > 0, count, success: true };
@@ -476,7 +476,7 @@ export class CartContadoService {
     if (isNaN(usuario_id)) return null;
     const ref = await this.carritoRead
       .createQueryBuilder('cart')
-      .where("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id", { id: usuario_id })
+      .where("cart.id_usuario_gen = :id", { id: usuario_id })
       .andWhere("cart.estado = '1'")
       .orderBy('cart.codigo', 'DESC')
       .getOne();
@@ -749,7 +749,7 @@ export class CartContadoService {
     const resultado = await this.carritoRead
       .createQueryBuilder('cart')
       .where(
-        "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id_usuario OR JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.correo')) = :correo",
+        "cart.id_usuario_gen = :id_usuario OR JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.correo')) = :correo",
         { id_usuario: decoded?.sub, correo: cuenta },
       )
       .andWhere(
@@ -863,7 +863,7 @@ export class CartContadoService {
     const resultado = await this.carritoRead
       .createQueryBuilder('cart')
       .where(
-        "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id_usuario",
+        "cart.id_usuario_gen = :id_usuario",
         {
           id_usuario: this.jwtService.decode(clienteToken)?.sub,
         },
@@ -881,17 +881,14 @@ export class CartContadoService {
       };
     }
 
-    const carritosConEstado = await Promise.all(
-      resultado.map(async (carrito) => {
-        const estadoEcont = await this.utilsCart.getEstadoSolicitudEcont(
-          carrito.codigo,
-        );
-        return {
-          ...carrito,
-          estadoSolicitud: estadoEcont,
-        };
-      }),
+    const estadosPorCodigo = await this.utilsCart.getEstadosSolicitudEcontBatch(
+      resultado.map((carrito) => carrito.codigo),
     );
+    const carritosConEstado = resultado.map((carrito) => ({
+      ...carrito,
+      estadoSolicitud:
+        estadosPorCodigo.get(carrito.codigo) || 'Estado no identificado',
+    }));
 
     return {
       data: carritosConEstado,
@@ -908,7 +905,7 @@ export class CartContadoService {
       const qb = this.carritoRead
         .createQueryBuilder('cart')
         .where(
-          "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id_usuario",
+          "cart.id_usuario_gen = :id_usuario",
           { id_usuario: String(userId) },
         )
         
@@ -919,8 +916,11 @@ export class CartContadoService {
       if (estado !== undefined && estado !== null && estado !== '') {
         qb.andWhere('cart.estado = :estado', { estado: String(estado) });
       }
-      const { entities, raw } = await qb.orderBy('cart.codigo', 'DESC').getRawAndEntities();
-      const ABANDONO_MIN = 20; 
+      const { entities, raw } = await qb
+        .orderBy('cart.codigo', 'DESC')
+        .take(200)
+        .getRawAndEntities();
+      const ABANDONO_MIN = 20;
       const enriched = (entities || []).map((c: any, i: number) => {
         const ageMin = Number(raw?.[i]?.age_min ?? 0);
         const finalizado = c?.estado === '0' || c?.finished === '1';
@@ -947,7 +947,7 @@ export class CartContadoService {
       const carritos = await this.carritoWrite
         .createQueryBuilder('cart')
         .where(
-          "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id_usuario",
+          "cart.id_usuario_gen = :id_usuario",
           { id_usuario: String(userId) },
         )
         .getMany();
@@ -980,7 +980,7 @@ export class CartContadoService {
 
       const qb = this.carritoRead
         .createQueryBuilder('cart')
-        .select("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario'))", 'userId')
+        .select("cart.id_usuario_gen", 'userId')
         .addSelect('COUNT(*)', 'compras')
         .addSelect(
           "COALESCE(SUM(CAST(JSON_UNQUOTE(JSON_EXTRACT(cart.pago, '$.monto')) AS DECIMAL(14,2))), 0)",
@@ -988,7 +988,7 @@ export class CartContadoService {
         )
         .where('cart.estado = :estado', { estado: '0' });
       if (ids.length > 0) {
-        qb.andWhere("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) IN (:...ids)", { ids });
+        qb.andWhere("cart.id_usuario_gen IN (:...ids)", { ids });
       }
       const rows = await qb.groupBy('userId').getRawMany();
 
@@ -1026,7 +1026,7 @@ export class CartContadoService {
         .createQueryBuilder('cart')
         .where('cart.estado = :estado', { estado: '0' })
         .andWhere(
-          "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id",
+          "cart.id_usuario_gen = :id",
           { id },
         )
         .orderBy('cart.codigo', 'DESC')
@@ -1046,17 +1046,23 @@ export class CartContadoService {
         return { data: vacio, success: true, message: 'SIN COMPRAS' };
       }
 
-      const productos: any[] = await this.resilientService.sendWithResilience(
-        this.productsService,
-        { cmd: 'get_products' },
-        { ids: codigos, fields: 'codigo,marca,categorias' },
-        {
-          retries: 2,
-          delay: 800,
-          fallback: async () => [],
-          circuitBreaker: { failureThreshold: 3, resetTimeout: 30000 },
-        },
-      );
+      const productosResponse: { data?: any[] } | any[] =
+        await this.resilientService.sendWithResilience(
+          this.productsService,
+          { cmd: 'get_products_by_codigos' },
+          { codigos, limit: codigos.length },
+          {
+            retries: 2,
+            delay: 800,
+            fallback: async () => ({ data: [] }),
+            circuitBreaker: { failureThreshold: 3, resetTimeout: 30000 },
+          },
+        );
+      const productos: any[] = Array.isArray(productosResponse)
+        ? productosResponse
+        : Array.isArray(productosResponse?.data)
+          ? productosResponse.data
+          : [];
 
       const marcaCount = new Map<string, { nombre: string | null; count: number }>();
       const catCount = new Map<string, number>();
@@ -1541,6 +1547,8 @@ export class CartContadoService {
 
     let resultado: Cart | any = [];
     try {
+      const safeLimit = Number(limit) > 0 ? Math.min(Number(limit), 200) : 50;
+      const safeSkip = Number(skip) > 0 ? Number(skip) : 0;
       resultado = await this.carritoRead
         .createQueryBuilder('cart')
         .where('cart.estado = :estado', { estado: '1' })
@@ -1552,6 +1560,8 @@ export class CartContadoService {
           'cart.cliente',
         ])
         .orderBy('cart.codigo', order as 'ASC' | 'DESC')
+        .take(safeLimit)
+        .skip(safeSkip)
         .getMany();
       if (!resultado || resultado.length === 0) {
         return {
@@ -1816,7 +1826,7 @@ export class CartContadoService {
     const carrito = await this.carritoRead
       .createQueryBuilder('cart')
       .where(
-        "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id_usuario AND cart.codigo = :codigo AND cart.estado != :estado",
+        "cart.id_usuario_gen = :id_usuario AND cart.codigo = :codigo AND cart.estado != :estado",
         {
           id_usuario: this.jwtService.decode(clienteToken)?.sub,
           codigo,
@@ -2497,6 +2507,84 @@ export class CartContadoService {
       );
     } catch (error) {
       this.logger.error('Error al generar cupón:', error);
+    }
+  }
+
+  async countCarritosActivos(): Promise<{ data: { total: number }; success: boolean; message: string }> {
+    try {
+      const ageExpr = `TIMESTAMPDIFF(MINUTE, COALESCE(c.updatedAt, c.createdAt), NOW())`;
+      const finalizadoExpr = `(c.estado = '0' OR COALESCE(c.finished, '') = '1')`;
+      const total = await this.carritoRead
+        .createQueryBuilder('c')
+        .where(`NOT ${finalizadoExpr}`)
+        .andWhere(`${ageExpr} <= 20`)
+        .getCount();
+      return { data: { total }, success: true, message: 'Carritos activos obtenidos' };
+    } catch (error) {
+      this.logger.error('Error al contar carritos activos:', error);
+      return { data: { total: 0 }, success: false, message: 'ERROR AL CONTAR CARRITOS ACTIVOS' };
+    }
+  }
+
+  async countCarritosAbandonados(
+    desde?: string,
+    hasta?: string,
+  ): Promise<{ data: { total: number }; success: boolean; message: string }> {
+    try {
+      const ageExpr = `TIMESTAMPDIFF(MINUTE, COALESCE(c.updatedAt, c.createdAt), NOW())`;
+      const finalizadoExpr = `(c.estado = '0' OR COALESCE(c.finished, '') = '1')`;
+      const query = this.carritoRead
+        .createQueryBuilder('c')
+        .where(`NOT ${finalizadoExpr}`)
+        .andWhere(`${ageExpr} > 20`);
+
+      if (desde && hasta) {
+        query.andWhere('c.createdAt BETWEEN :desde AND :hasta', { desde, hasta });
+      }
+
+      const total = await query.getCount();
+      return { data: { total }, success: true, message: 'Carritos abandonados obtenidos' };
+    } catch (error) {
+      this.logger.error('Error al contar carritos abandonados:', error);
+      return { data: { total: 0 }, success: false, message: 'ERROR AL CONTAR CARRITOS ABANDONADOS' };
+    }
+  }
+
+  async getTopProductosVendidos(
+    desde: string,
+    hasta: string,
+    limit = 10,
+  ): Promise<{
+    data: { total: number; cantidad: number; filas: Array<{ codigo: string; unidades: number; monto: number }> };
+    success: boolean;
+    message: string;
+  }> {
+    try {
+      const rows = await this.orderItemWrite
+        .createQueryBuilder('it')
+        .innerJoin('it.orden', 'o')
+        .select('it.producto_codigo', 'codigo')
+        .addSelect('SUM(it.cantidad)', 'unidades')
+        .addSelect('SUM(it.subtotal)', 'monto')
+        .where('o.estado = :estado', { estado: 0 })
+        .andWhere('o.fecha_creacion BETWEEN :desde AND :hasta', { desde, hasta })
+        .groupBy('it.producto_codigo')
+        .orderBy('unidades', 'DESC')
+        .limit(limit)
+        .getRawMany();
+
+      const filas = (rows || []).map((r: any) => ({
+        codigo: String(r.codigo),
+        unidades: Number(r.unidades) || 0,
+        monto: Number(r.monto) || 0,
+      }));
+      const total = filas.reduce((acc, f) => acc + f.monto, 0);
+      const cantidad = filas.length;
+
+      return { data: { total, cantidad, filas }, success: true, message: 'Top productos vendidos obtenido' };
+    } catch (error) {
+      this.logger.error('Error al obtener top productos vendidos:', error);
+      return { data: { total: 0, cantidad: 0, filas: [] }, success: false, message: 'ERROR AL OBTENER TOP PRODUCTOS VENDIDOS' };
     }
   }
 }

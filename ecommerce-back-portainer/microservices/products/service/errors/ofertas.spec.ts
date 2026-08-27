@@ -45,7 +45,6 @@ export class OfertasValidationService {
         };
       }
 
-      // Validar precios no negativos
       if (producto.descuento !== undefined && producto.descuento < 0) {
         this.logger.error('El descuento no puede ser negativo');
         return {
@@ -82,7 +81,6 @@ export class OfertasValidationService {
         };
       }
 
-      // Validar tiempo activo si existe
       if (producto.tiempoActivo !== undefined && producto.tiempoActivo < 0) {
         this.logger.error(
           'El tiempo activo del producto no puede ser negativo',
@@ -97,7 +95,6 @@ export class OfertasValidationService {
         };
       }
 
-      // Validar cuotas si existen
       if (producto.cuotas && Array.isArray(producto.cuotas)) {
         for (const cuota of producto.cuotas) {
           if (!cuota.cantidad || cuota.cantidad <= 0) {
@@ -127,7 +124,6 @@ export class OfertasValidationService {
       }
     }
 
-    // Validar tiempo activo de la oferta
     if (createData.tiempoActivo !== undefined && createData.tiempoActivo <= 0) {
       this.logger.error('El tiempo activo de la oferta debe ser mayor a 0');
       return {

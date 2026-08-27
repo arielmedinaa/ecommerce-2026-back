@@ -32,6 +32,12 @@ export class Cart {
   @Column({ type: 'json', nullable: true })
   articulos: any;
 
+  @Column({ type: 'json', nullable: true })
+  erpSecuencias: any;
+
+  @Column({ default: false })
+  abandonedEmailSent: boolean;
+
   @Column()
   estado: string;
 

@@ -89,7 +89,6 @@ export class LandingsController {
     return this.landingsService.getFormatoById(id);
   }
 
-
   @MessagePattern({ cmd: 'getPredefinedTemplates' })
   async getPredefinedTemplates(): Promise<any> {
     return this.landingsService.getPredefinedTemplates();

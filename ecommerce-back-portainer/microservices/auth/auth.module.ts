@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuthController } from './controller/auth.controller';
 import { AuthService } from './service/auth.service';
+import { RolesService } from './service/roles.service';
 import { GuestService } from './service/guest.service';
 import { UserCouponService } from './service/user-coupon.service';
 import { JwtModule } from '@nestjs/jwt';
@@ -13,6 +14,9 @@ import { MicroserviceModule } from '@shared/config/microservice/microservice.mod
 import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
 import { UserController } from './controller/user.controller';
 import { UserService } from './service/user.service';
+import { ErpClienteService } from './service/erp-cliente.service';
+import { EcontDatabaseModule } from '@shared/config/database/econt.database.module';
+import { UserTrackService } from './service/user-track.service';
 
 @Module({
   imports: [
@@ -20,6 +24,7 @@ import { UserService } from './service/user.service';
       isGlobal: true,
     }),
     MariaDbModule,
+    EcontDatabaseModule,
     PassportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'default-secret',
@@ -30,7 +35,7 @@ import { UserService } from './service/user.service';
     ]),
   ],
   controllers: [AuthController, UserController],
-  providers: [AuthService, UserService, GuestService, UserCouponService, GoogleStrategy, JwtStrategy, ResilientService],
-  exports: [AuthService, GuestService, UserCouponService, UserService],
+  providers: [AuthService, RolesService, UserService, GuestService, UserCouponService, GoogleStrategy, JwtStrategy, ResilientService, ErpClienteService, UserTrackService],
+  exports: [AuthService, RolesService, GuestService, UserCouponService, UserService, ErpClienteService, UserTrackService],
 })
 export class AuthModule {}

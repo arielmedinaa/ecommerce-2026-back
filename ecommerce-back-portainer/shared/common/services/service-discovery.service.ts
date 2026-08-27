@@ -21,9 +21,6 @@ export class ServiceDiscoveryService {
     this.initializeServices();
   }
 
-  /**
-   * Inicializa el registro de todos los microservicios
-   */
   private initializeServices() {
     this.logger.log('Inicializando registro de microservicios...');
     
@@ -51,10 +48,6 @@ export class ServiceDiscoveryService {
     this.checkServicesAvailability();
   }
 
-  /**
-   * Determina la URL de un servicio según el modo de ejecución
-   * Prioridad: 1. Variable de entorno, 2. Modo todos juntos, 3. localhost
-   */
   private getServiceUrl(serviceName: string, defaultPort: number, envKey: string): string {
     const envUrl = this.configService.get<string>(envKey);
     if (envUrl) {
@@ -74,9 +67,6 @@ export class ServiceDiscoveryService {
     return localhostUrl;
   }
 
-  /**
-   * Obtiene el puerto de un servicio
-   */
   getServicePort(serviceName: string): number {
     const service = this.services.get(serviceName);
     if (service) {
@@ -96,9 +86,6 @@ export class ServiceDiscoveryService {
     return defaultPorts[serviceName] || 3000;
   }
 
-  /**
-   * Determina el host de un servicio según el modo de ejecución
-   */
   private getServiceHost(serviceName: string): string {
     if (this.isAllServicesMode) {
       const cleanServiceName = serviceName.replace('_SERVICE', '').toLowerCase();
@@ -111,9 +98,6 @@ export class ServiceDiscoveryService {
     return 'localhost';
   }
 
-  /**
-   * Verifica la disponibilidad de todos los servicios registrados
-   */
   private async checkServicesAvailability() {
     this.logger.log('🔍 Verificando disponibilidad de servicios...');
     
@@ -137,11 +121,6 @@ export class ServiceDiscoveryService {
     this.logger.log(`Resumen: ${availableCount}/${totalCount} servicios disponibles`);
   }
 
-  // ==================== MÉTODOS PÚBLICOS ====================
-
-  /**
-   * Obtiene información completa de un servicio
-   */
   getServiceInfo(serviceName: string): ServiceInfo | undefined {
     const service = this.services.get(serviceName);
     if (!service) {
@@ -150,9 +129,6 @@ export class ServiceDiscoveryService {
     return service;
   }
 
-  /**
-   * Obtiene solo la URL de un servicio
-   */
   getServiceUrlByName(serviceName: string): string {
     const service = this.services.get(serviceName);
     const url = service?.url || 'http://localhost:3100';
@@ -160,9 +136,6 @@ export class ServiceDiscoveryService {
     return url;
   }
 
-  /**
-   * Verifica si un servicio específico está disponible
-   */
   isServiceAvailable(serviceName: string): boolean {
     const service = this.services.get(serviceName);
     const available = service?.available || false;
@@ -170,27 +143,18 @@ export class ServiceDiscoveryService {
     return available;
   }
 
-  /**
-   * Obtiene todos los servicios registrados
-   */
   getAllServices(): ServiceInfo[] {
     const allServices = Array.from(this.services.values());
     this.logger.log(`Total de servicios registrados: ${allServices.length}`);
     return allServices;
   }
 
-  /**
-   * Obtiene solo los servicios disponibles
-   */
   getAvailableServices(): ServiceInfo[] {
     const availableServices = Array.from(this.services.values()).filter(s => s.available);
     this.logger.log(`Servicios disponibles: ${availableServices.length}`);
     return availableServices;
   }
 
-  /**
-   * Registra manualmente un servicio (para dinámicos)
-   */
   registerService(serviceName: string, url: string, port: number) {
     this.services.set(serviceName, {
       name: serviceName,
@@ -202,33 +166,21 @@ export class ServiceDiscoveryService {
     this.logger.log(`Servicio ${serviceName} REGISTRADO manualmente en ${url}:${port}`);
   }
 
-  /**
-   * Refresca la disponibilidad de todos los servicios
-   */
   async refreshServices() {
     this.logger.log('Refrescando disponibilidad de servicios...');
     await this.checkServicesAvailability();
   }
 
-  /**
-   * Indica si estamos en modo "todos los servicios juntos"
-   */
   isAllServicesModeEnabled(): boolean {
     return this.isAllServicesMode;
   }
 
-  /**
-   * Obtiene el modo de ejecución actual
-   */
   getRunMode(): string {
     const mode = this.isAllServicesMode ? 'all' : 'single';
     this.logger.log(`Modo de ejecución actual: ${mode}`);
     return mode;
   }
 
-  /**
-   * Obtiene servicios por tipo (disponibles, no disponibles, todos)
-   */
   getServicesByStatus(status: 'available' | 'unavailable' | 'all'): ServiceInfo[] {
     switch (status) {
       case 'available':
@@ -241,9 +193,6 @@ export class ServiceDiscoveryService {
     }
   }
 
-  /**
-   * Encuentra un servicio por su puerto
-   */
   getServiceByPort(port: number): ServiceInfo | undefined {
     const service = Array.from(this.services.values()).find(s => s.port === port);
     if (service) {

@@ -1,5 +1,7 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger, OnModuleInit } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import type { Redis } from 'ioredis';
+import { REDIS_CLIENT } from '@shared/common/cache/redis.module';
 import { firstValueFrom } from 'rxjs';
 import { FilterHomeDto } from '@content/home/dto/filter.home';
 import { HomeData, HomeCategoriaFamilia } from '@content/home/interfaces/home.interface';
@@ -30,7 +32,7 @@ type HomeBuildInput = {
 };
 
 @Injectable()
-export class HomeService {
+export class HomeService implements OnModuleInit {
   private readonly logger = new Logger(HomeService.name);
   private fieldsImage = ['nombre', 'imagen', 'variante', 'estado', 'meta'];
   constructor(
@@ -38,28 +40,78 @@ export class HomeService {
     private readonly fallbackDataService: FallbackDataService,
     @Inject('PRODUCTS_SERVICE') private readonly productsClient: ClientProxy,
     @Inject('IMAGE_SERVICE') private readonly imageClient: ClientProxy,
+    @Inject('CART_SERVICE') private readonly cartClient: ClientProxy,
     private readonly verticalesService: VerticalesService,
     private readonly homeSectionsService: HomeSectionsService,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
-  private homeDataCache: Map<
-    string,
-    { data: ResponseData<HomeData>; timestamp: number }
-  > = new Map();
-  private readonly HOME_TTL = 30 * 1000;
+  private readonly FRESH_MS = 60 * 1000;
+  private readonly REDIS_TTL_S = 60 * 60;
+  private readonly revalidating = new Set<string>();
+
+  private redisKey(category: string, limit: number, offset: number): string {
+    return `home:v1:${category}:${limit}:${offset}`;
+  }
+
+  async onModuleInit(): Promise<void> {
+    setTimeout(() => {
+      this.getHomeData({ limit: 10, offset: 0 } as FilterHomeDto).catch((e) =>
+        this.logger.warn(`Pre-warm del home falló: ${e?.message ?? e}`),
+      );
+    }, 0);
+  }
 
   async getHomeData(filter: FilterHomeDto): Promise<ResponseData<HomeData>> {
     const limit = filter.limit || 6;
     const offset = filter.offset || 0;
     const category = filter.category || 'all';
-
-    const cacheKey = `home_${category}_${limit}_${offset}`;
+    const key = this.redisKey(category, limit, offset);
     const now = Date.now();
 
-    const cached = this.homeDataCache.get(cacheKey);
-    if (cached && now - cached.timestamp < this.HOME_TTL) {
-      return cached.data;
+    try {
+      const raw = await this.redis.get(key);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { ts: number; data: ResponseData<HomeData> };
+        const age = now - (parsed.ts || 0);
+        if (age < this.FRESH_MS) return parsed.data;
+        this.revalidateInBackground(filter, key);
+        return parsed.data;
+      }
+    } catch (e) {
+      this.logger.warn(`Redis get falló para ${key}: ${(e as any)?.message ?? e}`);
     }
+
+    const data = await this.buildHomeData(filter);
+    await this.writeCache(key, data);
+    return data;
+  }
+
+  private revalidateInBackground(filter: FilterHomeDto, key: string): void {
+    if (this.revalidating.has(key)) return;
+    this.revalidating.add(key);
+    this.buildHomeData(filter)
+      .then((fresh) => this.writeCache(key, fresh))
+      .catch((e) => this.logger.warn(`Revalidación de ${key} falló: ${e?.message ?? e}`))
+      .finally(() => this.revalidating.delete(key));
+  }
+
+  private async writeCache(key: string, data: ResponseData<HomeData>): Promise<void> {
+    try {
+      await this.redis.set(
+        key,
+        JSON.stringify({ ts: Date.now(), data }),
+        'EX',
+        this.REDIS_TTL_S,
+      );
+    } catch (e) {
+      this.logger.warn(`Redis set falló para ${key}: ${(e as any)?.message ?? e}`);
+    }
+  }
+
+  private async buildHomeData(filter: FilterHomeDto): Promise<ResponseData<HomeData>> {
+    const limit = filter.limit || 6;
+    const offset = filter.offset || 0;
 
     try {
       const resilientOptions: ResilientOptions = {
@@ -78,21 +130,20 @@ export class HomeService {
         },
       };
 
-      const verticales = await this.verticalesService.findAll({page: 1, limit: 5});
       const bannerOptions: ResilientOptions = {
         retries: 3,
         delay: 1000,
         fallback: async () => ({ data: [], message: 'fallback banners', success: true }),
         circuitBreaker: { failureThreshold: 3, resetTimeout: 30000 },
       };
-      const banners = await this.resilientService.sendWithResilience(
-        this.imageClient,
-        { cmd: 'get_all_banners' },
-        { fields: this.fieldsImage },
-        bannerOptions,
-      ) as BannerResponse;
-      this.logger.log(`[home] get_all_banners → ${Array.isArray((banners as any)?.data) ? (banners as any).data.length : 'sin data'} banners`);
-      const [jota, ofertas, productos] = await Promise.all([
+      const [verticales, banners, jota, ofertas, productos] = await Promise.all([
+        this.verticalesService.findAll({ page: 1, limit: 5 }),
+        this.resilientService.sendWithResilience(
+          this.imageClient,
+          { cmd: 'get_all_banners' },
+          { fields: this.fieldsImage, activeOnly: true },
+          bannerOptions,
+        ) as Promise<BannerResponse>,
         this.resilientService.sendWithResilience(
           this.productsClient,
           { cmd: 'get_products_jota' },
@@ -122,6 +173,7 @@ export class HomeService {
           resilientOptions,
         ) as Promise<any>,
       ]);
+      this.logger.log(`[home] get_all_banners → ${Array.isArray((banners as any)?.data) ? (banners as any).data.length : 'sin data'} banners`);
 
       this.fallbackDataService.saveSuccessfulResponse(productos, 'products');
       this.fallbackDataService.saveSuccessfulResponse(jota, 'jota');
@@ -139,10 +191,9 @@ export class HomeService {
       };
       response.status = 200;
       response.register = productos.total || 0;
-      this.homeDataCache.set(cacheKey, { data: response, timestamp: now });
       return response;
     } catch (error) {
-      this.logger.error('Error en getHomeData:', error);
+      this.logger.error('Error en buildHomeData:', error);
       const fallbackProducts =
         this.fallbackDataService.getFallbackProducts(limit);
       const fallbackJota = this.fallbackDataService.getFallbackJota();
@@ -168,9 +219,6 @@ export class HomeService {
   private async buildHomeSections(input: HomeBuildInput): Promise<HomeSectionResponse[]> {
     const dbSections = await this.homeSectionsService.getActiveSections();
     const sections = dbSections.length > 0 ? dbSections : this.getDefaultSections();
-
-    // JOTA: si en el admin se eligieron productos puntuales (config.codigos),
-    // usamos esos en vez del listado por marca por defecto (input.jota).
     let jotaData: any = (input as any).jota?.data ?? input.jota ?? [];
     let jotaTotal: any = (input as any).jota?.total ?? null;
     const jotaSection = sections.find((s) => s.type === 'JOTA');
@@ -197,10 +245,6 @@ export class HomeService {
       }
     }
 
-    // OFERTAS: si el admin configuró la sección (config.ofertaId), traemos ESA
-    // oferta y la fusionamos con la programación/colores de la config. Cada
-    // producto se enriquece con datos de catálogo (imagen/marca/precio tachado),
-    // manteniendo los precios de oferta (precioContado/precioCredito/cuotas).
     const ofertasSection = sections.find((s) => s.type === 'OFERTAS');
     const ofertasCfg: any = ofertasSection?.config || {};
     let ofertaPayload: any = null;
@@ -232,10 +276,8 @@ export class HomeService {
                 catData.map((c) => [String(c?.codigo_articulo ?? '').trim(), c]),
               );
             } catch {
-              // sin enriquecimiento si falla
             }
           }
-          // 18 cuotas sin interés: toggle general de la oferta + override por código.
           const sin18General = !!ofertasCfg.cuotasSinInteres18;
           const sin18Override: Record<string, boolean> =
             (ofertasCfg.sin18Override && typeof ofertasCfg.sin18Override === 'object')
@@ -246,23 +288,30 @@ export class HomeService {
             const cat = catalogoByCod.get(cod) || {};
             const sinInteres18 =
               cod in sin18Override ? !!sin18Override[cod] : sin18General;
+            const enPromo = !!p?.enPromo;
             return {
               ...p,
               imagenes: Array.isArray(cat?.imagenes) ? cat.imagenes : [],
               nombre_marca: cat?.nombre_marca ?? null,
               nombre_subcategoria: cat?.nombre_subcategoria ?? null,
+              sello: cat?.sello ?? null,
               precioCatalogo: cat?.precioventaRedondeado ?? cat?.precioventa ?? null,
               precioTope: cat?.preciotope ?? null,
+              precioContado: enPromo ? p.precioContadoRedondeado : p.precioContado,
+              precioCredito: enPromo ? p.precioContadoRedondeado : p.precioCredito,
+              cuotas: Array.isArray(cat?.cuotas) ? cat.cuotas : undefined,
               sinInteres18,
             };
           });
           ofertaPayload = {
             ofertaId: oferta.id,
-            titulo: oferta.titulo,
-            descripcion: oferta.descripcion,
+            titulo: ofertasCfg.titulo || oferta.titulo,
+            descripcion: ofertasCfg.descripcion || oferta.descripcion,
             fechaInicio: ofertasCfg.fechaInicio ?? null,
             fechaFin: ofertasCfg.fechaFin ?? null,
             tema: ofertasCfg.tema ?? null,
+            combosHabilitado: !!oferta.combosHabilitado,
+            comboDescuento: Number(oferta.comboDescuento) || 0,
             productos: productosEnriquecidos,
           };
         }
@@ -292,9 +341,6 @@ export class HomeService {
       return baseUrl ? `${baseUrl}${path}` : path;
     };
 
-    // BANNERS2 (banners secundarios): layout estructurado de 2 hero anchos + 3
-    // feature cards + 4 promo cards. Cada slot referencia su imagen por `nombre`;
-    // acá le resolvemos la `imageUrl` reusando el mismo patrón que los banners.
     const resolveBanners2Payload = (cfg: Record<string, any> | undefined) => {
       const c: any = cfg && typeof cfg === 'object' ? cfg : {};
       const withImg = (slot: any) => {
@@ -316,7 +362,9 @@ export class HomeService {
       if (Array.isArray(heroSlidesRaw) && heroSlidesRaw.length > 0) {
         const out: any[] = [];
         const seen = new Set<string>();
+        const legacySplitPct = Number((cfg as any)?.heroSplitPct ?? 50);
         for (const it of heroSlidesRaw) {
+          const splitPct = Number(it?.splitPct ?? legacySplitPct);
           const mediaType = String(it?.mediaType || 'image');
           if (mediaType === 'video') {
             const videoUrl = String(it?.videoUrl || '').trim();
@@ -332,6 +380,7 @@ export class HomeService {
                 href: it?.href ?? null,
                 mediaType: 'video',
                 videoUrl,
+                splitPct,
                 order: Number(it?.order ?? 0),
               },
             });
@@ -360,6 +409,7 @@ export class HomeService {
               href: it?.href ?? meta?.href,
               mediaType: 'image',
               imageUrl: bannerUrl(nombre, 'desktop'),
+              splitPct,
               order: Number.isFinite(order) ? order : meta?.order,
             },
           });
@@ -388,9 +438,6 @@ export class HomeService {
             (b as any)?.meta && typeof (b as any).meta === 'object'
               ? (b as any).meta
               : {};
-          // Meta editado en el admin (title/subtitle/badge/ctaText/bg) vive en el
-          // item de config. Lo fusionamos (precedencia sobre el meta de la entidad)
-          // para que los textos y colores lleguen al storefront, no solo la imagen.
           const itemMeta =
             (it as any)?.meta && typeof (it as any).meta === 'object'
               ? (it as any).meta
@@ -432,12 +479,10 @@ export class HomeService {
       });
     };
 
-    // PRODUCTOS config-driven: cada sección PRODUCTOS puede traer productos
-    // puntuales (config.codigos) o un set aleatorio acotado a productos con
-    // stock y precio (config.modo === 'aleatorio', ej. "Lo Más Vendido").
     const productosByKey = new Map<string, any[]>();
     for (const s of sections) {
-      if ((s.type as HomeSectionType) !== 'PRODUCTOS') continue;
+      const t = s.type as HomeSectionType;
+      if (t !== 'PRODUCTOS' && t !== 'PRODUCT_CAROUSEL') continue;
       const cfg: any = s.config || {};
       const codigos: string[] = Array.isArray(cfg.codigos)
         ? cfg.codigos
@@ -463,7 +508,7 @@ export class HomeService {
             ),
           );
           const data: any[] = Array.isArray(res?.data) ? [...res.data] : [];
-          // Barajado Fisher-Yates y corte al límite.
+          
           for (let i = data.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [data[i], data[j]] = [data[j], data[i]];
@@ -505,8 +550,7 @@ export class HomeService {
           section.payload = resolveBanners2Payload(s.config);
           break;
         case 'OFERTAS':
-          // Si hay oferta configurada en el admin, se usa ese payload enriquecido
-          // (título/desc/fechas/tema/productos). Si no, fallback al listado general.
+
           section.payload = ofertaPayload
             ? { oferta: ofertaPayload, ofertas: input.ofertas || [] }
             : { ofertas: input.ofertas || [] };
@@ -517,6 +561,45 @@ export class HomeService {
             total: jotaTotal,
           };
           break;
+        case 'IMAGE_GRID': {
+          const cfgGrid: any = s.config || {};
+          const mapCelda = (c: any) => {
+            const nombre = String(c?.imagenNombre || c?.nombre || '').trim();
+            return {
+              imagenNombre: nombre || null,
+              imageUrl: nombre ? bannerUrl(nombre, 'desktop') : null,
+              title: c?.title ?? null,
+              subtitle: c?.subtitle ?? null,
+              ctaText: c?.ctaText ?? null,
+              href: c?.href ?? null,
+            };
+          };
+
+          let filas: any[] = [];
+          if (Array.isArray(cfgGrid.filas) && cfgGrid.filas.length > 0) {
+            filas = cfgGrid.filas.map((f: any) => ({
+              columnas: Math.max(1, Math.min(4, Number(f?.columnas) || 3)),
+              items: (Array.isArray(f?.celdas) ? f.celdas : []).map(mapCelda),
+            }));
+          } else if (Array.isArray(cfgGrid.celdas) && cfgGrid.celdas.length > 0) {
+            filas = [{ columnas: Math.max(1, Math.min(4, Number(cfgGrid.columnas) || 3)), items: cfgGrid.celdas.map(mapCelda) }];
+          }
+          section.payload = { filas };
+          break;
+        }
+        case 'PRODUCT_CAROUSEL': {
+          const cfgPc: any = s.config || {};
+          section.payload = {
+            productos: productosByKey.get(s.key) ?? input.productos ?? [],
+            titulo: (cfgPc.tituloOferta && String(cfgPc.tituloOferta).trim()) || s.titulo || null,
+            descripcion: cfgPc.descripcion ?? null,
+            colores: cfgPc.colores ?? null,
+            variante: cfgPc.variante === 'ofertas' ? 'ofertas' : 'titulo',
+            tipografia: cfgPc.tipografia ?? null,
+            modo: cfgPc.modo ?? null,
+          };
+          break;
+        }
         case 'PRODUCTOS':
         default:
           section.payload = {
@@ -527,6 +610,102 @@ export class HomeService {
       }
       return section;
     });
+  }
+
+  async buildPersonalizedCarousel(
+    userId: number | string,
+    key: string,
+  ): Promise<ResponseData<any>> {
+    const build = (data: any, message: string, status: number): ResponseData<any> => {
+      const r = new ResponseData<any>();
+      r.data = data;
+      r.message = message;
+      r.status = status;
+      r.register = Array.isArray(data?.productos) ? data.productos.length : 0;
+      return r;
+    };
+    try {
+      const section = await this.homeSectionsService.getByKey(key);
+      if (!section || (section.type as HomeSectionType) !== 'PRODUCT_CAROUSEL') {
+        return build(null, 'Sección no encontrada', 404);
+      }
+      const cfg: any = section.config || {};
+      const limit = Number(cfg.limit) > 0 ? Number(cfg.limit) : 12;
+
+      let productos: any[] = [];
+      let marcaNombre: string | null = null;
+
+      let top: any = null;
+      try {
+        top = await firstValueFrom(
+          this.cartClient.send({ cmd: 'get_user_top_categorias' }, { userId, limit: 5 }),
+        );
+      } catch (e) {
+        this.logger.warn(`No se pudo obtener top de compras (user ${userId}): ${e}`);
+      }
+      const marcas: Array<{ codigo: string; nombre: string | null }> = top?.data?.marcas ?? [];
+
+      for (const m of marcas) {
+        if (productos.length >= limit) break;
+        try {
+          const res: any = await firstValueFrom(
+            this.productsClient.send(
+              { cmd: 'get_products' },
+              { marca: m.codigo, limit: limit * 2, offset: 0, soloConStock: true, precioMin: 1 },
+            ),
+          );
+          const data: any[] = Array.isArray(res?.data) ? res.data : [];
+          if (data.length && !marcaNombre) marcaNombre = m.nombre;
+          const vistos = new Set(productos.map((p) => String(p.codigo ?? p.codigo_articulo)));
+          for (const p of data) {
+            const cod = String(p.codigo ?? p.codigo_articulo);
+            if (!vistos.has(cod)) {
+              vistos.add(cod);
+              productos.push(p);
+            }
+          }
+        } catch (e) {
+          this.logger.warn(`No se pudieron traer productos de marca ${m.codigo}: ${e}`);
+        }
+      }
+
+      if (productos.length === 0) {
+        try {
+          const res: any = await firstValueFrom(
+            this.productsClient.send(
+              { cmd: 'get_products' },
+              { limit: Math.max(limit * 3, 60), offset: 0, soloConStock: true, precioMin: 1 },
+            ),
+          );
+          const data: any[] = Array.isArray(res?.data) ? [...res.data] : [];
+          for (let i = data.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [data[i], data[j]] = [data[j], data[i]];
+          }
+          productos = data.slice(0, limit);
+        } catch (e) {
+          this.logger.warn(`Fallback aleatorio del carrusel personalizado falló: ${e}`);
+        }
+      }
+
+      const payload = {
+        productos: productos.slice(0, limit),
+        titulo:
+          (cfg.tituloOferta && String(cfg.tituloOferta).trim()) ||
+          section.titulo ||
+          (marcaNombre ? `Lo mejor de ${marcaNombre} para vos` : 'Elegido para vos'),
+        descripcion: cfg.descripcion ?? null,
+        colores: cfg.colores ?? null,
+        variante: cfg.variante === 'ofertas' ? 'ofertas' : 'titulo',
+        tipografia: cfg.tipografia ?? null,
+        modo: 'compras_usuario',
+        personalizado: marcas.length > 0 && productos.length > 0,
+      };
+      return build(payload, 'Carrusel personalizado', 200);
+    } catch (error) {
+      this.logger.error('Error al construir carrusel personalizado', error as any);
+      return build(null, 'Error al construir carrusel personalizado', 500);
+    }
   }
 
   private getDefaultSections(): HomeSection[] {

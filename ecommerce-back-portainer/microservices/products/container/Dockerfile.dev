@@ -1,5 +1,4 @@
-FROM node:20-alpine
-
+FROM node:20-alpine AS deps
 WORKDIR /usr/src/app
 
 RUN apk add --no-cache \
@@ -9,9 +8,7 @@ RUN apk add --no-cache \
     g++ \
     libc6-compat
 
-RUN npm install -g nodemon ts-node tsconfig-paths
-
-COPY microservices/products/package*.json .
+COPY microservices/products/package*.json ./
 COPY yarn.lock ./
 COPY tsconfig.json ./
 COPY tsconfig.paths.json ./
@@ -20,6 +17,20 @@ RUN yarn config set network-timeout 600000 && \
     yarn config set registry https://registry.npmjs.org/ && \
     yarn install --network-timeout 600000 || \
     npm install --registry https://registry.npmjs.org/ --timeout=600000
+
+
+FROM node:20-alpine
+WORKDIR /usr/src/app
+
+RUN apk add --no-cache vips libc6-compat
+
+RUN npm install -g nodemon ts-node tsconfig-paths
+
+COPY --from=deps /usr/src/app/node_modules ./node_modules
+COPY microservices/products/package*.json ./
+COPY yarn.lock ./
+COPY tsconfig.json ./
+COPY tsconfig.paths.json ./
 
 COPY microservices/products/ ./microservices/products/
 COPY shared/ ./shared/

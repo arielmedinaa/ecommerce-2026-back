@@ -18,16 +18,16 @@ export class Order {
   codigo: string;
 
   @Column()
-  carrito_codigo: number; // Referencia al carrito (código único)
+  carrito_codigo: number; 
 
   @Column({length: 700})
-  cliente_documento: string; // Documento del cliente (o identificador único)
+  cliente_documento: string; 
 
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   total: number;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
-  evento_id: string; // ID del evento si aplica (puede ser número o string)
+  evento_id: string; 
 
   @Column({ type: 'json', nullable: true })
   datos_envio: Record<string, any>;
@@ -36,7 +36,13 @@ export class Order {
   datos_pago: Record<string, any>;
 
   @Column({ default: 1 })
-  estado: number; // 1 activa, 0 cancelada, etc.
+  estado: number; 
+
+  @Column({ type: 'json', nullable: true })
+  cambios: any[];
+
+  @Column({ type: 'json', nullable: true })
+  calificacion: { estrellas: number; motivos?: string[]; comentario?: string; fecha: string } | null;
 
   @CreateDateColumn()
   fecha_creacion: Date;

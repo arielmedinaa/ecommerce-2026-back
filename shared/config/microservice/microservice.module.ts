@@ -10,6 +10,7 @@ export const SERVICE_PORTS = {
   PRODUCTS_SERVICE: 3106,
   IMAGE_SERVICE: 3107,
   MAIL_SERVICE: 3108,
+  ETL_SERVICE: 3109,
 } as const;
 
 const getNatsServers = (): string[] => [

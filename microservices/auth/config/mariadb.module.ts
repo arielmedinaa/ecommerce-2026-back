@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { User } from '../schemas/user.schemas';
+import { Rol } from '../schemas/rol.schema';
 import { MariaDbConnectionService } from './mariadb-connection.service';
 import { UserCoupon } from '@auth/schemas/user-coupon.schema';
 import { UserTrack } from '../schemas/user-track.schema';
@@ -17,7 +18,7 @@ import { UserTrack } from '../schemas/user-track.schema';
         username: configService.get<string>('DATABASE_USER'),
         password: configService.get<string>('DATABASE_PASSWORD'),
         database: configService.get<string>('DATABASE_NAME'),
-        entities: [User, UserCoupon, UserTrack],
+        entities: [User, UserCoupon, UserTrack, Rol],
         synchronize: process.env.SYNCRONICE === 'true',
         logging: process.env.SYNCRONICE === 'true',
         keepConnectionAlive: true,
@@ -29,7 +30,7 @@ import { UserTrack } from '../schemas/user-track.schema';
       }),
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([User, UserCoupon, UserTrack]),
+    TypeOrmModule.forFeature([User, UserCoupon, UserTrack, Rol]),
   ],
   providers: [MariaDbConnectionService],
   exports: [TypeOrmModule],

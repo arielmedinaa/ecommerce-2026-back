@@ -16,15 +16,13 @@ export function SneakyThrows(serviceName?: string, operation?: string, lineNumbe
         const line = lineNumber || SneakyThrows.detectLine(target, propertyName);
         const errorMessage = error.message || '';
         console.log('errorMessage', errorMessage);
-        
-        // Extraer información del error del microservicio
+
         const microserviceError = error.response?.data || error;
         const microserviceMessage = microserviceError?.message || '';
         const microserviceErrorType = microserviceError?.error || '';
         
         console.log('microserviceError', microserviceError);
-        
-        // Detectar BadRequestException del microservicio
+
         if (microserviceErrorType === 'BadRequestException' ||
             microserviceError?.statusCode === 400 ||
             errorMessage.includes('Ya existe una landing') ||
@@ -34,11 +32,9 @@ export function SneakyThrows(serviceName?: string, operation?: string, lineNumbe
             error.name === 'BadRequestException' || 
             error.constructor?.name === 'BadRequestException' ||
             error.status === 400) {
-          
-          // Usar el mensaje del microservicio si está disponible
+
           let realMessage = microserviceMessage || errorMessage;
-          
-          // Si el mensaje contiene "Internal server error", buscar el mensaje real en el error original
+
           if (realMessage === 'Internal server error' && errorMessage) {
             const originalErrorMatch = errorMessage.match(/BadRequestException: (.+)$/);
             if (originalErrorMatch) {
@@ -53,8 +49,6 @@ export function SneakyThrows(serviceName?: string, operation?: string, lineNumbe
       }
     };
 
-    // Preserve Nest metadata (interceptors/guards/params/etc.) that may be attached to the original method
-    // Some decorators (e.g. multer interceptors) rely on metadata being present on the handler reference.
     try {
       const keys = Reflect.getMetadataKeys(method) || [];
       for (const key of keys) {
@@ -62,7 +56,7 @@ export function SneakyThrows(serviceName?: string, operation?: string, lineNumbe
         Reflect.defineMetadata(key, value, descriptor.value);
       }
     } catch {
-      // ignore metadata copy errors
+      
     }
 
     return descriptor;
@@ -84,13 +78,11 @@ export function SneakyThrowsSync(serviceName?: string, operation?: string, lineN
 
         const line = lineNumber || SneakyThrows.detectLine(target, propertyName);
         const errorMessage = error.message || '';
-        
-        // Extraer información del error del microservicio
+
         const microserviceError = error.response?.data || error;
         const microserviceMessage = microserviceError?.message || '';
         const microserviceErrorType = microserviceError?.error || '';
-        
-        // Detectar BadRequestException del microservicio
+
         if (microserviceErrorType === 'BadRequestException' ||
             microserviceError?.statusCode === 400 ||
             errorMessage.includes('Ya existe una landing') ||
@@ -100,11 +92,9 @@ export function SneakyThrowsSync(serviceName?: string, operation?: string, lineN
             error.name === 'BadRequestException' || 
             error.constructor?.name === 'BadRequestException' ||
             error.status === 400) {
-          
-          // Usar el mensaje del microservicio si está disponible
+
           let realMessage = microserviceMessage || errorMessage;
-          
-          // Si el mensaje contiene "Internal server error", buscar el mensaje real en el error original
+
           if (realMessage === 'Internal server error' && errorMessage) {
             const originalErrorMatch = errorMessage.match(/BadRequestException: (.+)$/);
             if (originalErrorMatch) {
@@ -119,7 +109,6 @@ export function SneakyThrowsSync(serviceName?: string, operation?: string, lineN
       }
     };
 
-    // Preserve Nest metadata on the original method
     try {
       const keys = Reflect.getMetadataKeys(method) || [];
       for (const key of keys) {
@@ -127,7 +116,7 @@ export function SneakyThrowsSync(serviceName?: string, operation?: string, lineN
         Reflect.defineMetadata(key, value, descriptor.value);
       }
     } catch {
-      // ignore
+      
     }
 
     return descriptor;

@@ -50,7 +50,7 @@ export class GuestService {
       esInvitado: true,
       infoDispositivo: { ipAddress, userAgent },
       ultimoInicioSesion: new Date(),
-      fechaExpiracion: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días
+      fechaExpiracion: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), 
     });
 
     const payload = {

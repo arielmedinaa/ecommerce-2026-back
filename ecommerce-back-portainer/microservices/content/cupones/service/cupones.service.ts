@@ -75,7 +75,6 @@ export class CuponesService {
     return { data: { ...cupon, vigente }, success: true, message: 'CUPÓN OBTENIDO' };
   }
 
-  // Varios cupones por ids (enriquecimiento en lote).
   async obtenerCuponesPorIds(
     ids: number[],
   ): Promise<{ data: any[]; success: boolean; message: string }> {

@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: etl-service
+  labels:
+    app: etl-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: etl-service
+  template:
+    metadata:
+      labels:
+        app: etl-service
+    spec:
+      containers:
+      - name: etl-service
+        image: localhost/etl-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3109
+        envFrom:
+        - configMapRef:
+            name: ecommerce-config
+        - secretRef:
+            name: econt-db
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: etl-service
+spec:
+  selector:
+    app: etl-service
+  ports:
+    - protocol: TCP
+      port: 3109
+      targetPort: 3109
+  type: ClusterIP

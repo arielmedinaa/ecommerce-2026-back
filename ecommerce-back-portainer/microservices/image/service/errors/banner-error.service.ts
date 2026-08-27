@@ -155,7 +155,7 @@ export class BannerErrorService {
 
     return stats.map(stat => ({
       ...stat,
-      count: parseInt(stat.count, 10), // MariaDB COUNT is typically returned as string by mysql2
+      count: parseInt(stat.count, 10), 
     }));
   }
 

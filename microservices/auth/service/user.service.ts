@@ -66,9 +66,10 @@ export class UserService {
     if (filters.perfil) dbFilter.perfil = filters.perfil;
     if (filters.estaActivo !== undefined) dbFilter.estaActivo = filters.estaActivo;
     dbFilter.perfil = 'cliente';
-    
+
     const [data, total] = await this.userRepository.findAndCount({
       where: dbFilter,
+      take: 200,
     });
 
     if (!data) {
@@ -97,6 +98,7 @@ export class UserService {
   }> {
     const [data, total] = await this.userRepository.findAndCount({
       where: filters,
+      take: 200,
     });
     if (!data) {
       return {
@@ -189,7 +191,7 @@ export class UserService {
   async listClienteIds(params: any = {}): Promise<{ data: number[]; total: number; success: boolean; message: string }> {
     const qb = this.construirQueryClientes(params);
     if (!qb) return { data: [], total: 0, success: true, message: 'SIN COINCIDENCIAS' };
-    const rows = await qb.select('u.id', 'id').getRawMany();
+    const rows = await qb.select('u.id', 'id').limit(5000).getRawMany();
     const ids = (rows || []).map((r: any) => Number(r.id)).filter((x: number) => Number.isFinite(x));
     return { data: ids, total: ids.length, success: true, message: 'IDS DE CLIENTES' };
   }
@@ -249,6 +251,23 @@ export class UserService {
     };
   }
 
+  async getUsuariosPorRol(): Promise<{
+    data: { total: number; cantidad: number; filas: Array<{ perfil: string; total: number }> };
+    success: boolean;
+    message: string;
+  }> {
+    try {
+      const rows = await this.userRepository.query(
+        `SELECT perfil, COUNT(*) AS total FROM usuarios GROUP BY perfil ORDER BY total DESC`,
+      );
+      const filas = (rows || []).map((r: any) => ({ perfil: r.perfil, total: Number(r.total) }));
+      const total = filas.reduce((acc: number, f: any) => acc + f.total, 0);
+      return { data: { total, cantidad: filas.length, filas }, success: true, message: 'Usuarios por rol obtenidos' };
+    } catch (error) {
+      return { data: { total: 0, cantidad: 0, filas: [] }, success: false, message: 'ERROR AL OBTENER USUARIOS POR ROL' };
+    }
+  }
+
   async enviarMensajeMasivo(payload: {
     userIds: (number | string)[];
     mensaje: string;
@@ -306,6 +325,44 @@ export class UserService {
     };
   }
 
+  async findByNumeroDocumento(numeroDocumento: string): Promise<{
+    nombre: string;
+    email: string;
+    numeroCelular: string;
+    numeroDocumento: string;
+    parentescos: string;
+    datosLaborales: any;
+  } | null> {
+    const doc = String(numeroDocumento ?? '').trim().split('-')[0].replace(/\D/g, '');
+    if (!doc) return null;
+    const u = await this.userRepository
+      .createQueryBuilder('u')
+      .where(
+        "u.numeroDocumento = :doc OR SUBSTRING_INDEX(u.numeroDocumento, '-', 1) = :doc",
+        { doc },
+      )
+      .orderBy('(u.datosLaborales IS NULL)', 'ASC')
+      .addOrderBy('u.id', 'DESC')
+      .getOne()
+      .catch(() => null);
+    if (!u) return null;
+    let datosLaborales: any = null;
+    if (u.datosLaborales != null) {
+      datosLaborales =
+        typeof u.datosLaborales === 'string'
+          ? this.safeParse(u.datosLaborales)
+          : u.datosLaborales;
+    }
+    return {
+      nombre: u.nombre || '',
+      email: u.email || '',
+      numeroCelular: u.numeroCelular || '',
+      numeroDocumento: u.numeroDocumento || '',
+      parentescos: u.parentescos || '',
+      datosLaborales,
+    };
+  }
+
   private safeParse(s: string): any {
     try {
       return JSON.parse(s);
@@ -329,14 +386,39 @@ export class UserService {
       if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) updates.email = email;
     }
     
-    if (patch?.parentescos != null) updates.parentescos = String(patch.parentescos);
+    if (patch?.parentescos != null) {
+      const refs =
+        typeof patch.parentescos === 'string' ? this.safeParse(patch.parentescos) : patch.parentescos;
+      // Igual que datosLaborales: un array vacío o de referencias en blanco
+      // no debe pisar los parentescos previamente guardados con datos reales.
+      if (
+        Array.isArray(refs) &&
+        refs.some(
+          (r) =>
+            r &&
+            typeof r === 'object' &&
+            Object.values(r).some((v) => v != null && String(v).trim() !== '' && String(v).trim() !== '0'),
+        )
+      ) {
+        updates.parentescos = JSON.stringify(refs);
+      }
+    }
 
     if (patch?.datosLaborales != null) {
       const lab =
         typeof patch.datosLaborales === 'string'
           ? this.safeParse(patch.datosLaborales)
           : patch.datosLaborales;
-      if (lab && typeof lab === 'object' && Object.values(lab).some((v) => v != null && String(v).trim() !== '')) {
+      // "0"/0 son valores default (sin dato real, p. ej. ciudad/salario sin
+      // completar) y no deben contar como "tiene contenido" — de lo
+      // contrario un objeto casi vacío (con solo esos defaults) pasa el
+      // chequeo y pisa un datosLaborales previamente guardado con datos
+      // reales.
+      if (
+        lab &&
+        typeof lab === 'object' &&
+        Object.values(lab).some((v) => v != null && String(v).trim() !== '' && String(v).trim() !== '0')
+      ) {
         updates.datosLaborales = lab;
       }
     }

@@ -4,7 +4,10 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { Rol } from './rol.schema';
 
 @Entity('usuarios')
 export class User {
@@ -44,8 +47,24 @@ export class User {
   @Column({default: 'cliente'})
   perfil: string;
 
+  @Column({ nullable: true })
+  rolId?: number;
+
+  @ManyToOne(() => Rol, { nullable: true, eager: true })
+  @JoinColumn({ name: 'rolId' })
+  rol?: Rol;
+
   @Column({ type: 'json', nullable: true })
   infoDispositivo?: any;
+
+  @Column({ type: 'json', nullable: true })
+  direcciones?: any[];
+
+  @Column({ type: 'longtext', nullable: true })
+  parentescos?: string;
+
+  @Column({ type: 'json', nullable: true })
+  datosLaborales?: any;
 
   @Column({ type: 'datetime', nullable: true })
   fechaExpiracion?: Date;

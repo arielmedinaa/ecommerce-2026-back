@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Product } from '../schemas/product.schemas';
-import { ProductsSello } from '../schemas/products-sello.schema';
+import { Product } from '../schemas/products/product.schemas';
+import { ProductsSello } from '../schemas/products/products-sello.schema';
 import { Repository } from 'typeorm';
 import { PromoPricingUtil } from './promo-pricing.util';
 
@@ -176,11 +176,56 @@ export class ProductsUtils {
     return this.aplicarPreciosPromo(conCredito);
   }
 
+  async complementosDisponibles(
+    candidatos: string[],
+    WEB_BASE_WHERE: any,
+    cache: any,
+    CACHE_TTL: any,
+    STOCK_EXISTS: any,
+  ): Promise<string[]> {
+    const unicos = [
+      ...new Set(candidatos.map((c) => String(c || '').trim()).filter(Boolean)),
+    ];
+    if (unicos.length === 0) return [];
+
+    const resultados = await Promise.all(
+      unicos.map(async (termino) => {
+        const cacheKey = `complemento-existe:${termino.toLowerCase()}`;
+        const cached = await cache.get(cacheKey);
+        if (cached != null) return cached ? termino : null;
+
+        try {
+          const like = `%${termino}%`;
+          const rows = await this.productReadRepository.query(
+            `SELECT EXISTS (
+                 SELECT 1 FROM articulo a
+                 LEFT JOIN subfamilia sf ON sf.codigo = a.subfamilia
+                 WHERE ${WEB_BASE_WHERE} AND ${STOCK_EXISTS}
+                   AND (a.nombre LIKE ? OR sf.nombre LIKE ?)
+               ) AS existe`,
+            [like, like],
+          );
+          const existe = !!Number(rows?.[0]?.existe);
+          await cache.set(cacheKey, existe, CACHE_TTL);
+          return existe ? termino : null;
+        } catch (e) {
+          this.logger.error(
+            `Error chequeando disponibilidad de complemento "${termino}":`,
+            e,
+          );
+          return null;
+        }
+      }),
+    );
+    return resultados.filter((t): t is string => t !== null);
+  }
+
   async aplicarPreciosPromo(products: any[]): Promise<any[]> {
     if (!Array.isArray(products) || products.length === 0) return products;
 
     const codigos = products.map((p: any) => p.codigo_articulo);
-    const promoMap = await this.promoPricingUtil.getPromoInfoForCodigos(codigos);
+    const promoMap =
+      await this.promoPricingUtil.getPromoInfoForCodigos(codigos);
     if (promoMap.size === 0) return products;
 
     return products.map((product: any) => {
@@ -201,9 +246,13 @@ export class ProductsUtils {
       return {
         ...product,
         precioventaRedondeado:
-          promo.contado !== null ? promo.contado : product.precioventaRedondeado,
-        precioventa: promo.contado !== null ? promo.contado : product.precioventa,
-        preciotope: promo.original !== null ? promo.original : product.preciotope,
+          promo.contado !== null
+            ? promo.contado
+            : product.precioventaRedondeado,
+        precioventa:
+          promo.contado !== null ? promo.contado : product.precioventa,
+        preciotope:
+          promo.original !== null ? promo.original : product.preciotope,
         cuotas: cuotasPromo.length > 0 ? cuotasPromo : product.cuotas,
         enPromo: true,
         idPromo: promo.idPromo,
@@ -217,7 +266,8 @@ export class ProductsUtils {
     if (!Array.isArray(productos) || productos.length === 0) return productos;
 
     const codigos = productos.map((p: any) => p.codigo_articulo);
-    const promoMap = await this.promoPricingUtil.getPromoInfoForCodigos(codigos);
+    const promoMap =
+      await this.promoPricingUtil.getPromoInfoForCodigos(codigos);
     if (promoMap.size === 0) return productos;
 
     return productos.map((producto: any) => {
@@ -238,10 +288,15 @@ export class ProductsUtils {
       return {
         ...producto,
         precioContadoRedondeado:
-          promo.contado !== null ? promo.contado : producto.precioContadoRedondeado,
-        precioContado: promo.contado !== null ? promo.contado : producto.precioContado,
-        precioCredito: promo.contado !== null ? promo.contado : producto.precioCredito,
-        precioOriginal: promo.original !== null ? promo.original : producto.precioOriginal,
+          promo.contado !== null
+            ? promo.contado
+            : producto.precioContadoRedondeado,
+        precioContado:
+          promo.contado !== null ? promo.contado : producto.precioContado,
+        precioCredito:
+          promo.contado !== null ? promo.contado : producto.precioCredito,
+        precioOriginal:
+          promo.original !== null ? promo.original : producto.precioOriginal,
         cuotas: cuotasPromo.length > 0 ? cuotasPromo : producto.cuotas,
         enPromo: true,
         idPromo: promo.idPromo,
@@ -383,7 +438,6 @@ export class ProductsUtils {
     let detectedCategory: string | null = null;
 
     if (numericRegex.test(cleanedQuery)) {
-      
       nombre = cleanedQuery;
     } else {
       const exactMatchRegex = /"([^"]+)"/;
@@ -517,7 +571,6 @@ export class ProductsUtils {
         const numericRegex = /^\d+$/;
 
         if (numericRegex.test(searchParams.nombre)) {
-          
           matchesNombre =
             productCode === searchParams.nombre ||
             productCode.includes(searchParams.nombre);
@@ -615,7 +668,7 @@ export class ProductsUtils {
       const base = tok.slice(0, -2);
       if (base.length >= 4) return base;
     }
-    
+
     if (/[aeiou]s$/i.test(tok)) return tok.slice(0, -1);
     return tok;
   }
@@ -667,7 +720,7 @@ export class ProductsUtils {
     const hh = parts.hour === '24' ? '00' : parts.hour;
     const ymd = `${parts.year}-${parts.month}-${parts.day}`;
     const minutes = Number(hh) * 60 + Number(parts.minute);
-    const dow = new Date(`${ymd}T12:00:00Z`).getUTCDay(); 
+    const dow = new Date(`${ymd}T12:00:00Z`).getUTCDay();
     return { ymd, minutes, dow };
   }
 
@@ -740,7 +793,11 @@ export class ProductsUtils {
     }
   }
 
-  async contarProductosV2(filters: any = {}, WEB_BASE_WHERE: any={}, STOCK_EXISTS: any={}): Promise<number> {
+  async contarProductosV2(
+    filters: any = {},
+    WEB_BASE_WHERE: any = {},
+    STOCK_EXISTS: any = {},
+  ): Promise<number> {
     const f = this.buildProcFilters(filters);
     const rows = await this.productReadRepository.query(
       `SELECT COUNT(*) AS total

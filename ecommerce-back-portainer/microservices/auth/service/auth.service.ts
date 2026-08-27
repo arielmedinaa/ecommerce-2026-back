@@ -1,4 +1,5 @@
 import { User } from '@auth/schemas/user.schemas';
+import { Rol } from '@auth/schemas/rol.schema';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -14,6 +15,7 @@ export class AuthService {
 
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
+    @InjectRepository(Rol) private readonly rolRepository: Repository<Rol>,
     private readonly jwtService: JwtService,
     private readonly userCouponService: UserCouponService,
     private readonly resilientService: ResilientService,
@@ -130,19 +132,64 @@ export class AuthService {
     const userCoupons = await this.userCouponService.getCouponsForToken(
       user.id,
     );
-    const payload = {
+    const payload: Record<string, any> = {
       sub: user.id.toString(),
       email: user.email,
       name: user.nombre,
       provider: user.proveedor,
       etiquetas: user.etiquetas || [],
       cupones: userCoupons,
-      perfil: user.perfil || "administrador",
-      numeroCelular: user.numeroCelular || "",
-      numeroDocumento: user.numeroDocumento || ""
+      perfil: user.perfil || 'cliente',
+      numeroCelular: user.numeroCelular || '',
+      numeroDocumento: user.numeroDocumento || '',
     };
 
+    if (user.perfil === 'administrador') {
+      payload.tipo = 'admin';
+      payload.rol = user.rol?.nombre ?? null;
+      payload.modulosPermitidos = user.rol?.modulos ?? [];
+    }
+
     return this.jwtService.sign(payload, { expiresIn: '24h' });
+  }
+
+  async createAdminUser(payload: {
+    nombre: string;
+    email: string;
+    rolId: number;
+  }): Promise<{ data: User | null; success: boolean; message: string }> {
+    const existente = await this.userRepository.findOne({ where: { email: payload.email } });
+    if (existente) {
+      return { data: null, success: false, message: 'El email ya está registrado' };
+    }
+
+    const rol = await this.rolRepository.findOne({ where: { id: payload.rolId } });
+    if (!rol) {
+      return { data: null, success: false, message: 'El rol indicado no existe' };
+    }
+
+    const admin = this.userRepository.create({
+      email: payload.email,
+      nombre: payload.nombre,
+      proveedor: 'usuario basico',
+      idProveedor: payload.email,
+      esInvitado: false,
+      estaActivo: true,
+      perfil: 'administrador',
+      rolId: rol.id,
+      etiquetas: ['ADMINISTRADOR'],
+    });
+
+    await this.userRepository.save(admin);
+    return { data: admin, success: true, message: 'Administrador creado exitosamente' };
+  }
+
+  async listAdminUsers(): Promise<{ data: User[]; success: boolean; message: string }> {
+    const data = await this.userRepository.find({
+      where: { perfil: 'administrador' },
+      order: { fechaCreacion: 'DESC' },
+    });
+    return { data, success: true, message: 'OK' };
   }
 
   async validateGoogleUser(profile: any): Promise<User> {
@@ -211,13 +258,8 @@ export class AuthService {
       throw new Error('Guest token expired or invalid');
     }
 
-    // Crear usuario Google
     const googleUser = await this.validateGoogleUser(googleProfile);
 
-    // Migrar carritos del guest al Google user (actualizar cliente.equipo)
-    // Esto se haría en el servicio de cart
-
-    // Eliminar usuario invitado
     await this.userRepository.delete(guestUser.id);
 
     this.logger.log(
@@ -327,7 +369,6 @@ export class AuthService {
         },
       };
 
-      // Bloquea asignar un cupón vencido/inactivo a un cliente.
       try {
         const cuponRes = await this.resilientService.sendWithResilience(
           this.contentClient,
@@ -353,16 +394,20 @@ export class AuthService {
         resilientOptions,
       ) as number;
 
-      const cantidadCuponesUsuario =
-        await this.userCouponService.getUserCouponsCount(
-          couponData.userId,
-          couponData.idCupon,
-        );
-      if (cantidadCuponesUsuario >= limitePorUsuarioCupon) {
-        return {
-          success: false,
-          message: 'Usuario ya tiene un cupón de este tipo'.toUpperCase(),
-        };
+      const limiteRaw = Number(limitePorUsuarioCupon);
+      const limite = Number.isFinite(limiteRaw) ? limiteRaw : 1;
+      if (limite > 0) {
+        const cantidadCuponesUsuario =
+          await this.userCouponService.getUserCouponsCount(
+            couponData.userId,
+            couponData.idCupon,
+          );
+        if (cantidadCuponesUsuario >= limite) {
+          return {
+            success: false,
+            message: 'USUARIO YA TIENE EL MÁXIMO DE ESTE CUPÓN',
+          };
+        }
       }
       const coupon = await this.userCouponService.createCouponForUser(
         couponData.userId,
@@ -372,6 +417,13 @@ export class AuthService {
           eventId: couponData.eventId,
         },
       );
+
+      if (!coupon) {
+        return {
+          success: false,
+          message: 'USUARIO YA TIENE ESTE CUPÓN',
+        };
+      }
 
       return {
         success: true,
@@ -428,20 +480,23 @@ export class AuthService {
 
     const asignados: number[] = [];
     const omitidos: Array<{ userId: number; motivo: string }> = [];
-    // Umbral de "ya lo tiene": el límite por usuario, o 1 si es ilimitado (evita duplicar).
-    const threshold = limite > 0 ? limite : 1;
+
+    const limiteNorm = Number.isFinite(limite) ? limite : 1;
     for (const uid of userIds) {
       try {
-        const count = await this.userCouponService.getUserCouponsCount(uid, idCupon);
-        if (count >= threshold) {
-          omitidos.push({ userId: uid, motivo: count >= 1 ? 'ya tiene el cupón' : 'límite alcanzado' });
-          continue;
+        if (limiteNorm > 0) {
+          const count = await this.userCouponService.getUserCouponsCount(uid, idCupon);
+          if (count >= limiteNorm) {
+            omitidos.push({ userId: uid, motivo: 'ya tiene el máximo del cupón' });
+            continue;
+          }
         }
-        await this.userCouponService.createCouponForUser(uid, {
+        const created = await this.userCouponService.createCouponForUser(uid, {
           idCupon,
           descripcion: payload?.descripcion || 'Asignación masiva',
         });
-        asignados.push(uid);
+        if (created) asignados.push(uid);
+        else omitidos.push({ userId: uid, motivo: 'ya tiene el cupón' });
       } catch (e) {
         this.logger.error(`Error asignando cupón ${idCupon} al usuario ${uid}`, e);
         omitidos.push({ userId: uid, motivo: 'error' });

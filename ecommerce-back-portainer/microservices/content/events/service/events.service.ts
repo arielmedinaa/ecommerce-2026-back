@@ -35,7 +35,7 @@ export class EventsService {
     private readonly conditionsService: ConditionsService,
 
     @Inject('AUTH_SERVICE') private readonly authService: ClientProxy,
-    // database-per-service: la tabla `ordenes` es de cart; se consulta por RPC.
+    
     @Inject('CART_SERVICE') private readonly cartService: ClientProxy,
   ) {}
 
@@ -165,7 +165,7 @@ export class EventsService {
         activo: true,
         fechaInicio: LessThanOrEqual(now),
         fechaFin: MoreThanOrEqual(now),
-        idEventoPadre: IsNull(), // Solo eventos raíz
+        idEventoPadre: IsNull(), 
       },
       relations: ['eventProducts', 'conditions', 'subEventos'],
       order: { prioridad: 'DESC' },
@@ -320,9 +320,7 @@ export class EventsService {
       allowed: true,
       precioOferta: eventProduct.precioOferta,
       condiciones: conditionsMet.condiciones,
-      // En eventos de beneficio (codigo "B-"), el campo `limiteGlobalPorUsuario` se usa
-      // como umbral de compras para otorgar cupón (ver `getBenefitEvents`). No debe
-      // restringir la cantidad de unidades que el usuario puede agregar al carrito.
+
       limite: esEventoBeneficio ? null : (limite || null),
       eventoId: selectedEvent.id,
       eventoNombre: selectedEvent.nombre,
@@ -361,7 +359,7 @@ export class EventsService {
           }
           
           if (!esNuevoUsuario) {
-            // Antes leía la tabla `ordenes` (de cart) directamente; ahora vía RPC.
+            
             const res: any = await firstValueFrom(
               this.cartService.send(
                 { cmd: 'count_user_orders' },
@@ -417,7 +415,7 @@ export class EventsService {
   }
 
   async deleteEvent(id: number): Promise<void> {
-    // Cargar el evento con sus relaciones para eliminación en cascada
+    
     const event = await this.eventRepositoryRead.findOne({
       where: { id },
       relations: ['subEventos', 'eventProducts', 'conditions'],
@@ -426,14 +424,12 @@ export class EventsService {
       throw new NotFoundException(`Evento con ID ${id} no encontrado`);
     }
 
-    // Si tiene subeventos, eliminarlos primero (aunque CASCADE debería encargarse)
     if (event.subEventos && event.subEventos.length > 0) {
       for (const subEvent of event.subEventos) {
         await this.deleteEvent(subEvent.id);
       }
     }
 
-    // Eliminar relacionesManyToMany (eventProducts y conditions) ya que no tienen CASCADE
     if (event.eventProducts && event.eventProducts.length > 0) {
       await this.eventProductRepository.delete({ evento_id: id });
     }
@@ -441,7 +437,6 @@ export class EventsService {
       await this.conditionsService.deleteByEvent(id);
     }
 
-    // Finalmente eliminar el evento
     await this.eventRepository.delete(id);
   }
 

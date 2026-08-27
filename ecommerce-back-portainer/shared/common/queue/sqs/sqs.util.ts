@@ -19,7 +19,7 @@ export async function resolveQueueUrl(queueName: string) {
     );
     return res.QueueUrl as string;
   } catch (error: any) {
-    // LocalStack/AWS: create queue if it doesn't exist
+    
     try {
       await client.send(new CreateQueueCommand({ QueueName: queueName }));
       const res = await client.send(

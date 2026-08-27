@@ -147,6 +147,21 @@ export class CartController {
     return this.cartService.getTopPedidosHoy(payload?.limit);
   }
 
+  @MessagePattern({ cmd: 'count_carritos_activos' })
+  async countCarritosActivos() {
+    return this.cartService.countCarritosActivos();
+  }
+
+  @MessagePattern({ cmd: 'count_carritos_abandonados' })
+  async countCarritosAbandonados(@Payload() payload: { desde?: string; hasta?: string }) {
+    return this.cartService.countCarritosAbandonados(payload?.desde, payload?.hasta);
+  }
+
+  @MessagePattern({ cmd: 'get_top_productos_vendidos' })
+  async getTopProductosVendidos(@Payload() payload: { desde: string; hasta: string; limit?: number }) {
+    return this.cartService.getTopProductosVendidos(payload?.desde, payload?.hasta, payload?.limit);
+  }
+
   @MessagePattern({ cmd: 'sync_cart_cliente' })
   async syncCartCliente(
     @Payload() payload: { userId: number | string; cliente: { razonsocial?: string; correo?: string; telefono?: string; documento?: string } },

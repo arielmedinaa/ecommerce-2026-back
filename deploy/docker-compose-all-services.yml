@@ -1,13 +1,4 @@
-# Stack local CANÓNICO — espeja la arquitectura ECS Fargate (NATS + Redis + DB-per-service).
-# Levantar con: make compose-up   (o: docker compose -f deploy/docker-compose-all-services.yml up --build)
-#
-# Equivalencias con AWS:
-#   nginx-lb  ≈ ALB        | mariadb ≈ RDS        | redis ≈ ElastiCache
-#   nats      = el bus     | localstack ≈ S3+SQS  | cada service ≈ un ECS Service
-# ECONT (ERP on-prem, 192.168.100.100) es real → products lo usa vía .env.local.
-
 services:
-  # --- Infra ---
   nginx-lb:                              # ≈ ALB (entrada pública en :3100)
     image: nginx:latest
     volumes:
@@ -21,7 +12,9 @@ services:
 
   nats:                                  # bus de mensajería (RPC entre servicios)
     image: nats:2.10-alpine
-    command: ["-js", "-m", "8222"]       # JetStream + endpoint de monitoreo
+    command: ["-c", "/etc/nats/nats-server.conf", "-js"]  # JetStream + max_payload custom (ver nats-server.conf)
+    volumes:
+      - ./nats-server.conf:/etc/nats/nats-server.conf:ro
     ports:
       - '4222:4222'
       - '8222:8222'                       # http://localhost:8222/connz

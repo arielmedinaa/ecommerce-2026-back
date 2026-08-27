@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Product } from '../schemas/product.schemas';
+import { Product } from '../schemas/products/product.schemas';
+import { ProductsSello } from '../schemas/products/products-sello.schema';
 import { Repository } from 'typeorm';
+import { PromoPricingUtil } from './promo-pricing.util';
 
 @Injectable()
 export class ProductsUtils {
@@ -90,7 +92,219 @@ export class ProductsUtils {
   constructor(
     @InjectRepository(Product, 'READ_CONNECTION')
     private readonly productReadRepository: Repository<Product>,
+    @InjectRepository(ProductsSello, 'READ_ECOMMERCE_PRODUCTS_CONNECTION')
+    private readonly productsSelloReadRepository: Repository<ProductsSello>,
+    private readonly promoPricingUtil: PromoPricingUtil,
   ) {}
+
+  buildProcFilters(filters: any = {}) {
+    const num = (v: any): number | null => {
+      if (v === undefined || v === null || v === '') return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
+    const soloStock =
+      filters.soloConStock === true ||
+      filters.soloConStock === 1 ||
+      filters.soloConStock === '1' ||
+      filters.soloConStock === 'true';
+    return {
+      marca: this.normFiltro(filters.marca),
+      categoria: this.normFiltro(filters.categoria),
+      proveedor: this.normFiltro(filters.proveedor),
+      precioMin: num(filters.precioMin),
+      precioMax: num(filters.precioMax),
+      soloStock: soloStock ? 1 : null,
+      busqueda: this.normBusqueda(filters.busqueda ?? filters.search),
+    };
+  }
+
+  async enrichProductRows(
+    productos: any[],
+    productsImagesReadRepository: any,
+  ): Promise<any[]> {
+    const codigosProductos = productos.map((item: any) =>
+      item.codigo_articulo.trim(),
+    );
+    const imagenesMap = new Map();
+    if (codigosProductos.length > 0) {
+      const imagenes = await productsImagesReadRepository
+        .createQueryBuilder('img')
+        .where('img.producto_codigo IN (:...codigos)', {
+          codigos: codigosProductos,
+        })
+        .andWhere('img.activo = :activo', { activo: true })
+        .orderBy('img.orden', 'ASC')
+        .getMany();
+
+      imagenes.forEach((img) => {
+        if (!imagenesMap.has(img.producto_codigo)) {
+          imagenesMap.set(img.producto_codigo, []);
+        }
+        imagenesMap.get(img.producto_codigo).push(img.url_imagen);
+      });
+    }
+
+    const selloMap = new Map<string, string>();
+    if (codigosProductos.length > 0) {
+      const sellos = await this.productsSelloReadRepository
+        .createQueryBuilder('s')
+        .where('s.producto_codigo IN (:...codigos)', {
+          codigos: codigosProductos,
+        })
+        .andWhere('s.activo = :activo', { activo: true })
+        .getMany();
+      sellos.forEach((s) => selloMap.set(s.producto_codigo, s.url_sello));
+    }
+
+    const dataWithTrimmedNames = productos.map((item: any) => ({
+      ...item,
+      codigo_articulo: item.codigo_articulo.trim(),
+      nombre_articulo: item.nombre_articulo.trim(),
+      nombre_subcategoria: item.nombre_subcategoria.trim(),
+      nombre_marca: item.nombre_marca.trim(),
+      nombre_proveedor: item.nombre_proveedor.trim(),
+      codigo_de_barra: item.codigo_de_barra.trim(),
+      descripcion: item.nota.trim(),
+      imagenes: imagenesMap.get(item.codigo_articulo.trim()) || [],
+      sello: selloMap.get(item.codigo_articulo.trim()) || null,
+    }));
+
+    const conCredito = await this.calculoCreditoProductos(
+      dataWithTrimmedNames || [],
+    );
+    return this.aplicarPreciosPromo(conCredito);
+  }
+
+  async complementosDisponibles(
+    candidatos: string[],
+    WEB_BASE_WHERE: any,
+    cache: any,
+    CACHE_TTL: any,
+    STOCK_EXISTS: any,
+  ): Promise<string[]> {
+    const unicos = [
+      ...new Set(candidatos.map((c) => String(c || '').trim()).filter(Boolean)),
+    ];
+    if (unicos.length === 0) return [];
+
+    const resultados = await Promise.all(
+      unicos.map(async (termino) => {
+        const cacheKey = `complemento-existe:${termino.toLowerCase()}`;
+        const cached = await cache.get(cacheKey);
+        if (cached != null) return cached ? termino : null;
+
+        try {
+          const like = `%${termino}%`;
+          const rows = await this.productReadRepository.query(
+            `SELECT EXISTS (
+                 SELECT 1 FROM articulo a
+                 LEFT JOIN subfamilia sf ON sf.codigo = a.subfamilia
+                 WHERE ${WEB_BASE_WHERE} AND ${STOCK_EXISTS}
+                   AND (a.nombre LIKE ? OR sf.nombre LIKE ?)
+               ) AS existe`,
+            [like, like],
+          );
+          const existe = !!Number(rows?.[0]?.existe);
+          await cache.set(cacheKey, existe, CACHE_TTL);
+          return existe ? termino : null;
+        } catch (e) {
+          this.logger.error(
+            `Error chequeando disponibilidad de complemento "${termino}":`,
+            e,
+          );
+          return null;
+        }
+      }),
+    );
+    return resultados.filter((t): t is string => t !== null);
+  }
+
+  async aplicarPreciosPromo(products: any[]): Promise<any[]> {
+    if (!Array.isArray(products) || products.length === 0) return products;
+
+    const codigos = products.map((p: any) => p.codigo_articulo);
+    const promoMap =
+      await this.promoPricingUtil.getPromoInfoForCodigos(codigos);
+    if (promoMap.size === 0) return products;
+
+    return products.map((product: any) => {
+      const promo = promoMap.get(String(product.codigo_articulo).trim());
+      if (!promo) return product;
+
+      const cuotasPromo = promo.cuotas
+        .slice()
+        .sort((a, b) => a.cuota - b.cuota)
+        .map((c) => ({
+          cuota: c.cuota,
+          incremento: null,
+          precio: c.precio,
+          precioFormateado: c.precio.toFixed(0),
+          precioOriginal: c.precioOriginal,
+        }));
+
+      return {
+        ...product,
+        precioventaRedondeado:
+          promo.contado !== null
+            ? promo.contado
+            : product.precioventaRedondeado,
+        precioventa:
+          promo.contado !== null ? promo.contado : product.precioventa,
+        preciotope:
+          promo.original !== null ? promo.original : product.preciotope,
+        cuotas: cuotasPromo.length > 0 ? cuotasPromo : product.cuotas,
+        enPromo: true,
+        idPromo: promo.idPromo,
+        promoTieneContado: promo.contado !== null,
+        promoDisponibleEcommerce: promo.disponibleEcommerce,
+      };
+    });
+  }
+
+  async aplicarPreciosPromoOferta(productos: any[]): Promise<any[]> {
+    if (!Array.isArray(productos) || productos.length === 0) return productos;
+
+    const codigos = productos.map((p: any) => p.codigo_articulo);
+    const promoMap =
+      await this.promoPricingUtil.getPromoInfoForCodigos(codigos);
+    if (promoMap.size === 0) return productos;
+
+    return productos.map((producto: any) => {
+      const promo = promoMap.get(String(producto.codigo_articulo).trim());
+      if (!promo) return producto;
+
+      const cuotasPromo = promo.cuotas
+        .slice()
+        .sort((a, b) => a.cuota - b.cuota)
+        .map((c) => ({
+          cuota: c.cuota,
+          incremento: null,
+          precio: c.precio,
+          precioFormateado: c.precio.toFixed(0),
+          precioOriginal: c.precioOriginal,
+        }));
+
+      return {
+        ...producto,
+        precioContadoRedondeado:
+          promo.contado !== null
+            ? promo.contado
+            : producto.precioContadoRedondeado,
+        precioContado:
+          promo.contado !== null ? promo.contado : producto.precioContado,
+        precioCredito:
+          promo.contado !== null ? promo.contado : producto.precioCredito,
+        precioOriginal:
+          promo.original !== null ? promo.original : producto.precioOriginal,
+        cuotas: cuotasPromo.length > 0 ? cuotasPromo : producto.cuotas,
+        enPromo: true,
+        idPromo: promo.idPromo,
+        promoTieneContado: promo.contado !== null,
+        promoDisponibleEcommerce: promo.disponibleEcommerce,
+      };
+    });
+  }
 
   async calculoCreditoProductos(products: any[]) {
     if (!Array.isArray(products)) {
@@ -136,6 +350,9 @@ export class ProductsUtils {
 
       return {
         ...product,
+        // El redondeado al millar es la fuente de la verdad — Contado (precioventa)
+        // debe coincidir con Crédito (precioventaRedondeado), no con el crudo del ERP.
+        precioventa: precioVentaRedondeado,
         precioventaRedondeado: precioVentaRedondeado,
         cuotas: cuotasCalculadas,
       };
@@ -187,6 +404,7 @@ export class ProductsUtils {
 
       return {
         ...producto,
+        precioContado: precioContadoRedondeado,
         precioContadoRedondeado: precioContadoRedondeado,
         cuotas: cuotasCalculadas,
       };
@@ -213,15 +431,13 @@ export class ProductsUtils {
     const cleanedQuery = searchQuery.trim().toLowerCase();
     const searchTerms = this.expandSearchTerms(cleanedQuery);
 
-    // Check if query is a numeric product code
     let nombre = cleanedQuery;
     const numericRegex = /^\d+$/;
     let exactMatch = false;
     let detectedBrand: string | null = null;
     let detectedCategory: string | null = null;
-    
+
     if (numericRegex.test(cleanedQuery)) {
-      // For numeric codes, search both as code and as part of name
       nombre = cleanedQuery;
     } else {
       const exactMatchRegex = /"([^"]+)"/;
@@ -229,7 +445,7 @@ export class ProductsUtils {
 
       detectedBrand = this.detectBrand(cleanedQuery);
       detectedCategory = this.detectCategory(cleanedQuery);
-      
+
       if (exactMatch) {
         nombre = exactMatchRegex.exec(cleanedQuery)?.[1] || cleanedQuery;
       } else {
@@ -237,7 +453,9 @@ export class ProductsUtils {
           nombre = nombre.replace(new RegExp(detectedBrand, 'gi'), '').trim();
         }
         if (detectedCategory) {
-          nombre = nombre.replace(new RegExp(detectedCategory, 'gi'), '').trim();
+          nombre = nombre
+            .replace(new RegExp(detectedCategory, 'gi'), '')
+            .trim();
         }
       }
     }
@@ -353,8 +571,9 @@ export class ProductsUtils {
         const numericRegex = /^\d+$/;
 
         if (numericRegex.test(searchParams.nombre)) {
-          // For numeric searches, check exact match in codigo_articulo
-          matchesNombre = productCode === searchParams.nombre || productCode.includes(searchParams.nombre);
+          matchesNombre =
+            productCode === searchParams.nombre ||
+            productCode.includes(searchParams.nombre);
         } else if (searchParams.exactMatch) {
           matchesNombre =
             productName.includes(searchParams.nombre) ||
@@ -424,5 +643,195 @@ export class ProductsUtils {
         searchParams.categoria || '',
       ),
     };
+  }
+
+  normFiltro(value: any): string | null {
+    if (value === undefined || value === null) return null;
+    const s = String(value).trim();
+    return s === '' ? null : s;
+  }
+
+  normBusqueda(value: any): string | null {
+    const s = this.normFiltro(value);
+    if (!s) return s;
+    const singular = s
+      .split(/\s+/)
+      .map((tok) => this.singularizarToken(tok))
+      .join(' ')
+      .trim();
+    return singular === '' ? null : singular;
+  }
+
+  private singularizarToken(tok: string): string {
+    if (tok.length <= 4) return tok;
+    if (/[bcdfghjklmnpqrstvwxyz]es$/i.test(tok)) {
+      const base = tok.slice(0, -2);
+      if (base.length >= 4) return base;
+    }
+
+    if (/[aeiou]s$/i.test(tok)) return tok.slice(0, -1);
+    return tok;
+  }
+
+  private esJotaRow(r: any, ProductsService: any): boolean {
+    return (
+      Number(r?.codigo_marca) === ProductsService.JOTA_MARCA ||
+      /jota/i.test(String(r?.nombre_marca ?? ''))
+    );
+  }
+
+  private esConsultaJota(
+    rows: any[],
+    filters: any = {},
+    ProductsService: any,
+  ): boolean {
+    const categoria = Number(filters?.categoria);
+    if (
+      Number.isFinite(categoria) &&
+      ProductsService.JOTA_FAMILIAS.has(categoria)
+    )
+      return true;
+    const search = String(filters?.search ?? '').trim();
+    if (search && ProductsService.JOTA_KEYWORDS.test(search)) return true;
+    if (Array.isArray(rows) && rows.length) {
+      const enFam = rows.filter((r) =>
+        ProductsService.JOTA_FAMILIAS.has(Number(r?.codigo_categoria)),
+      );
+      if (enFam.length * 2 >= rows.length) return true;
+    }
+    return false;
+  }
+
+  nowAsuncion(): { ymd: string; minutes: number; dow: number } {
+    const tz = 'America/Asuncion';
+    const parts = Object.fromEntries(
+      new Intl.DateTimeFormat('en-CA', {
+        timeZone: tz,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      })
+        .formatToParts(new Date())
+        .map((p) => [p.type, p.value]),
+    );
+    const hh = parts.hour === '24' ? '00' : parts.hour;
+    const ymd = `${parts.year}-${parts.month}-${parts.day}`;
+    const minutes = Number(hh) * 60 + Number(parts.minute);
+    const dow = new Date(`${ymd}T12:00:00Z`).getUTCDay();
+    return { ymd, minutes, dow };
+  }
+
+  hmsToMin(t: any): number | null {
+    if (!t) return null;
+    const [h, m] = String(t).split(':');
+    const n = Number(h) * 60 + Number(m || 0);
+    return Number.isFinite(n) ? n : null;
+  }
+  minToHm = (min: number) =>
+    `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+
+  addDaysYmd(ymd: string, days: number): string {
+    const d = new Date(`${ymd}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+
+  async aplicarPrioridadJota(
+    res: { data: any[]; total: number },
+    filters: any = {},
+    ProductsService: any,
+    getCachedPrismaProductos: any,
+  ): Promise<{ data: any[]; total: number }> {
+    const rows = Array.isArray(res.data) ? res.data : [];
+    const marcaFiltro = this.normFiltro(filters?.marca);
+    if (marcaFiltro || rows.length === 0) return res;
+    if (!this.esConsultaJota(rows, filters, ProductsService)) return res;
+
+    const offset = Number(filters?.offset) || 0;
+    const limit = Number(filters?.limit) || rows.length;
+
+    const dedupPrepend = (jota: any[], resto: any[]) => {
+      const cods = new Set(jota.map((r) => String(r?.codigo_articulo)));
+      return [
+        ...jota,
+        ...resto.filter((r) => !cods.has(String(r?.codigo_articulo))),
+      ];
+    };
+
+    if (offset > 0) {
+      const jota = rows.filter((r) => this.esJotaRow(r, ProductsService));
+      if (!jota.length || jota.length === rows.length) return res;
+      return {
+        ...res,
+        data: dedupPrepend(
+          jota,
+          rows.filter((r) => !this.esJotaRow(r, ProductsService)),
+        ),
+      };
+    }
+
+    try {
+      const jotaRes = await getCachedPrismaProductos({
+        ...filters,
+        marca: ProductsService.JOTA_MARCA,
+        offset: 0,
+        limit: Math.max(limit, 12),
+      });
+      const jota = Array.isArray(jotaRes.data) ? jotaRes.data : [];
+      if (!jota.length) return res;
+      const merged = dedupPrepend(jota, rows);
+      const data = limit > 0 ? merged.slice(0, limit) : merged;
+      return { ...res, data };
+    } catch (e) {
+      this.logger.warn(
+        `aplicarPrioridadJota falló: ${(e as any)?.message ?? e}`,
+      );
+      return res;
+    }
+  }
+
+  async contarProductosV2(
+    filters: any = {},
+    WEB_BASE_WHERE: any = {},
+    STOCK_EXISTS: any = {},
+  ): Promise<number> {
+    const f = this.buildProcFilters(filters);
+    const rows = await this.productReadRepository.query(
+      `SELECT COUNT(*) AS total
+         FROM articulo a
+        WHERE ${WEB_BASE_WHERE}
+          AND (? IS NULL OR a.marca = CAST(? AS UNSIGNED))
+          AND (? IS NULL OR a.familia = CAST(? AS UNSIGNED))
+          AND (? IS NULL OR a.proveedor = CAST(? AS UNSIGNED))
+          AND (? IS NULL OR a.precioventa >= ?)
+          AND (? IS NULL OR a.precioventa <= ?)
+          AND (? IS NULL
+               OR TRIM(a.codigo) = ?
+               OR a.codigodebarra = ?
+               OR a.nombre LIKE CONCAT('%', REPLACE(?, ' ', '%'), '%'))
+          AND (? IS NULL OR ? = 0 OR ${STOCK_EXISTS})`,
+      [
+        f.marca,
+        f.marca,
+        f.categoria,
+        f.categoria,
+        f.proveedor,
+        f.proveedor,
+        f.precioMin,
+        f.precioMin,
+        f.precioMax,
+        f.precioMax,
+        f.busqueda,
+        f.busqueda,
+        f.busqueda,
+        f.busqueda,
+        f.soloStock,
+        f.soloStock,
+      ],
+    );
+    return Number(rows?.[0]?.total || 0);
   }
 }

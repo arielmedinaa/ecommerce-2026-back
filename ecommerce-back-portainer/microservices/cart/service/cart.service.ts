@@ -3,8 +3,9 @@ import { Transaccion } from '@cart/schemas/transaccion.schemas';
 import { Order } from '@cart/schemas/order.schemas';
 import { OrderItem } from '@cart/schemas/order-item.schemas';
 import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
+import { Between, In, IsNull, LessThanOrEqual, MoreThan, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { JwtService } from '@nestjs/jwt';
@@ -17,6 +18,8 @@ import { ResilientService } from '@shared/common/decorators/resilient-client.dec
 import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
 import { CartValidationService } from './cart.service.spec';
 import { CartErrorService } from './errors/cart-error.service';
+
+const STOREFRONT_URL = process.env.STOREFRONT_URL;
 
 @Injectable()
 export class CartContadoService {
@@ -42,6 +45,7 @@ export class CartContadoService {
     @Inject('PAYMENTS_SERVICE') private readonly paymentsService: ClientProxy,
     @Inject('CONTENT_SERVICE') private readonly contentService: ClientProxy,
     @Inject('AUTH_SERVICE') private readonly authService: ClientProxy,
+    @Inject('MAIL_SERVICE') private readonly mailClient: ClientProxy,
     private readonly cartValidationService: CartValidationService,
     private readonly cartErrorService: CartErrorService,
     private readonly resilientService: ResilientService,
@@ -160,7 +164,51 @@ export class CartContadoService {
       });
     }
 
-    // Verificar límite de compra por producto (si hay límite en evento)
+    try {
+      const promoInfo: Record<string, any> = await firstValueFrom(
+        this.productsService.send(
+          { cmd: 'get_promo_info_for_codigos' },
+          { codigos: [producto.codigo] },
+        ),
+      );
+      const promo = promoInfo?.[String(producto.codigo).trim()];
+      if (promo) {
+        if (promo.disponibleEcommerce !== null && promo.disponibleEcommerce !== undefined) {
+          let cantidadActualEnCarritoPromo = 0;
+          if (carritoExistente && carritoExistente.articulos) {
+            const contado = carritoExistente.articulos.contado || [];
+            const credito = carritoExistente.articulos.credito || [];
+            cantidadActualEnCarritoPromo = [...contado, ...credito]
+              .filter((item: any) => String(item.codigo) === String(producto.codigo))
+              .reduce((sum, item) => sum + (item.cantidad || 1), 0);
+          }
+          const cantidadNuevaPromo = producto.cantidad || 1;
+          if (cantidadActualEnCarritoPromo + cantidadNuevaPromo > promo.disponibleEcommerce) {
+            return {
+              data: [],
+              success: false,
+              message: `Stock de promoción agotado para este producto. Disponible: ${promo.disponibleEcommerce} unidades. Ya tienes ${cantidadActualEnCarritoPromo} en tu carrito.`,
+            };
+          }
+        }
+
+        if (promo.contado !== null && promo.contado !== undefined) {
+          producto.precio = promo.contado;
+          if (producto.credito) {
+            const cuotaPromo = Array.isArray(promo.cuotas)
+              ? promo.cuotas.find((c: any) => c.cuota === producto.credito.cuota)
+              : null;
+            producto.credito.precio = cuotaPromo ? cuotaPromo.precio : promo.contado;
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.warn(
+        'Error al validar stock de promoción, permitiendo añadir producto',
+        error,
+      );
+    }
+
     if (eventoValidation.limite && eventoValidation.limite > 0) {
       let cantidadActualEnCarrito = 0;
       if (carritoExistente && carritoExistente.articulos) {
@@ -168,7 +216,6 @@ export class CartContadoService {
         const credito = carritoExistente.articulos.credito || [];
         const allArticulos = [...contado, ...credito];
 
-        // Buscar el mismo producto (mismo código, mismo tipo de venta)
         const productosExistentes = allArticulos.filter((item: any) => {
           if (articuloTipo === 'credito') {
             return (
@@ -206,7 +253,6 @@ export class CartContadoService {
           const montoMinimo = parseFloat(condicion.valor);
           if (isNaN(montoMinimo) || montoMinimo <= 0) continue;
 
-          // Calcular monto total del carrito actual (sin el nuevo producto)
           let montoActual = 0;
           if (carritoExistente && carritoExistente.articulos) {
             const contado = carritoExistente.articulos.contado || [];
@@ -216,7 +262,7 @@ export class CartContadoService {
               0,
             );
           }
-          // Sumar precio del nuevo producto (ya con precioOferta si aplica)
+          
           montoActual += producto.precio * (producto.cantidad || 1);
 
           if (montoActual < montoMinimo) {
@@ -230,7 +276,6 @@ export class CartContadoService {
           const maxUnidades = parseInt(condicion.valor);
           if (isNaN(maxUnidades) || maxUnidades <= 0) continue;
 
-          // Calcular total de unidades en carrito actual
           let unidadesActuales = 0;
           if (carritoExistente && carritoExistente.articulos) {
             const contado = carritoExistente.articulos.contado || [];
@@ -240,7 +285,7 @@ export class CartContadoService {
               0,
             );
           }
-          // Sumar unidades del nuevo producto
+          
           unidadesActuales += producto.cantidad || 1;
 
           if (unidadesActuales > maxUnidades) {
@@ -251,7 +296,7 @@ export class CartContadoService {
             };
           }
         }
-        // METODO_PAGO_ESPECIFICO se validará al finalizar compra
+        
       }
     }
 
@@ -396,8 +441,6 @@ export class CartContadoService {
     };
   }
 
-  // ¿El usuario tuvo movimientos de carrito en los últimos 30 días?
-  // (cualquier carrito suyo actualizado en ese período: abierto, abandonado o finalizado).
   async userHasMovements(userId: number | string): Promise<{ hasMovements: boolean; count: number; success: boolean }> {
     try {
       const count = await this.carritoRead
@@ -412,9 +455,6 @@ export class CartContadoService {
     }
   }
 
-  // Cuenta órdenes de un cliente por estado. Expuesto vía RPC para que content
-  // (eventos "solo nuevos usuarios") no lea la tabla `ordenes` directamente:
-  // database-per-service → cada servicio sólo toca sus propias tablas.
   async countUserOrders(
     clienteDocumento: string,
     estado = 1,
@@ -430,7 +470,6 @@ export class CartContadoService {
     }
   }
 
-  // Carrito activo (estado '1') del usuario del token. Helper para remove/clear.
   private async getCarritoActivoDeToken(clienteToken: string): Promise<Cart | null> {
     const decoded = this.jwtService.verify(clienteToken);
     const usuario_id = parseInt(decoded.sub);
@@ -445,7 +484,6 @@ export class CartContadoService {
     return this.carritoWrite.findOne({ where: { id: ref.id } });
   }
 
-  // Quita un ítem del carrito activo (por código de producto; tipo opcional contado/credito).
   async removeCartItem(
     clienteToken: string,
     productoCodigo: string | number,
@@ -468,9 +506,76 @@ export class CartContadoService {
     }
   }
 
-  // Quita varios ítems del carrito activo en UNA sola lectura-modificación-escritura.
-  // Evita la condición de carrera de disparar N removeCartItem en paralelo
-  // (cada uno leía el carrito completo y el último save pisaba a los demás).
+  // Cambia contado↔crédito de un ítem del carrito en UNA sola lectura-mutación-escritura
+  // (evita la ventana de carrera del anterior "agregar nuevo tipo" + "borrar tipo viejo"
+  // como dos llamadas de red independientes, que podía dejar el ítem duplicado con precio
+  // incorrecto en ambos arrays).
+  async changeCartItemCondition(
+    clienteToken: string,
+    productoCodigo: string | number,
+    fromTipo: 'contado' | 'credito',
+    toTipo: 'contado' | 'credito',
+    precio: number,
+    cuota?: number,
+  ): Promise<{ data: Cart[]; success: boolean; message: string }> {
+    try {
+      const carrito = await this.getCarritoActivoDeToken(clienteToken);
+      if (!carrito) return { data: [], success: false, message: 'NO HAY CARRITO ACTIVO' };
+      const art: any = carrito.articulos || { contado: [], credito: [] };
+      const origen = art[fromTipo] || [];
+      const articulo = origen.find((i: any) => String(i.codigo) === String(productoCodigo));
+      if (!articulo) {
+        return { data: [carrito], success: false, message: 'ITEM NO ENCONTRADO EN EL CARRITO' };
+      }
+
+      // Reprecio autoritativo si hay una promo activa (misma fuente que addCart).
+      let precioFinal = Number(precio) || Number(articulo.precio) || 0;
+      let cuotaFinal = toTipo === 'credito' ? Number(cuota) || articulo.credito?.cuota || 12 : undefined;
+      try {
+        const promoInfo: Record<string, any> = await firstValueFrom(
+          this.productsService.send(
+            { cmd: 'get_promo_info_for_codigos' },
+            { codigos: [productoCodigo] },
+          ),
+        );
+        const promo = promoInfo?.[String(productoCodigo).trim()];
+        if (promo && promo.contado !== null && promo.contado !== undefined) {
+          if (toTipo === 'contado') {
+            precioFinal = promo.contado;
+          } else {
+            const cuotaPromo = Array.isArray(promo.cuotas)
+              ? promo.cuotas.find((c: any) => c.cuota === cuotaFinal)
+              : null;
+            precioFinal = cuotaPromo ? cuotaPromo.precio : promo.contado;
+          }
+        }
+      } catch (error) {
+        this.logger.warn('No se pudo revalidar promo en cambio de condición, se usa el precio enviado', error);
+      }
+
+      art[fromTipo] = origen.filter((i: any) => String(i.codigo) !== String(productoCodigo));
+      const movido: any = {
+        codigo: articulo.codigo,
+        nombre: articulo.nombre,
+        cantidad: articulo.cantidad,
+        ruta: articulo.ruta,
+        imagen: articulo.imagen,
+        precio: precioFinal,
+      };
+      if (toTipo === 'credito') {
+        movido.credito = { precio: precioFinal, cuota: cuotaFinal };
+      }
+      art[toTipo] = this.utilsCart.eliminarDuplicados([...(art[toTipo] || []), movido], toTipo);
+
+      carrito.articulos = art;
+      await this.carritoWrite.save(carrito);
+      return { data: [carrito], success: true, message: 'CONDICIÓN DE PAGO ACTUALIZADA' };
+    } catch (error) {
+      this.logger.error('Error al cambiar condición del carrito:', error);
+      return { data: [], success: false, message: 'ERROR AL CAMBIAR CONDICIÓN' };
+    }
+  }
+
   async removeCartItems(
     clienteToken: string,
     items: Array<{ codigo: string | number; tipo?: 'contado' | 'credito' }>,
@@ -495,7 +600,6 @@ export class CartContadoService {
     }
   }
 
-  // Setea la cantidad de un ítem del carrito activo (si <=0, lo quita).
   async setCartItemQty(
     clienteToken: string,
     productoCodigo: string | number,
@@ -527,7 +631,6 @@ export class CartContadoService {
     }
   }
 
-  // Vacía el carrito activo del usuario (deja articulos en blanco, estado '1').
   async clearCart(clienteToken: string): Promise<{ data: Cart[]; success: boolean; message: string }> {
     try {
       const carrito = await this.getCarritoActivoDeToken(clienteToken);
@@ -541,34 +644,68 @@ export class CartContadoService {
     }
   }
 
-  // Mergea el carrito del invitado (por email) en el carrito activo del usuario logueado.
-  // Mueve los artículos y cierra el carrito del invitado para evitar duplicados.
   async mergeGuestCart(
     userToken: string,
     guestEmail: string,
   ): Promise<{ data: Cart[]; success: boolean; message: string }> {
     try {
       const destino = await this.getCarritoActivoDeToken(userToken);
+      const decoded = this.jwtService.verify(userToken);
+      const usuario_id = parseInt(decoded.sub);
+
+      const anyGuestCart = await this.carritoRead
+        .createQueryBuilder('cart')
+        .where("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.correo')) = :correo", { correo: guestEmail })
+        .orderBy('cart.codigo', 'DESC')
+        .getOne();
+      const guestUserId = Number((anyGuestCart?.cliente as any)?.id_usuario);
+      if (Number.isFinite(guestUserId) && guestUserId > 0 && guestUserId !== usuario_id) {
+        
+        await this.orderWrite
+          .createQueryBuilder()
+          .update()
+          .set({ cliente_documento: String(usuario_id) })
+          .where('cliente_documento = :g', { g: String(guestUserId) })
+          .execute();
+
+        const carritosInvitado = await this.carritoWrite
+          .createQueryBuilder('cart')
+          .where("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.correo')) = :correo", { correo: guestEmail })
+          .andWhere("cart.estado = '0'")
+          .getMany();
+        for (const cInv of carritosInvitado) {
+          cInv.cliente = this.utilsCart.buildClienteFromToken(
+            decoded,
+            userToken,
+            decoded.email,
+            cInv.cliente as any,
+          );
+          await this.carritoWrite.save(cInv);
+        }
+      }
+
       const guestCartRef = await this.carritoRead
         .createQueryBuilder('cart')
         .where("JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.correo')) = :correo", { correo: guestEmail })
         .andWhere("cart.estado = '1'")
         .orderBy('cart.codigo', 'DESC')
         .getOne();
-      if (!guestCartRef) return { data: destino ? [destino] : [], success: true, message: 'SIN CARRITO INVITADO' };
+      if (!guestCartRef) return { data: destino ? [destino] : [], success: true, message: 'ORDENES INVITADO ASOCIADAS' };
       const guestCart = await this.carritoWrite.findOne({ where: { id: guestCartRef.id } });
       const gArt: any = guestCart?.articulos || { contado: [], credito: [] };
 
-      // Si el usuario no tiene carrito activo, simplemente reasignamos el del invitado.
-      const decoded = this.jwtService.verify(userToken);
-      const usuario_id = parseInt(decoded.sub);
       if (!destino) {
-        guestCart.cliente = { ...(guestCart.cliente as any), id_usuario: usuario_id, equipo: userToken, correo: decoded.email };
+
+        guestCart.cliente = this.utilsCart.buildClienteFromToken(
+          decoded,
+          userToken,
+          decoded.email,
+          guestCart.cliente as any,
+        );
         await this.carritoWrite.save(guestCart);
         return { data: [guestCart], success: true, message: 'CARRITO INVITADO REASIGNADO' };
       }
 
-      // Fusionar artículos (sumando cantidades por codigo+tipo).
       const dArt: any = destino.articulos || { contado: [], credito: [] };
       for (const t of ['contado', 'credito']) {
         const destList = Array.isArray(dArt[t]) ? dArt[t] : [];
@@ -581,7 +718,7 @@ export class CartContadoService {
       }
       destino.articulos = dArt;
       await this.carritoWrite.save(destino);
-      // Cerrar el carrito del invitado.
+      
       guestCart.estado = '0';
       await this.carritoWrite.save(guestCart);
       return { data: [destino], success: true, message: 'CARRITO INVITADO FUSIONADO' };
@@ -774,7 +911,7 @@ export class CartContadoService {
           "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id_usuario",
           { id_usuario: String(userId) },
         )
-        // Antigüedad calculada con el reloj de la BD (evita desfases de timezone en JS).
+        
         .addSelect(
           'TIMESTAMPDIFF(MINUTE, COALESCE(cart.updatedAt, cart.createdAt), NOW())',
           'age_min',
@@ -783,7 +920,7 @@ export class CartContadoService {
         qb.andWhere('cart.estado = :estado', { estado: String(estado) });
       }
       const { entities, raw } = await qb.orderBy('cart.codigo', 'DESC').getRawAndEntities();
-      const ABANDONO_MIN = 20; // un carrito no finalizado sin actividad > 20 min = abandonado
+      const ABANDONO_MIN = 20; 
       const enriched = (entities || []).map((c: any, i: number) => {
         const ageMin = Number(raw?.[i]?.age_min ?? 0);
         const finalizado = c?.estado === '0' || c?.finished === '1';
@@ -802,6 +939,37 @@ export class CartContadoService {
     }
   }
 
+  async syncClienteByUser(
+    userId: number | string,
+    patch: { razonsocial?: string; correo?: string; telefono?: string; documento?: string },
+  ): Promise<{ data: { actualizados: number }; success: boolean; message: string }> {
+    try {
+      const carritos = await this.carritoWrite
+        .createQueryBuilder('cart')
+        .where(
+          "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id_usuario",
+          { id_usuario: String(userId) },
+        )
+        .getMany();
+
+      let actualizados = 0;
+      for (const cart of carritos) {
+        const cliente: any = { ...(cart.cliente as any) };
+        if (patch.razonsocial != null && patch.razonsocial !== '') cliente.razonsocial = patch.razonsocial;
+        if (patch.correo != null && patch.correo !== '') cliente.correo = patch.correo;
+        if (patch.telefono != null && patch.telefono !== '') cliente.telefono = patch.telefono;
+        if (patch.documento != null && patch.documento !== '') cliente.documento = patch.documento;
+        cart.cliente = cliente;
+        await this.carritoWrite.save(cart);
+        actualizados++;
+      }
+      return { data: { actualizados }, success: true, message: 'CLIENTE SINCRONIZADO EN CARRITOS' };
+    } catch (error) {
+      this.logger.error('Error al sincronizar cliente en carritos:', error);
+      return { data: { actualizados: 0 }, success: false, message: 'ERROR AL SINCRONIZAR CLIENTE' };
+    }
+  }
+
   async getComprasResumenByUsers(
     userIds: (number | string)[],
   ): Promise<{ data: Array<{ userId: string; compras: number; gastoTotal: number }>; success: boolean; message: string }> {
@@ -809,7 +977,6 @@ export class CartContadoService {
       const ids = (Array.isArray(userIds) ? userIds : [])
         .map((x) => String(x))
         .filter((x) => x && x !== 'null' && x !== 'undefined');
-      // ids vacío => resumen de TODOS los usuarios con compras finalizadas (para el filtro por tipo).
 
       const qb = this.carritoRead
         .createQueryBuilder('cart')
@@ -834,6 +1001,519 @@ export class CartContadoService {
     } catch (error) {
       this.logger.error('Error al obtener resumen de compras por usuario:', error);
       return { data: [], success: false, message: 'ERROR AL OBTENER RESUMEN DE COMPRAS' };
+    }
+  }
+
+  async getUserTopCategorias(
+    userId: number | string,
+    limit = 5,
+  ): Promise<{
+    data: {
+      marcas: Array<{ codigo: string; nombre: string | null; count: number }>;
+      categorias: Array<{ nombre: string; count: number }>;
+    };
+    success: boolean;
+    message: string;
+  }> {
+    const vacio = { marcas: [], categorias: [] };
+    try {
+      const id = String(userId ?? '').trim();
+      if (!id || id === 'null' || id === 'undefined') {
+        return { data: vacio, success: true, message: 'SIN USUARIO' };
+      }
+
+      const carritos = await this.carritoRead
+        .createQueryBuilder('cart')
+        .where('cart.estado = :estado', { estado: '0' })
+        .andWhere(
+          "JSON_UNQUOTE(JSON_EXTRACT(cart.cliente, '$.id_usuario')) = :id",
+          { id },
+        )
+        .orderBy('cart.codigo', 'DESC')
+        .limit(50)
+        .getMany();
+
+      const codigos = [
+        ...new Set(
+          carritos.flatMap((c) => [
+            ...((c.articulos as any)?.contado || []),
+            ...((c.articulos as any)?.credito || []),
+          ].map((a: any) => String(a.codigo)).filter(Boolean)),
+        ),
+      ];
+
+      if (codigos.length === 0) {
+        return { data: vacio, success: true, message: 'SIN COMPRAS' };
+      }
+
+      const productos: any[] = await this.resilientService.sendWithResilience(
+        this.productsService,
+        { cmd: 'get_products' },
+        { ids: codigos, fields: 'codigo,marca,categorias' },
+        {
+          retries: 2,
+          delay: 800,
+          fallback: async () => [],
+          circuitBreaker: { failureThreshold: 3, resetTimeout: 30000 },
+        },
+      );
+
+      const marcaCount = new Map<string, { nombre: string | null; count: number }>();
+      const catCount = new Map<string, number>();
+      for (const p of productos || []) {
+        const codigoMarca = p?.marca != null && String(p.marca).trim() ? String(p.marca).trim() : '';
+        if (codigoMarca) {
+          const prev = marcaCount.get(codigoMarca);
+          const nombre = p?.nombre_marca ? String(p.nombre_marca).trim() : prev?.nombre ?? null;
+          marcaCount.set(codigoMarca, { nombre, count: (prev?.count || 0) + 1 });
+        }
+        const cat = p?.categorias?.[0]?.nombre ? String(p.categorias[0].nombre).trim() : '';
+        if (cat) catCount.set(cat, (catCount.get(cat) || 0) + 1);
+      }
+
+      const marcas = [...marcaCount.entries()]
+        .map(([codigo, v]) => ({ codigo, nombre: v.nombre, count: v.count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, limit);
+      const categorias = [...catCount.entries()]
+        .map(([nombre, count]) => ({ nombre, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, limit);
+
+      return {
+        data: { marcas, categorias },
+        success: true,
+        message: 'TOP CATEGORIAS/MARCAS DEL USUARIO',
+      };
+    } catch (error) {
+      this.logger.error('Error al obtener top categorías por usuario:', error);
+      return { data: vacio, success: false, message: 'ERROR AL OBTENER TOP CATEGORIAS' };
+    }
+  }
+
+  private readonly ORDER_EDIT_WINDOW_MIN = 20;
+
+  async getUserOrders(
+    userId: number | string,
+  ): Promise<{ data: any[]; success: boolean; message: string }> {
+    try {
+      const id = String(userId ?? '').trim();
+      if (!id || id === 'null' || id === 'undefined') {
+        return { data: [], success: true, message: 'SIN USUARIO' };
+      }
+
+      const rows = await this.orderWrite
+        .createQueryBuilder('orden')
+        .select('orden.id', 'id')
+        .addSelect('TIMESTAMPDIFF(MINUTE, orden.fecha_creacion, NOW())', 'minutos_desde_creacion')
+        .where('orden.cliente_documento = :id', { id })
+        .andWhere('orden.estado = :estado', { estado: 0 })
+        .orderBy('orden.fecha_creacion', 'DESC')
+        .take(50)
+        .getRawMany();
+      if (rows.length === 0) {
+        return { data: [], success: true, message: 'SIN ORDENES' };
+      }
+      const orderIds = rows.map((r) => Number(r.id));
+      const minutosByOrderId = new Map<number, number>(
+        rows.map((r) => [Number(r.id), Number(r.minutos_desde_creacion ?? 0)]),
+      );
+      const ordersUnsorted = await this.orderWrite.find({
+        where: { id: In(orderIds) },
+        relations: { items: true },
+      });
+      const orderById = new Map(ordersUnsorted.map((o) => [o.id, o]));
+      const orders = orderIds.map((oid) => orderById.get(oid)).filter(Boolean) as typeof ordersUnsorted;
+
+      const codigos = [
+        ...new Set(
+          orders.flatMap((o) => (o.items || []).map((it) => String(it.producto_codigo))).filter(Boolean),
+        ),
+      ];
+      const imgByCodigo = new Map<string, string | null>();
+      if (codigos.length > 0) {
+        try {
+          const res: any = await this.resilientService.sendWithResilience(
+            this.productsService,
+            { cmd: 'get_products_by_codigos' },
+            { codigos, limit: codigos.length },
+            { retries: 2, delay: 800, fallback: async () => ({ data: [] }), circuitBreaker: { failureThreshold: 3, resetTimeout: 30000 } },
+          );
+          const data: any[] = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+          for (const p of data) {
+            const cod = String(p?.codigo_articulo ?? p?.codigo ?? '').trim();
+            const img = Array.isArray(p?.imagenes) ? p.imagenes[0] : null;
+            if (cod) imgByCodigo.set(cod, img || null);
+          }
+        } catch (e) {
+          this.logger.warn(`No se pudieron enriquecer imágenes de órdenes: ${e}`);
+        }
+      }
+
+      const data = orders.map((o) => {
+        const minutos = minutosByOrderId.get(o.id) ?? 0;
+        const envio: any = o.datos_envio || {};
+        return {
+          id: o.id,
+          codigo: o.codigo,
+          carritoCodigo: o.carrito_codigo,
+          total: Number(o.total) || 0,
+          estado: o.estado,
+          fechaCreacion: o.fecha_creacion,
+          cambios: Array.isArray(o.cambios) ? o.cambios : [],
+          editable: minutos < this.ORDER_EDIT_WINDOW_MIN,
+          minutosDesdeFinalizado: Math.floor(minutos),
+          ventanaEdicionMin: this.ORDER_EDIT_WINDOW_MIN,
+          envio: {
+            retirar: !!envio.retirar,
+            agendamiento: envio.agendamiento ?? null,
+            horaAgendamiento: envio.horaAgendamiento ?? null,
+            horarioDesde: envio.horarioDesde ?? null,
+            horarioHasta: envio.horarioHasta ?? null,
+            callePrincipal: envio.callePrincipal ?? envio.direccion ?? null,
+            ciudad: envio.ciudad ?? envio.city ?? null,
+          },
+          articulos: (o.items || []).map((it) => ({
+            codigo: it.producto_codigo,
+            nombre: it.producto_nombre,
+            cantidad: it.cantidad,
+            precio: Number(it.precio_unitario) || 0,
+            subtotal: Number(it.subtotal) || 0,
+            imagen: imgByCodigo.get(String(it.producto_codigo)) ?? null,
+          })),
+        };
+      });
+
+      return { data, success: true, message: 'ORDENES DEL USUARIO' };
+    } catch (error) {
+      this.logger.error('Error al obtener órdenes del usuario:', error);
+      return { data: [], success: false, message: 'ERROR AL OBTENER ORDENES' };
+    }
+  }
+
+  async updateOrder(
+    userId: number | string,
+    codigo: string,
+    patch: {
+      agendamiento?: { fecha?: string; hora?: string; horarioDesde?: string; horarioHasta?: string };
+      items?: Array<{ codigo: string | number; nombre: string; cantidad: number; precio: number }>;
+    },
+  ): Promise<{ data: any; success: boolean; message: string }> {
+    try {
+      const id = String(userId ?? '').trim();
+      const order = await this.orderWrite.findOne({
+        where: { codigo, cliente_documento: id, estado: 0 },
+        relations: { items: true },
+      });
+      if (!order) {
+        return { data: null, success: false, message: 'ORDEN NO ENCONTRADA' };
+      }
+
+      const minutos = (Date.now() - new Date(order.fecha_creacion).getTime()) / 60000;
+      if (minutos >= this.ORDER_EDIT_WINDOW_MIN) {
+        return {
+          data: null,
+          success: false,
+          message: 'La orden ya no puede editarse (pasaron más de 20 minutos).',
+        };
+      }
+
+      const carrito = await this.carritoWrite
+        .createQueryBuilder('cart')
+        .where('cart.codigo = :codigo', { codigo: order.carrito_codigo })
+        .getOne();
+
+      const cambios: any[] = Array.isArray(order.cambios) ? [...order.cambios] : [];
+      const ahora = new Date().toISOString();
+
+      if (patch.agendamiento) {
+        const a = patch.agendamiento;
+        const envioPrev: any = { ...(order.datos_envio || {}) };
+        const envio: any = { ...envioPrev };
+        if (a.fecha != null) envio.agendamiento = a.fecha;
+        if (a.hora != null) envio.horaAgendamiento = a.hora;
+        if (a.horarioDesde != null) envio.horarioDesde = a.horarioDesde;
+        if (a.horarioHasta != null) envio.horarioHasta = a.horarioHasta;
+        order.datos_envio = envio;
+        if (carrito) carrito.envio = { ...(carrito.envio as any), ...envio };
+        cambios.push({
+          tipo: 'agendamiento',
+          fecha: ahora,
+          antes: {
+            agendamiento: envioPrev.agendamiento ?? null,
+            horaAgendamiento: envioPrev.horaAgendamiento ?? null,
+            horarioDesde: envioPrev.horarioDesde ?? null,
+            horarioHasta: envioPrev.horarioHasta ?? null,
+          },
+          despues: {
+            agendamiento: envio.agendamiento ?? null,
+            horaAgendamiento: envio.horaAgendamiento ?? null,
+            horarioDesde: envio.horarioDesde ?? null,
+            horarioHasta: envio.horarioHasta ?? null,
+          },
+          resumen: `Reprogramó la entrega${envio.horaAgendamiento ? ` a las ${envio.horaAgendamiento}` : ''}`,
+        });
+      }
+
+      if (Array.isArray(patch.items) && patch.items.length > 0) {
+        const nuevos = patch.items.map((it) => ({
+          codigo: String(it.codigo),
+          nombre: String(it.nombre ?? ''),
+          cantidad: Number(it.cantidad) || 1,
+          precio: Number(it.precio) || 0,
+        }));
+
+        const antesItems = (order.items || []).map((it) => ({
+          codigo: it.producto_codigo,
+          nombre: it.producto_nombre,
+          cantidad: it.cantidad,
+        }));
+
+        await this.orderItemWrite.delete({ orden_id: order.id });
+        const nuevosItems = nuevos.map((it) =>
+          this.orderItemWrite.create({
+            orden_id: order.id,
+            producto_codigo: it.codigo,
+            producto_nombre: it.nombre,
+            cantidad: it.cantidad,
+            precio_unitario: it.precio,
+            subtotal: it.cantidad * it.precio,
+            evento_id: null,
+          }),
+        );
+        await this.orderItemWrite.save(nuevosItems);
+
+        const total = nuevos.reduce((s, it) => s + it.cantidad * it.precio, 0);
+        order.total = total;
+
+        if (carrito) {
+          const articulos: any = { ...(carrito.articulos as any) };
+          articulos.contado = nuevos.map((it) => ({
+            codigo: it.codigo,
+            nombre: it.nombre,
+            cantidad: it.cantidad,
+            precio: it.precio,
+          }));
+          carrito.articulos = articulos;
+        }
+
+        cambios.push({
+          tipo: 'articulo',
+          fecha: ahora,
+          antes: antesItems,
+          despues: nuevos.map((it) => ({ codigo: it.codigo, nombre: it.nombre, cantidad: it.cantidad })),
+          resumen:
+            antesItems.length === 0
+              ? `Agregó: ${nuevos.map((n) => n.nombre).join(', ')}`
+              : `Actualizó los artículos: ${nuevos.map((n) => n.nombre).join(', ')}`,
+        });
+      }
+
+      order.cambios = cambios;
+      await this.orderWrite.save(order);
+      if (carrito) await this.carritoWrite.save(carrito);
+
+      const clienteToken = (order.datos_pago as any)?.cliente?.equipo || (carrito?.cliente as any)?.equipo;
+      if (clienteToken) {
+        setImmediate(async () => {
+          try {
+            await this.insertarSolicitudesCentralApp({}, clienteToken, '', order.carrito_codigo);
+          } catch (e) {
+            this.logger.error('Error al re-enviar solicitud a CentralApp tras editar orden:', e as any);
+          }
+        });
+      }
+
+      const [refreshed] = (await this.getUserOrders(id)).data.filter((o: any) => o.codigo === codigo);
+      return { data: refreshed ?? null, success: true, message: 'ORDEN ACTUALIZADA' };
+    } catch (error) {
+      this.logger.error('Error al actualizar orden:', error);
+      return { data: null, success: false, message: 'ERROR AL ACTUALIZAR ORDEN' };
+    }
+  }
+
+  async rateOrder(
+    userId: number | string,
+    codigo: string,
+    body: { estrellas: number; motivos?: string[]; comentario?: string },
+  ): Promise<{ data: any; success: boolean; message: string }> {
+    try {
+      const id = String(userId ?? '').trim();
+      const estrellas = Number(body?.estrellas);
+      if (!Number.isFinite(estrellas) || estrellas < 1 || estrellas > 5) {
+        return { data: null, success: false, message: 'CALIFICACION INVALIDA' };
+      }
+
+      const order = await this.orderWrite.findOne({ where: { codigo, cliente_documento: id } });
+      if (!order) {
+        return { data: null, success: false, message: 'ORDEN NO ENCONTRADA' };
+      }
+      if (order.calificacion) {
+        return { data: order.calificacion, success: false, message: 'LA ORDEN YA FUE CALIFICADA' };
+      }
+
+      order.calificacion = {
+        estrellas,
+        motivos: estrellas <= 3 && Array.isArray(body?.motivos) ? body.motivos.filter(Boolean) : undefined,
+        comentario: estrellas <= 3 ? (body?.comentario || undefined) : undefined,
+        fecha: new Date().toISOString(),
+      };
+      await this.orderWrite.save(order);
+
+      return { data: order.calificacion, success: true, message: 'CALIFICACION REGISTRADA' };
+    } catch (error) {
+      this.logger.error('Error al calificar orden:', error);
+      return { data: null, success: false, message: 'ERROR AL CALIFICAR ORDEN' };
+    }
+  }
+
+  // Decide si corresponde ofrecer la encuesta de calificación para esta orden:
+  // no si ya fue calificada, no si el cliente ya calificó una orden y todavía
+  // no completó 40 compras desde entonces (no guardamos contador propio, se
+  // deriva de `ordenes.calificacion`/`fecha_creacion`).
+  private readonly RATING_COOLDOWN_ORDERS = 40;
+
+  async shouldPromptRating(
+    userId: number | string,
+    codigo: string,
+  ): Promise<{ data: { shouldPrompt: boolean; codigo: string | null }; success: boolean; message: string }> {
+    try {
+      const id = String(userId ?? '').trim();
+      const order = await this.orderWrite.findOne({ where: { codigo, cliente_documento: id } });
+      if (!order || order.calificacion) {
+        return { data: { shouldPrompt: false, codigo: null }, success: true, message: 'NO APLICA' };
+      }
+
+      const lastRated = await this.orderWrite.findOne({
+        where: { cliente_documento: id, calificacion: Not(IsNull()) },
+        order: { fecha_creacion: 'DESC' },
+      });
+
+      let shouldPrompt = true;
+      if (lastRated) {
+        const ordersSinceRating = await this.orderWrite.count({
+          where: { cliente_documento: id, fecha_creacion: MoreThan(lastRated.fecha_creacion) },
+        });
+        shouldPrompt = ordersSinceRating >= this.RATING_COOLDOWN_ORDERS;
+      }
+
+      return {
+        data: { shouldPrompt, codigo: shouldPrompt ? order.codigo : null },
+        success: true,
+        message: 'OK',
+      };
+    } catch (error) {
+      this.logger.error('Error al evaluar elegibilidad de calificación:', error);
+      return { data: { shouldPrompt: false, codigo: null }, success: false, message: 'ERROR' };
+    }
+  }
+
+  async getOrdersByProduct(
+    productoCodigo: string,
+  ): Promise<{ data: any; success: boolean; message: string }> {
+    try {
+      const cod = String(productoCodigo ?? '').trim();
+      if (!cod) return { data: { total: 0, unidades: 0, ordenes: [] }, success: true, message: 'SIN CODIGO' };
+
+      const items = await this.orderItemWrite
+        .createQueryBuilder('it')
+        .innerJoinAndSelect('it.orden', 'o')
+        .where('it.producto_codigo = :cod', { cod })
+        .orderBy('o.fecha_creacion', 'DESC')
+        .take(200)
+        .getMany();
+
+      const unidades = items.reduce((s, it) => s + (Number(it.cantidad) || 0), 0);
+      const ordenes = items.map((it) => ({
+        codigo: it.orden?.codigo,
+        carritoCodigo: it.orden?.carrito_codigo,
+        clienteId: it.orden?.cliente_documento,
+        fechaCreacion: it.orden?.fecha_creacion,
+        estado: it.orden?.estado,
+        cantidad: it.cantidad,
+        precioUnitario: Number(it.precio_unitario) || 0,
+        nombre: it.producto_nombre,
+      }));
+
+      return {
+        data: { total: ordenes.length, unidades, ordenes },
+        success: true,
+        message: 'TRACKING POR PRODUCTO',
+      };
+    } catch (error) {
+      this.logger.error('Error al obtener tracking por producto:', error);
+      return { data: { total: 0, unidades: 0, ordenes: [] }, success: false, message: 'ERROR TRACKING PRODUCTO' };
+    }
+  }
+
+  // "Lo más pedido hoy": agrega unidades vendidas por producto entre el inicio
+  // del día actual y ahora, solo de órdenes confirmadas (estado 0). Usado por el
+  // filtro de "más pedido hoy" en el storefront.
+  async getTopPedidosHoy(
+    limit = 50,
+  ): Promise<{ data: Array<{ codigo: string; cantidad: number }>; success: boolean; message: string }> {
+    try {
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
+
+      const rows = await this.orderItemWrite
+        .createQueryBuilder('it')
+        .innerJoin('it.orden', 'o')
+        .select('it.producto_codigo', 'codigo')
+        .addSelect('SUM(it.cantidad)', 'cantidad')
+        .where('o.estado = :estado', { estado: 0 })
+        .andWhere('o.fecha_creacion BETWEEN :start AND :end', { start: todayStart, end: todayEnd })
+        .groupBy('it.producto_codigo')
+        .orderBy('cantidad', 'DESC')
+        .limit(limit)
+        .getRawMany();
+
+      const data = (rows || []).map((r: any) => ({
+        codigo: String(r.codigo),
+        cantidad: Number(r.cantidad) || 0,
+      }));
+      return { data, success: true, message: 'TOP PEDIDOS DE HOY' };
+    } catch (error) {
+      this.logger.error('Error al obtener top pedidos de hoy:', error);
+      return { data: [], success: false, message: 'ERROR AL OBTENER TOP PEDIDOS DE HOY' };
+    }
+  }
+
+  // Agrega unidades vendidas y monto por producto_codigo, sobre órdenes
+  // confirmadas (estado 0), para un set puntual de códigos — usado por el
+  // dashboard de ventas del panel de proveedores.
+  async getVentasPorCodigos(
+    codigos: string[],
+  ): Promise<{ data: Record<string, { unidades: number; monto: number }>; success: boolean; message: string }> {
+    try {
+      if (!codigos || codigos.length === 0) {
+        return { data: {}, success: true, message: 'Sin códigos' };
+      }
+
+      const rows = await this.orderItemWrite
+        .createQueryBuilder('it')
+        .innerJoin('it.orden', 'o')
+        .select('it.producto_codigo', 'codigo')
+        .addSelect('SUM(it.cantidad)', 'unidades')
+        .addSelect('SUM(it.subtotal)', 'monto')
+        .where('o.estado = :estado', { estado: 0 })
+        .andWhere('it.producto_codigo IN (:...codigos)', { codigos })
+        .groupBy('it.producto_codigo')
+        .getRawMany();
+
+      const data: Record<string, { unidades: number; monto: number }> = {};
+      for (const row of rows || []) {
+        data[String(row.codigo)] = {
+          unidades: Number(row.unidades) || 0,
+          monto: Number(row.monto) || 0,
+        };
+      }
+
+      return { data, success: true, message: 'Ok' };
+    } catch (error) {
+      this.logger.error('Error al obtener ventas por códigos:', error);
+      return { data: {}, success: false, message: 'ERROR AL OBTENER VENTAS POR CODIGOS' };
     }
   }
 
@@ -982,72 +1662,114 @@ export class CartContadoService {
   async getCartWithoutToken(
     filters: any,
   ): Promise<{
-    data: any;
+    data: { carritos: any[] };
     message: string;
     success: boolean;
     totalCarritos: number;
-    totalCarritosFinalizados: number;
+    totalEnProceso: number;
     totalAbandonados: number;
+    totalFinalizados: number;
+    totalFiltrado: number;
+    promedioFinalizacionMin: number;
   }> {
-    const limit = Number(filters?.limit ?? 10);
-    const offset = Number(filters?.offset ?? 0);
+    const ABANDONO_MIN = 20; 
+    const limit = Math.max(1, Number(filters?.limit ?? 10));
+    const offset = Math.max(0, Number(filters?.offset ?? filters?.skip ?? 0));
+    const search = String(filters?.search ?? '').trim().toLowerCase();
+    const situacionFiltro = String(filters?.situacion ?? '').trim();
 
-    const where: any = {};
-    const desdeRaw = filters?.desde;
-    const hastaRaw = filters?.hasta;
-
+    const desdeRaw = filters?.desde ?? filters?.fechaDesde;
+    const hastaRaw = filters?.hasta ?? filters?.fechaHasta;
     const desde = desdeRaw ? new Date(desdeRaw) : null;
     const hasta = hastaRaw ? new Date(hastaRaw) : null;
-
     const hasDesde = !!(desde && !Number.isNaN(desde.getTime()));
     const hasHasta = !!(hasta && !Number.isNaN(hasta.getTime()));
 
-    if (hasDesde && hasHasta) where.createdAt = Between(desde as Date, hasta as Date);
-    else if (hasDesde) where.createdAt = MoreThanOrEqual(desde as Date);
-    else if (hasHasta) where.createdAt = LessThanOrEqual(hasta as Date);
+    const ageExpr = `TIMESTAMPDIFF(MINUTE, COALESCE(c.updatedAt, c.createdAt), NOW())`;
 
-    const carritos = await this.carritoRead.find({
-      where,
-      order: {
-        createdAt: 'DESC',
-      },
-      take: limit,
-      skip: offset,
+    const finalizadoExpr = `(c.estado = '0' OR COALESCE(c.finished, '') = '1')`;
+    const abandonadoExpr = `(NOT ${finalizadoExpr} AND ${ageExpr} > ${ABANDONO_MIN})`;
+    const enProcesoExpr = `(NOT ${finalizadoExpr} AND ${ageExpr} <= ${ABANDONO_MIN})`;
+    const situacionExpr = `CASE WHEN ${finalizadoExpr} THEN 'finalizado' WHEN ${abandonadoExpr} THEN 'abandonado' ELSE 'en_proceso' END`;
+    const prioridadExpr = `CASE WHEN ${abandonadoExpr} THEN 0 WHEN ${enProcesoExpr} THEN 1 ELSE 2 END`;
+
+    const base = () => {
+      const qb = this.carritoRead.createQueryBuilder('c');
+      if (hasDesde && hasHasta) qb.andWhere('c.createdAt BETWEEN :desde AND :hasta', { desde, hasta });
+      else if (hasDesde) qb.andWhere('c.createdAt >= :desde', { desde });
+      else if (hasHasta) qb.andWhere('c.createdAt <= :hasta', { hasta });
+      if (search) {
+        qb.andWhere(
+          `(CAST(c.codigo AS CHAR) LIKE :s OR LOWER(CAST(c.cliente AS CHAR)) LIKE :s)`,
+          { s: `%${search}%` },
+        );
+      }
+      return qb;
+    };
+
+    const applySituacion = (qb: ReturnType<typeof base>) => {
+      if (situacionFiltro === 'finalizado') qb.andWhere(finalizadoExpr);
+      else if (situacionFiltro === 'abandonado') qb.andWhere(abandonadoExpr);
+      else if (situacionFiltro === 'en_proceso') qb.andWhere(enProcesoExpr);
+      return qb;
+    };
+
+    const [totalEnProceso, totalAbandonados, totalFinalizados] = await Promise.all([
+      base().andWhere(enProcesoExpr).getCount(),
+      base().andWhere(abandonadoExpr).getCount(),
+      base().andWhere(finalizadoExpr).getCount(),
+    ]);
+
+    const avgRow = await base()
+      .andWhere(finalizadoExpr)
+      .select(`AVG(TIMESTAMPDIFF(MINUTE, c.createdAt, COALESCE(c.updatedAt, c.createdAt)))`, 'avg')
+      .getRawOne();
+    const promedioFinalizacionMin = Math.round(Number(avgRow?.avg ?? 0));
+
+    const pageQb = applySituacion(base())
+      .addSelect(situacionExpr, 'situacion_calc')
+      .addSelect(ageExpr, 'age_min')
+      .orderBy(prioridadExpr, 'ASC')
+      .addOrderBy(ageExpr, 'DESC')
+      .addOrderBy('c.createdAt', 'DESC')
+      .take(limit)
+      .skip(offset);
+
+    const { entities, raw } = await pageQb.getRawAndEntities();
+    const totalFiltrado = await applySituacion(base()).getCount();
+
+    const carritos = entities.map((c: any, i: number) => {
+      const situacion = raw?.[i]?.situacion_calc ?? 'en_proceso';
+      const ageMin = Number(raw?.[i]?.age_min ?? 0);
+      const finalizado = situacion === 'finalizado';
+      const retirar = Number(c?.envio?.retirar ?? 0);
+      const creado = c?.createdAt ? new Date(c.createdAt).getTime() : null;
+      const actualizado = c?.updatedAt ? new Date(c.updatedAt).getTime() : null;
+      return {
+        ...c,
+        situacion,
+        ageMin,
+        abandonado: situacion === 'abandonado',
+        metodoPago: c?.pago?.tipo ?? null,
+        entrega: finalizado ? (retirar === 1 ? 'retiro' : 'delivery') : null,
+        tiempoFinalizacionMin:
+          finalizado && creado && actualizado
+            ? Math.max(0, Math.round((actualizado - creado) / 60000))
+            : null,
+        total: c?.pago?.monto ?? null,
+      };
     });
 
-    const carritosFinalizados = await this.carritoRead.find({
-      where: {
-        estado: '0',
-        finished: '1',
-      },
-      order: {
-        createdAt: 'DESC',
-      },
-      take: limit,
-      skip: offset,
-    });
-
-    const carritosAbandonados = await this.carritoRead.find({
-      where: {
-        estado: '1',
-      },
-      order: {
-        createdAt: 'DESC',
-      },
-      take: limit,
-      skip: offset,
-    });
     return {
-      data: {
-        carritos,
-        carritosAbandonados,
-        carritosFinalizados
-      },
+      data: { carritos },
       message: 'Carrito obtenido exitosamente',
       success: true,
-      totalCarritos: carritos.length,
-      totalCarritosFinalizados: carritosFinalizados.length,
-      totalAbandonados: carritosAbandonados.length,
+      totalCarritos: totalEnProceso + totalAbandonados + totalFinalizados,
+      totalEnProceso,
+      totalAbandonados,
+      totalFinalizados,
+      totalFiltrado,
+      promedioFinalizacionMin,
     };
   }
 
@@ -1109,6 +1831,52 @@ export class CartContadoService {
       throw error;
     }
 
+    try {
+      const articulosCarrito = [
+        ...(carrito.articulos?.contado || []),
+        ...(carrito.articulos?.credito || []),
+      ];
+      const codigosCarrito = [
+        ...new Set(articulosCarrito.map((item: any) => String(item.codigo))),
+      ];
+      if (codigosCarrito.length > 0) {
+        const promoInfo: Record<string, any> = await firstValueFrom(
+          this.productsService.send(
+            { cmd: 'get_promo_info_for_codigos' },
+            { codigos: codigosCarrito },
+          ),
+        );
+        const cantidadPorCodigo = new Map<string, number>();
+        articulosCarrito.forEach((item: any) => {
+          const cod = String(item.codigo);
+          cantidadPorCodigo.set(
+            cod,
+            (cantidadPorCodigo.get(cod) || 0) + (item.cantidad || 1),
+          );
+        });
+        for (const codigo of codigosCarrito) {
+          const promo = promoInfo?.[codigo];
+          if (
+            promo &&
+            promo.disponibleEcommerce !== null &&
+            promo.disponibleEcommerce !== undefined &&
+            (cantidadPorCodigo.get(codigo) || 0) > promo.disponibleEcommerce
+          ) {
+            return {
+              data: [],
+              success: false,
+              message: `Stock de promoción agotado para el producto ${codigo}. Disponible: ${promo.disponibleEcommerce} unidades.`,
+            };
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.warn(
+        'Error al revalidar stock de promoción en finishCart, continuando',
+        error,
+      );
+    }
+
     let metodoPago = '';
     let montoTotal = 0;
     let descripcion = '';
@@ -1160,6 +1928,16 @@ export class CartContadoService {
         {
           ...carrito.cliente,
           ...process.cliente,
+          datosCredito:
+            process.cliente?.datosCredito || carrito.cliente?.datosCredito,
+          datosLaborales:
+            process.cliente?.datosLaborales ||
+            carrito.cliente?.datosLaborales,
+          referencias:
+            process.cliente?.referencias ||
+            process.referencias ||
+            carrito.cliente?.referencias ||
+            [],
         },
       );
 
@@ -1215,7 +1993,7 @@ export class CartContadoService {
             eventoId = eventoResponse.id;
           }
         } catch (error) {
-          // Si no hay evento, ignorar
+          
         }
 
         orderItems.push(
@@ -1237,8 +2015,7 @@ export class CartContadoService {
         total: montoTotal,
         datos_envio: process?.envio || {},
         datos_pago: process,
-        // Mantener consistencia con el sistema actual: las órdenes finalizadas
-        // se registran con `estado = 0` (y el conteo de beneficios diarios usa ese valor).
+
         estado: 0,
       });
 
@@ -1263,7 +2040,6 @@ export class CartContadoService {
         }
       });
 
-      // Validar beneficios por cupones (compras diarias)
       setImmediate(async () => {
         try {
           await this.validateDailyPurchaseBenefits(usuario_id);
@@ -1272,8 +2048,37 @@ export class CartContadoService {
         }
       });
 
+      setImmediate(() => {
+        const correo = carrito.cliente?.correo;
+        if (!correo) return;
+        const items = [
+          ...(carrito.articulos?.contado || []),
+          ...(carrito.articulos?.credito || []),
+        ].map((item: any) => ({
+          nombre: item.nombre,
+          cantidad: item.cantidad,
+          precio: item.precio,
+        }));
+        this.mailClient
+          .send(
+            { cmd: 'send_order_confirmation' },
+            {
+              correo,
+              nombre: carrito.cliente?.razonsocial,
+              items,
+              total: montoTotal,
+              trackingUrl: `${STOREFRONT_URL}/tracking/${encodeURIComponent(savedOrder.codigo)}`,
+              codigo: savedOrder.codigo,
+            },
+          )
+          .subscribe({
+            error: (mailError) =>
+              console.error('Error enviando correo de confirmación de pedido:', mailError),
+          });
+      });
+
       return {
-        data: [pagoResponse.data],
+        data: [{ ...pagoResponse.data, ordenCodigo: savedOrder.codigo }],
         success: true,
         message: 'CARRITO FINALIZADO E INTENTO DE PAGO ENCOLADO',
       };
@@ -1294,6 +2099,72 @@ export class CartContadoService {
         success: false,
         message: `ERROR AL FINALIZAR CARRITO: ${error.message}`,
       };
+    }
+  }
+
+  @Cron('*/5 * * * *')
+  async notifyAbandonedCarts(): Promise<void> {
+    const ABANDONO_MIN = 20;
+    const ageExpr = `TIMESTAMPDIFF(MINUTE, COALESCE(c.updatedAt, c.createdAt), NOW())`;
+    const finalizadoExpr = `(c.estado = '0' OR COALESCE(c.finished, '') = '1')`;
+    const abandonadoExpr = `(NOT ${finalizadoExpr} AND ${ageExpr} > ${ABANDONO_MIN})`;
+
+    let carritos: Cart[] = [];
+    try {
+      carritos = await this.carritoRead
+        .createQueryBuilder('c')
+        .where(abandonadoExpr)
+        .andWhere('c.abandonedEmailSent = false')
+        .andWhere("JSON_UNQUOTE(JSON_EXTRACT(c.cliente, '$.correo')) IS NOT NULL")
+        .andWhere("JSON_UNQUOTE(JSON_EXTRACT(c.cliente, '$.correo')) <> ''")
+        .getMany();
+    } catch (error) {
+      this.logger.error('Error consultando carritos abandonados para notificar:', error);
+      return;
+    }
+
+    for (const carrito of carritos) {
+      const correo = carrito.cliente?.correo;
+      if (!correo) continue;
+      const items = [
+        ...(carrito.articulos?.contado || []),
+        ...(carrito.articulos?.credito || []),
+      ].map((item: any) => ({
+        nombre: item.nombre,
+        cantidad: item.cantidad,
+        precio: item.precio,
+      }));
+      const total = items.reduce(
+        (acc: number, item: any) => acc + (item.precio || 0) * (item.cantidad || 0),
+        0,
+      );
+
+      if (items.length === 0) {
+        // El cliente vació el carrito antes de que se cumpliera el tiempo de
+        // abandono — ya no corresponde notificar, pero se marca igual para no
+        // volver a evaluarlo en cada corrida del cron.
+        await this.carritoWrite.update({ codigo: carrito.codigo }, { abandonedEmailSent: true });
+        continue;
+      }
+
+      this.mailClient
+        .send(
+          { cmd: 'send_abandoned_cart' },
+          {
+            correo,
+            nombre: carrito.cliente?.razonsocial,
+            items,
+            total,
+            recoverUrl: `${STOREFRONT_URL}/checkout?codigo=${encodeURIComponent(carrito.codigo)}&step=datos`,
+            codigo: carrito.codigo,
+          },
+        )
+        .subscribe({
+          error: (mailError) =>
+            this.logger.error(`Error enviando correo de carrito abandonado ${carrito.codigo}:`, mailError),
+        });
+
+      await this.carritoWrite.update({ codigo: carrito.codigo }, { abandonedEmailSent: true });
     }
   }
 
@@ -1354,81 +2225,50 @@ export class CartContadoService {
         });
       }
 
-      const resultados: {
-        cuotas: number;
-        success: boolean;
-        articulosCount: number;
-      }[] = [];
+      const mapPromoInfo = (item: any) => {
+        if (item.isCombo && !item.isPromo) {
+          return { is_combo: 1, is_promo: 0, id_promo: null, nombrePromo: null };
+        }
+        if (!item.isCombo && item.isPromo) {
+          return { is_combo: 0, is_promo: 1, id_promo: item.promoCodigo || null, nombrePromo: item.promoNombre || null };
+        }
+        if (item.isCombo && item.isPromo) {
+          return { is_combo: 1, is_promo: 1, id_promo: item.promoCodigo || null, nombrePromo: item.promoNombre || null };
+        }
+        return { is_combo: 0, is_promo: 0, id_promo: null, nombrePromo: null };
+      };
 
-      if (
-        datos.articulos &&
-        datos.articulos.contado &&
-        Array.isArray(datos.articulos.contado) &&
-        datos.articulos.contado.length > 0
-      ) {
-        const solicitudContado = NEW_SOLICITUD_INITIAL_STATE(
-          codigo!,
-          clienteToken,
-          cuenta || '',
-          Number(datos.cliente?.id_usuario || 0),
-          datos.cliente,
-        );
+      const contadoItems = (
+        datos.articulos?.contado && Array.isArray(datos.articulos.contado)
+          ? datos.articulos.contado
+          : []
+      ).map((item: any) => ({ ...item, ...mapPromoInfo(item) }));
+      const [cuotasCredito, articulosCredito] =
+        solicitudesPorCuota.entries().next().value || [0, []];
 
-        solicitudContado.cliente = {
-          ...solicitudContado.cliente!,
-          equipo:
-            datos.cliente?.equipo ||
-            solicitudContado.cliente?.equipo ||
-            clienteToken,
+      const creditoItems = (articulosCredito || []).map((articulo: any) => ({
+        codigo: articulo.codigo,
+        nombre: articulo.nombre,
+        ruta: articulo.ruta,
+        imagen: articulo.imagen,
+        cantidad: articulo.cantidad,
+        precio: articulo.credito?.precio || articulo.precio,
+        cuota: cuotasCredito,
+        ...mapPromoInfo(articulo),
+      }));
+
+      if (contadoItems.length === 0 && creditoItems.length === 0) {
+        return {
+          data: [],
+          success: false,
+          message: 'No hay artículos para procesar',
         };
-        solicitudContado.pago = datos.pago;
-        solicitudContado.estado = datos.estado;
-        solicitudContado.envio =
-          solicitud['envio'] || datos.envio || solicitudContado.envio;
-        solicitudContado.codigo = Number(codigo);
-
-        solicitudContado.articulos = {
-          contado: datos.articulos.contado.map((item: any) => {
-            const processedItem: any = { ...item };
-            if (item.isCombo && !item.isPromo) {
-              processedItem.is_combo = 1;
-              processedItem.is_promo = 0;
-              processedItem.id_promo = null;
-              processedItem.nombrePromo = null;
-            } else if (!item.isCombo && item.isPromo) {
-              processedItem.is_combo = 0;
-              processedItem.is_promo = 1;
-              processedItem.id_promo = item.promoCodigo || null;
-              processedItem.nombrePromo = item.promoNombre || null;
-            } else if (item.isCombo && item.isPromo) {
-              processedItem.is_combo = 1;
-              processedItem.is_promo = 1;
-              processedItem.id_promo = item.promoCodigo || null;
-              processedItem.nombrePromo = item.promoNombre || null;
-            } else {
-              processedItem.is_combo = 0;
-              processedItem.is_promo = 0;
-              processedItem.id_promo = null;
-              processedItem.nombrePromo = null;
-            }
-
-            return processedItem;
-          }),
-          credito: [],
-        };
-
-        const resultadoContado =
-          await this.utilsCart.insertarCarritos(solicitudContado);
-        resultados.push({
-          cuotas: 0,
-          success: resultadoContado === 1,
-          articulosCount: datos.articulos.contado.length,
-        });
       }
 
-      for (const [cuotas, articulos] of solicitudesPorCuota.entries()) {
-        if (cuotas === 0) continue;
-
+      const buildSolicitud = (
+        articulos: { contado: any[]; credito: any[] },
+        esCredito: boolean,
+      ) => {
         const nuevaSolicitud = NEW_SOLICITUD_INITIAL_STATE(
           codigo!,
           clienteToken,
@@ -1444,69 +2284,88 @@ export class CartContadoService {
             nuevaSolicitud.cliente?.equipo ||
             clienteToken,
         };
+        nuevaSolicitud.pago = esCredito
+          ? datos.pago
+          : {
+              tipo: datos.pago?.tipo,
+              condicion: datos.pago?.condicion,
+              periodicidad: datos.pago?.periodicidad,
+              moneda: datos.pago?.moneda,
+              monto: datos.pago?.monto,
+              primerpago: datos.pago?.primerpago,
+              entregainicial: datos.pago?.entregainicial,
+            };
         nuevaSolicitud.estado = datos.estado;
-        nuevaSolicitud.pago = datos.pago;
         nuevaSolicitud.envio =
           solicitud['envio'] || datos.envio || nuevaSolicitud.envio;
         nuevaSolicitud.codigo = Number(codigo);
+        nuevaSolicitud.articulos = articulos;
+        return nuevaSolicitud;
+      };
 
-        nuevaSolicitud.articulos = {
-          contado: [],
-          credito: articulos.map((articulo: any) => {
-            const processedItem: any = {
-              codigo: articulo.codigo,
-              nombre: articulo.nombre,
-              ruta: articulo.ruta,
-              imagen: articulo.imagen,
-              cantidad: articulo.cantidad,
-              precio: articulo.credito?.precio || articulo.precio,
-              cuota: cuotas,
-            };
+      const resultados: {
+        tipo: 'contado' | 'credito';
+        success: boolean;
+        count: number;
+        secuencia: number | null;
+      }[] = [];
 
-            if (articulo.isCombo && !articulo.isPromo) {
-              processedItem.is_combo = 1;
-              processedItem.is_promo = 0;
-              processedItem.id_promo = null;
-              processedItem.nombrePromo = null;
-            } else if (!articulo.isCombo && articulo.isPromo) {
-              processedItem.is_combo = 0;
-              processedItem.is_promo = 1;
-              processedItem.id_promo = articulo.promoCodigo || null;
-              processedItem.nombrePromo = articulo.promoNombre || null;
-            } else if (articulo.isCombo && articulo.isPromo) {
-              processedItem.is_combo = 1;
-              processedItem.is_promo = 1;
-              processedItem.id_promo = articulo.promoCodigo || null;
-              processedItem.nombrePromo = articulo.promoNombre || null;
-            } else {
-              processedItem.is_combo = 0;
-              processedItem.is_promo = 0;
-              processedItem.id_promo = null;
-              processedItem.nombrePromo = null;
-            }
-
-            return processedItem;
-          }),
-        };
-
-        const resultado = await this.utilsCart.insertarCarritos(nuevaSolicitud);
+      if (contadoItems.length > 0) {
+        const solicitudContado = buildSolicitud(
+          {
+            contado: contadoItems,
+            credito: [],
+          },
+          false,
+        );
+        const resultado = await this.utilsCart.insertarCarritos(
+          solicitudContado,
+        );
         resultados.push({
-          cuotas,
-          success: resultado === 1,
-          articulosCount: articulos.length,
+          tipo: 'contado',
+          success: resultado.success === 1,
+          count: contadoItems.length,
+          secuencia: resultado.secuencia,
         });
       }
 
-      const successCount = resultados.filter((r) => r.success).length;
-      const totalCount = resultados.length;
+      if (creditoItems.length > 0) {
+        const solicitudCredito = buildSolicitud(
+          {
+            contado: [],
+            credito: creditoItems,
+          },
+          true,
+        );
+        const resultado = await this.utilsCart.insertarCarritos(
+          solicitudCredito,
+        );
+        resultados.push({
+          tipo: 'credito',
+          success: resultado.success === 1,
+          count: creditoItems.length,
+          secuencia: resultado.secuencia,
+        });
+      }
+
+      const success = resultados.every((r) => r.success);
+
+      const erpSecuencias = resultados
+        .filter((r) => r.secuencia !== null)
+        .map((r) => ({ tipo: r.tipo, secuencia: r.secuencia }));
+      if (erpSecuencias.length > 0) {
+        await this.carritoWrite.update(
+          { codigo: Number(codigo) },
+          { erpSecuencias },
+        );
+      }
 
       return {
         data: resultados,
-        success: successCount === totalCount && totalCount > 0,
-        message:
-          totalCount > 0
-            ? `${successCount}/${totalCount} solicitudes insertadas en Central App`
-            : 'No hay artículos de crédito para procesar',
+        success,
+        message: success
+          ? 'Solicitud(es) insertada(s) en Central App'
+          : 'Error al insertar una o más solicitudes en Central App',
       };
     } catch (error) {
       return {
@@ -1515,6 +2374,41 @@ export class CartContadoService {
         message: `ERROR AL INSERTAR EN CENTRAL APP: ${error.message}`,
       };
     }
+  }
+
+  async obtenerEstadoPedido(codigo: number): Promise<{
+    data: any[];
+    success: boolean;
+    message: string;
+  }> {
+    const carrito = await this.carritoRead.findOne({ where: { codigo } });
+    if (!carrito) {
+      return { data: [], success: false, message: 'Carrito no encontrado' };
+    }
+
+    const erpSecuencias: { tipo: string; secuencia: number }[] =
+      carrito.erpSecuencias || [];
+    if (erpSecuencias.length === 0) {
+      return {
+        data: [],
+        success: false,
+        message: 'Este carrito aún no fue enviado al ERP',
+      };
+    }
+
+    const estados = await Promise.all(
+      erpSecuencias.map(async ({ tipo, secuencia }) => ({
+        tipo,
+        secuencia,
+        ...(await this.utilsCart.resolverEstadoPedido(secuencia)),
+      })),
+    );
+
+    return {
+      data: estados,
+      success: true,
+      message: 'Estado de pedido resuelto',
+    };
   }
 
   async countDailyFinishedCarts(clienteDocumento: number): Promise<number> {
@@ -1531,8 +2425,7 @@ export class CartContadoService {
         .where('order.cliente_documento = :clienteDocumento', {
           clienteDocumento,
         })
-        // En este proyecto las órdenes "finalizadas" se guardan con `estado = 0`
-        // (ver datos reales). Este conteo alimenta los beneficios diarios.
+
         .andWhere('order.estado = 0')
         .andWhere('order.fecha_creacion BETWEEN :start AND :end', {
           start: todayStart,
@@ -1540,7 +2433,6 @@ export class CartContadoService {
         })
         .getCount();
 
-      //this.logger.log(`Carritos finalizados del día para cliente ${clienteDocumento}: ${orderCount}`);
       return orderCount;
     } catch (error) {
       this.logger.error('Error al contar carritos finalizados del día:', error);
@@ -1562,7 +2454,6 @@ export class CartContadoService {
         ),
       );
 
-      //this.logger.debug('Response Beneficios', benefitEventsResponse.data)
       if (!benefitEventsResponse || !benefitEventsResponse.data) {
         return;
       }
@@ -1606,6 +2497,84 @@ export class CartContadoService {
       );
     } catch (error) {
       this.logger.error('Error al generar cupón:', error);
+    }
+  }
+
+  async countCarritosActivos(): Promise<{ data: { total: number }; success: boolean; message: string }> {
+    try {
+      const ageExpr = `TIMESTAMPDIFF(MINUTE, COALESCE(c.updatedAt, c.createdAt), NOW())`;
+      const finalizadoExpr = `(c.estado = '0' OR COALESCE(c.finished, '') = '1')`;
+      const total = await this.carritoRead
+        .createQueryBuilder('c')
+        .where(`NOT ${finalizadoExpr}`)
+        .andWhere(`${ageExpr} <= 20`)
+        .getCount();
+      return { data: { total }, success: true, message: 'Carritos activos obtenidos' };
+    } catch (error) {
+      this.logger.error('Error al contar carritos activos:', error);
+      return { data: { total: 0 }, success: false, message: 'ERROR AL CONTAR CARRITOS ACTIVOS' };
+    }
+  }
+
+  async countCarritosAbandonados(
+    desde?: string,
+    hasta?: string,
+  ): Promise<{ data: { total: number }; success: boolean; message: string }> {
+    try {
+      const ageExpr = `TIMESTAMPDIFF(MINUTE, COALESCE(c.updatedAt, c.createdAt), NOW())`;
+      const finalizadoExpr = `(c.estado = '0' OR COALESCE(c.finished, '') = '1')`;
+      const query = this.carritoRead
+        .createQueryBuilder('c')
+        .where(`NOT ${finalizadoExpr}`)
+        .andWhere(`${ageExpr} > 20`);
+
+      if (desde && hasta) {
+        query.andWhere('c.createdAt BETWEEN :desde AND :hasta', { desde, hasta });
+      }
+
+      const total = await query.getCount();
+      return { data: { total }, success: true, message: 'Carritos abandonados obtenidos' };
+    } catch (error) {
+      this.logger.error('Error al contar carritos abandonados:', error);
+      return { data: { total: 0 }, success: false, message: 'ERROR AL CONTAR CARRITOS ABANDONADOS' };
+    }
+  }
+
+  async getTopProductosVendidos(
+    desde: string,
+    hasta: string,
+    limit = 10,
+  ): Promise<{
+    data: { total: number; cantidad: number; filas: Array<{ codigo: string; unidades: number; monto: number }> };
+    success: boolean;
+    message: string;
+  }> {
+    try {
+      const rows = await this.orderItemWrite
+        .createQueryBuilder('it')
+        .innerJoin('it.orden', 'o')
+        .select('it.producto_codigo', 'codigo')
+        .addSelect('SUM(it.cantidad)', 'unidades')
+        .addSelect('SUM(it.subtotal)', 'monto')
+        .where('o.estado = :estado', { estado: 0 })
+        .andWhere('o.fecha_creacion BETWEEN :desde AND :hasta', { desde, hasta })
+        .groupBy('it.producto_codigo')
+        .orderBy('unidades', 'DESC')
+        .limit(limit)
+        .getRawMany();
+
+      const filas = (rows || []).map((r: any) => ({
+        codigo: String(r.codigo),
+        unidades: Number(r.unidades) || 0,
+        monto: Number(r.monto) || 0,
+      }));
+      const total = filas.reduce((acc, f) => acc + f.monto, 0);
+      const cantidad = filas.length;
+
+      return { data: { total, cantidad, filas }, success: true, message: 'Top productos vendidos obtenido' };
+    } catch (error) {
+      this.logger.error('Error al obtener top productos vendidos:', error);
+      return { data: { total: 0, cantidad: 0, filas: [] }, success: false, message: 'ERROR AL OBTENER TOP PRODUCTOS VENDIDOS' };
     }
   }
 }

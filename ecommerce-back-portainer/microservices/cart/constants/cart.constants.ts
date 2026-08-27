@@ -26,6 +26,8 @@ export const DEFAULT_CART: Partial<Cart> = {
     ubicacion: {},
     agendamiento: moment().tz('America/Asuncion').format('YYYY-MM-DDTHH'),
     horaAgendamiento: '',
+    horarioDesde: '',
+    horarioHasta: '',
     retirar: 0
   },
   pago: {
@@ -54,7 +56,10 @@ export const DEFAULT_SOLICITUD: Partial<Cart> = {
     correo: '',
     telefono: '',
     tipodocumento: '',
-    id_usuario: 0
+    id_usuario: 0,
+    datosCredito: null,
+    datosLaborales: null,
+    referencias: [],
   },
   tiempo: moment().tz('America/Asuncion').format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
   envio: {
@@ -71,6 +76,8 @@ export const DEFAULT_SOLICITUD: Partial<Cart> = {
     },
     agendamiento: '',
     horaAgendamiento: '',
+    horarioDesde: '',
+    horarioHasta: '',
     retirar: 0
   },
   pago: {
@@ -134,7 +141,7 @@ export const NEW_SOLICITUD_INITIAL_STATE = (
 
 export const ESTADO_SOLICITUD_MAP = {
   '01': 'Solicitud en análisis de crédito',
-  '02': 'Solicitud en análisis de crédito', 
+  '02': 'Solicitud en análisis de crédito',
   '04': 'Solicitud en análisis de crédito',
   '07': 'El pedido se está procesando',
   '10': 'El pedido se está procesando',
@@ -143,4 +150,19 @@ export const ESTADO_SOLICITUD_MAP = {
   '23': 'El pedido se está procesando',
   '05': 'El pedido se está procesando',
   '16': 'Su solicitud está lista para despacharse',
+  '19': 'Su pedido está en tránsito a despacho',
+};
+
+export const ESTADO_SOLICITUD_FASE_MAP = {
+  '01': 'analisis_credito',
+  '02': 'analisis_credito',
+  '04': 'analisis_credito',
+  '07': 'procesando',
+  '10': 'procesando',
+  '13': 'procesando',
+  '22': 'procesando',
+  '23': 'procesando',
+  '05': 'procesando',
+  '16': 'listo_despacho',
+  '19': 'pendiente_dispatch',
 };

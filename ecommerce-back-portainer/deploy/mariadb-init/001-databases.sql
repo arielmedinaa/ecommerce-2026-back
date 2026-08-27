@@ -1,0 +1,6 @@
+CREATE DATABASE IF NOT EXISTS ecommerce CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS combos CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+GRANT ALL PRIVILEGES ON ecommerce.* TO 'ecommerce'@'%';
+GRANT ALL PRIVILEGES ON combos.* TO 'ecommerce'@'%';
+FLUSH PRIVILEGES;

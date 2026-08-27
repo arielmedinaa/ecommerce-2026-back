@@ -16,6 +16,7 @@ import { HomeSection } from './schemas/home-section.schema';
     MicroserviceModule.forRoot([
       'PRODUCTS_SERVICE',
       'IMAGE_SERVICE',
+      'CART_SERVICE',
     ]),
     VerticalesModule,
     TypeOrmModule.forFeature([HomeSection], 'WRITE_CONNECTION'),

@@ -3,7 +3,7 @@ import { AppModule } from '@gateway/app.module';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import compression from 'compression';
+import compression = require('compression');
 import { JsonLogger } from '@shared/common/logging/json-logger';
 import { requestIdMiddleware } from '@gateway/common/middlewares/request-id.middleware';
 import { HttpLoggingInterceptor } from '@gateway/common/interceptors/http-logging.interceptor';

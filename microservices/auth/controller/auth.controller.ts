@@ -1,12 +1,16 @@
 import { Controller, Logger } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AuthService } from '../service/auth.service';
+import { RolesService } from '../service/roles.service';
 
 @Controller()
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly rolesService: RolesService,
+  ) {}
 
   @MessagePattern({ cmd: 'create_guest_session' })
   async createGuestSession(
@@ -145,6 +149,62 @@ export class AuthController {
       return await this.authService.asignarCuponMasivo(payload);
     } catch (error) {
       this.logger.error('Error in createUserCouponBulk:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'create_admin_user' })
+  async createAdminUser(
+    @Payload() payload: { nombre: string; email: string; rolId: number },
+  ) {
+    try {
+      return await this.authService.createAdminUser(payload);
+    } catch (error) {
+      this.logger.error('Error in create_admin_user:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'list_admin_users' })
+  async listAdminUsers() {
+    try {
+      return await this.authService.listAdminUsers();
+    } catch (error) {
+      this.logger.error('Error in list_admin_users:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'list_roles' })
+  async listRoles() {
+    try {
+      return await this.rolesService.listRoles();
+    } catch (error) {
+      this.logger.error('Error in list_roles:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'create_rol' })
+  async createRol(
+    @Payload() payload: { nombre: string; descripcion?: string; modulos: string[] },
+  ) {
+    try {
+      return await this.rolesService.createRol(payload);
+    } catch (error) {
+      this.logger.error('Error in create_rol:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'update_rol' })
+  async updateRol(
+    @Payload() payload: { id: number; descripcion?: string; modulos?: string[] },
+  ) {
+    try {
+      return await this.rolesService.updateRol(payload.id, payload);
+    } catch (error) {
+      this.logger.error('Error in update_rol:', error);
       throw error;
     }
   }

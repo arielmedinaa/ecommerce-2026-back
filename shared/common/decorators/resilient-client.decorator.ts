@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, Observable, throwError, timer } from 'rxjs';
-import { retryWhen, delay, take, mergeMap } from 'rxjs/operators';
+import { retryWhen, delay, take, mergeMap, timeout as rxTimeout } from 'rxjs/operators';
 import { CircuitBreaker } from './circuit-breaker.decorator';
 
 export interface ResilientOptions {
@@ -12,6 +12,11 @@ export interface ResilientOptions {
     failureThreshold?: number;
     resetTimeout?: number;
   };
+  // Timeout por llamada NATS. Antes no existía ningún timeout acá: si el
+  // servicio destino tardaba (ej. ERP lento), la petición HTTP colgaba hasta
+  // que nginx la cortaba a los 60s con un 504. Con esto, una llamada lenta
+  // cae al `fallback` en vez de trabar toda la respuesta.
+  timeoutMs?: number;
 }
 
 @Injectable()
@@ -32,6 +37,7 @@ export class ResilientService {
       delay: retryDelay = 1000,
       fallback,
       circuitBreaker: cbOptions = {},
+      timeoutMs = 10000,
     } = options;
 
     const serviceKey = pattern.cmd || JSON.stringify(pattern);
@@ -50,7 +56,7 @@ export class ResilientService {
 
     return circuitBreaker.execute(
       async () => {
-        return this.executeWithRetry(client, pattern, data, retries, retryDelay);
+        return this.executeWithRetry(client, pattern, data, retries, retryDelay, timeoutMs);
       },
       fallback,
     );
@@ -62,14 +68,22 @@ export class ResilientService {
     data: any,
     retries: number,
     delay: number,
+    timeoutMs: number,
   ): Promise<T> {
+    // Nota: esto NO reintenta (a pesar del nombre/parámetro `retries`, que
+    // hoy no se usa acá — bug preexistente, `createRetryObservable` está
+    // definida pero nunca se llama). Reintentar de verdad multiplicaría la
+    // latencia máxima de cada request de gateway que agrega varias llamadas
+    // en paralelo (ej. /api/content/home), así que por ahora se deja en un
+    // único intento con timeout, que es lo que evita el hang/504. Reintentos
+    // reales quedan como mejora aparte, con su propio presupuesto de tiempo.
     try {
-      const response = client.send(pattern, data);
+      const response = client.send(pattern, data).pipe(rxTimeout(timeoutMs));
       const result = await firstValueFrom(response);
       return result;
     } catch (error) {
       this.logger.error(
-        `Failed to execute command ${pattern.cmd} after ${retries} retries:`,
+        `Failed to execute command ${pattern.cmd} (timeout ${timeoutMs}ms):`,
         error.message,
       );
       this.logger.error(`Full error details:`, error.stack || error);

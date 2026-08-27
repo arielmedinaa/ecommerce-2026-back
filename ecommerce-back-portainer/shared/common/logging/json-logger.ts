@@ -74,10 +74,10 @@ export class JsonLogger implements LoggerService {
 
     const line = JSON.stringify(record);
     if (level === 'error') {
-      // eslint-disable-next-line no-console
+      
       console.error(line);
     } else {
-      // eslint-disable-next-line no-console
+      
       console.log(line);
     }
   }

@@ -2,22 +2,10 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Redis } from 'ioredis';
 import { REDIS_CLIENT } from '../cache/redis.constants';
 
-/**
- * Caché distribuida respaldada por Redis.
- *
- * Antes esto era un Map en memoria + un archivo JSON en el disco del pod, lo que
- * impedía escalar horizontalmente (cada réplica tenía su propio caché y su propio
- * archivo → datos divergentes). Ahora todas las réplicas comparten el mismo Redis.
- *
- * La API pública (get/set/del/clear/keys/getStats/cleanup/getWithFallback/preload)
- * se mantiene idéntica para no tocar a los consumidores. Los TTL siguen en
- * milisegundos. Si Redis no está disponible, las operaciones degradan a cache-miss
- * (no lanzan), de modo que la request sigue funcionando aunque sin caché.
- */
 @Injectable()
 export class CachePersistenteService {
   private readonly logger = new Logger(CachePersistenteService.name);
-  // Namespace para aislar las claves de este servicio dentro de Redis.
+  
   private readonly prefix = process.env.CACHE_PREFIX || 'cache';
 
   constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {}
@@ -38,7 +26,7 @@ export class CachePersistenteService {
 
   async set<T>(key: string, data: T, ttl = 300000): Promise<void> {
     try {
-      // PX = TTL en milisegundos (compatible con la API previa).
+      
       await this.redis.set(this.k(key), JSON.stringify(data), 'PX', ttl);
     } catch (error) {
       this.logger.debug(`set(${key}) ignorado por error Redis: ${error?.['message']}`);
@@ -53,7 +41,6 @@ export class CachePersistenteService {
     }
   }
 
-  /** Borra todas las claves bajo un prefijo lógico (ej. 'products:'). Usa SCAN para no bloquear Redis. */
   async delByPrefix(prefix: string): Promise<void> {
     try {
       const match = `${this.k(prefix)}*`;
@@ -68,7 +55,6 @@ export class CachePersistenteService {
     }
   }
 
-  /** Borra todas las claves de este namespace. */
   async clear(): Promise<void> {
     await this.delByPrefix('');
   }
@@ -95,7 +81,6 @@ export class CachePersistenteService {
     return { size: keys.length, keys, memoryUsage: 0 };
   }
 
-  /** No-op: Redis expira las claves automáticamente vía TTL. Se mantiene por compatibilidad. */
   async cleanup(): Promise<void> {
     return;
   }

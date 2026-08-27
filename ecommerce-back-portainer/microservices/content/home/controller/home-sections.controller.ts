@@ -37,4 +37,14 @@ export class HomeSectionsController {
       message: saved ? 'SECCION GUARDADA' : 'NO SE PUDO GUARDAR LA SECCION',
     };
   }
+
+  @MessagePattern({ cmd: 'delete_home_section' })
+  async remove(@Payload() payload: { key: string }) {
+    const ok = await this.homeSectionsService.deleteByKey(payload.key);
+    return {
+      data: ok,
+      success: ok,
+      message: ok ? 'SECCION ELIMINADA' : 'NO SE PUDO ELIMINAR LA SECCION',
+    };
+  }
 }

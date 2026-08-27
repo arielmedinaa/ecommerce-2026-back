@@ -3,7 +3,6 @@ import IORedis, { Redis } from 'ioredis';
 import { CachePersistenteService } from '../services/cache-persistente.service';
 import { REDIS_CLIENT } from './redis.constants';
 
-// Re-export para compatibilidad con imports previos `from '.../redis.module'`.
 export { REDIS_CLIENT } from './redis.constants';
 
 function resolveRedisUrl(): string {
@@ -26,6 +25,16 @@ function resolveRedisUrl(): string {
           enableOfflineQueue: false,
           lazyConnect: false,
           retryStrategy: (times) => Math.min(times * 200, 2000),
+          // Sin esto, un comando enviado sobre una conexión que quedó a medio
+          // morir (ej. el pod de Redis reiniciado por el liveness probe justo
+          // mientras había un socket abierto) se queda esperando una respuesta
+          // que nunca llega — y como los callers hacen try/catch pero await,
+          // eso cuelga el handler entero (y termina en 504 en el gateway).
+          // `enableOfflineQueue: false` solo protege el caso "ya sé que está
+          // desconectado"; commandTimeout protege el caso "la conexión está
+          // viva pero no responde".
+          connectTimeout: 3000,
+          commandTimeout: 2000,
         });
         client.on('connect', () => logger.log(`Redis conectado: ${url}`));
         client.on('error', (err) =>

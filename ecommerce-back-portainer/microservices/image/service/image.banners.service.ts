@@ -3,9 +3,11 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
+  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ClientProxy } from '@nestjs/microservices';
 import { Banners } from '../schemas/banners/banners.schema';
 import { BannerValidationService } from './errors/image.spec';
 import { BannerErrorService } from './errors/banner-error.service';
@@ -33,6 +35,7 @@ export class BannerService {
     private readonly bannerValidationService: BannerValidationService,
     private readonly bannerErrorService: BannerErrorService,
     private readonly imageStorage: ImageStorageService,
+    @Inject('MAIL_SERVICE') private readonly mailClient: ClientProxy,
   ) {
     const configured =
       process.env.DIR_IMAGE ||
@@ -42,10 +45,7 @@ export class BannerService {
       String(process.env.IS_DOCKER || '').toLowerCase() === 'true' ||
       String(process.env.RUN_MODE || '').toLowerCase() === 'all';
     const rawHome = os.homedir();
-    // En Docker queremos que "~/" apunte al path montado por volumen (bajo /home/appuser),
-    // así los archivos se reflejan en `ecommerce-2026-back/imagesEcommerce` del host.
     const homeForTilde = isDocker ? dockerHome : rawHome;
-    // Expand "~" to homedir so paths are absolute and work across services/containers
     this.bannersDir =
       configured === '~'
         ? homeForTilde
@@ -106,12 +106,15 @@ export class BannerService {
 
       const bannerId = uuidv4();
       const baseFileName = `${bannerId}_${nombre.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+      const preserveOriginal = true;
       const savedImages = await this.processAndSaveImages(
         file,
         baseFileName,
         bannerId,
         nombre,
         creadoPor,
+        preserveOriginal,
       );
       const bannerData = {
         id: bannerId,
@@ -131,6 +134,8 @@ export class BannerService {
 
       const newEntity = this.bannerRepository.create(bannerData);
       const newBanner = await this.bannerRepository.save(newEntity);
+
+      this.notifyNewPromo(newBanner);
 
       return {
         data: newBanner,
@@ -161,6 +166,9 @@ export class BannerService {
     modificadoPor: string,
     meta?: Record<string, any>,
     contentType?: string,
+    originalKeyMobile?: string,
+    fechaDesde?: string | Date | null,
+    fechaHasta?: string | Date | null,
   ): Promise<{ data: Banners; message: string; success: boolean }> {
     try {
       const existingBanner = await this.bannerRepository.findOne({
@@ -189,9 +197,8 @@ export class BannerService {
         };
       }
 
-      // ----- Video (mp4): NO se procesa con Sharp; se guarda el archivo tal cual.
       const isVideo =
-        /video\//i.test(contentType || '') || /\.mp4$/i.test(originalKey);
+        /^video\//.test(contentType || '') || /\.(mp4|mov|webm)$/i.test(originalKey);
       if (isVideo) {
         return await this.saveVideoBannerFromS3(
           originalKey,
@@ -204,13 +211,20 @@ export class BannerService {
       }
 
       const original = await this.imageStorage.getObjectBuffer(originalKey);
+      const originalMobile = originalKeyMobile
+        ? await this.imageStorage.getObjectBuffer(originalKeyMobile)
+        : undefined;
       const bannerId = uuidv4();
       const baseFileName = `${bannerId}_${nombre.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+      const preserveOriginal = true;
       const savedImages = await this.processAndSaveImagesFromBuffer(
         original.buffer,
         baseFileName,
         bannerId,
         creadoPor,
+        preserveOriginal,
+        originalMobile?.buffer,
       );
 
       const bannerData: Partial<Banners> = {
@@ -225,11 +239,16 @@ export class BannerService {
         modificadoPor,
         dimensiones: savedImages,
         meta: meta || undefined,
+        fechaDesde: fechaDesde ? new Date(fechaDesde) : null,
+        fechaHasta: fechaHasta ? new Date(fechaHasta) : null,
       };
 
       const newEntity = this.bannerRepository.create(bannerData);
       const newBanner = await this.bannerRepository.save(newEntity);
       await this.imageStorage.deleteObject(originalKey);
+      if (originalKeyMobile) await this.imageStorage.deleteObject(originalKeyMobile);
+
+      this.notifyNewPromo(newBanner);
 
       return {
         data: newBanner,
@@ -252,9 +271,6 @@ export class BannerService {
     }
   }
 
-  // Guarda un banner de VIDEO (mp4) sin procesarlo con Sharp: mueve el objeto
-  // original de S3 a la ruta definitiva y apunta las 4 "dimensiones" a esa misma
-  // key, para que GET /image/banner/:nombre/:device sirva el mp4 en cualquier device.
   private async saveVideoBannerFromS3(
     originalKey: string,
     nombre: string,
@@ -309,11 +325,31 @@ export class BannerService {
     const newBanner = await this.bannerRepository.save(newEntity);
     await this.imageStorage.deleteObject(originalKey);
 
+    this.notifyNewPromo(newBanner);
+
     return {
       data: newBanner,
       message: 'BANNER (VIDEO) SUBIDO EXITOSAMENTE',
       success: true,
     };
+  }
+
+  private notifyNewPromo(banner: Banners): void {
+    const gatewayUrl = (process.env.API_GATEWAY_URL || '').replace(/\/+$/, '');
+    const storefrontUrl = (process.env.STOREFRONT_URL || '').replace(/\/+$/, '');
+    this.mailClient
+      .send(
+        { cmd: 'send_promo_notification' },
+        {
+          titulo: banner.nombre,
+          bannerImageUrl: `${gatewayUrl}/image/banner/${encodeURIComponent(banner.nombre)}/desktop`,
+          link: storefrontUrl,
+        },
+      )
+      .subscribe({
+        error: (mailError) =>
+          this.logger.error(`Error enviando notificación de promo para banner ${banner.nombre}:`, mailError),
+      });
   }
 
   private async processAndSaveImages(
@@ -322,9 +358,46 @@ export class BannerService {
     bannerId: string,
     nombre: string,
     creadoPor: string,
+    preserveOriginal = false,
   ): Promise<any> {
     const savedImages = {};
     const tempPath = file.path;
+
+    if (preserveOriginal) {
+      try {
+        const fileName = `${baseFileName}_original.webp`;
+        const key = this.imageStorage.buildKey(fileName);
+        const filePath = path.join(this.bannersDir, fileName);
+        const meta = await sharp(tempPath).metadata();
+        const transformer = sharp(tempPath).webp({ quality: 90 });
+        let url: string | undefined;
+        if (this.imageStorage.isS3()) {
+          const buffer = await transformer.toBuffer();
+          const put = await this.imageStorage.putObject({
+            key,
+            body: buffer,
+            contentType: 'image/webp',
+            cacheControl: 'public, max-age=31536000, immutable',
+          });
+          url = put.url;
+        } else {
+          await transformer.toFile(filePath);
+        }
+        const entry = {
+          fileName,
+          key,
+          filePath: this.imageStorage.isS3() ? null : filePath,
+          width: meta.width || null,
+          height: meta.height || null,
+          url: url || `/image/banner/${baseFileName.split('_')[1]}/desktop`,
+        };
+        if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+        return { desktop: entry, tablet: entry, mobile: entry, small: entry };
+      } catch (error) {
+        if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+        throw error;
+      }
+    }
 
     try {
       for (const [device, dimension] of Object.entries(this.dimensions)) {
@@ -388,13 +461,70 @@ export class BannerService {
     }
   }
 
+  private async saveOriginalWebp(
+    buffer: Buffer,
+    fileName: string,
+  ): Promise<{
+    fileName: string;
+    key: string;
+    filePath: null;
+    width: number | null;
+    height: number | null;
+    url?: string;
+  }> {
+    const key = this.imageStorage.buildKey(fileName);
+    const meta = await sharp(buffer).metadata();
+    const out = await sharp(buffer).webp({ quality: 90 }).toBuffer();
+    const put = await this.imageStorage.putObject({
+      key,
+      body: out,
+      contentType: 'image/webp',
+      cacheControl: 'public, max-age=31536000, immutable',
+    });
+    return {
+      fileName,
+      key,
+      filePath: null,
+      width: meta.width || null,
+      height: meta.height || null,
+      url: put.url,
+    };
+  }
+
   private async processAndSaveImagesFromBuffer(
     buffer: Buffer,
     baseFileName: string,
     bannerId: string,
     creadoPor: string,
+    preserveOriginal = false,
+    bufferMobile?: Buffer,
   ): Promise<any> {
     const savedImages: any = {};
+
+    if (preserveOriginal) {
+      const desktopEntry = await this.saveOriginalWebp(
+        buffer,
+        `${baseFileName}_desktop_original.webp`,
+      );
+      if (bufferMobile) {
+        const mobileEntry = await this.saveOriginalWebp(
+          bufferMobile,
+          `${baseFileName}_mobile_original.webp`,
+        );
+        return {
+          desktop: desktopEntry,
+          tablet: desktopEntry,
+          small: desktopEntry,
+          mobile: mobileEntry,
+        };
+      }
+      return {
+        desktop: desktopEntry,
+        tablet: desktopEntry,
+        mobile: desktopEntry,
+        small: desktopEntry,
+      };
+    }
 
     for (const [device, dimension] of Object.entries(this.dimensions)) {
       const fileName = `${baseFileName}_${device}.webp`;
@@ -502,7 +632,6 @@ export class BannerService {
         return { kind: 'url', value: url, contentType: 'image/webp' };
       }
 
-      // Local filesystem mode
       const files = fs.readdirSync(this.bannersDir);
       const matchingFile = files.find(
         (f) =>
@@ -550,7 +679,7 @@ export class BannerService {
     nombre: string,
     device: string = 'desktop',
   ): Promise<{ buffer: Buffer; contentType: string }> {
-    // Modo local (no S3): resolvemos vía getBannerImage (path en disco).
+    
     if (!this.imageStorage.isS3()) {
       const location = await this.getBannerImage(nombre, device);
       if (location.kind === 'file') {
@@ -572,23 +701,18 @@ export class BannerService {
       }
     }
 
-    // S3 mode: derive key from DB (sin pasar por getBannerImage, que tira
-    // NotFound si `dimensiones` está NULL antes de poder aplicar el fallback).
     const banner = await this.bannerRepository.findOne({
       where: { nombre, estado: 'activo' },
     });
     if (!banner) throw new NotFoundException('Banner no encontrado');
     let key: string | undefined = banner?.dimensiones?.[device]?.key;
 
-    // Fallback: si `dimensiones` no tiene la key del device (p.ej. banners cuyo
-    // JSON quedó NULL), la derivamos desde `ruta` (apunta al *_desktop.webp).
-    // Los 4 archivos por device existen en S3 con el mismo prefijo.
     if (!key && banner?.ruta) {
       const ruta = String(banner.ruta);
       if (/_(?:desktop|tablet|mobile|small)\.[a-z0-9]+$/i.test(ruta)) {
         key = ruta.replace(/_(?:desktop|tablet|mobile|small)(\.[a-z0-9]+)$/i, `_${device}$1`);
       } else {
-        // Video u otros formatos sin sufijo de device: servimos `ruta` tal cual.
+        
         key = ruta;
       }
     }
@@ -598,7 +722,7 @@ export class BannerService {
       const obj = await this.imageStorage.getObjectBuffer(key);
       return { buffer: obj.buffer, contentType: obj.contentType || 'image/webp' };
     } catch {
-      // Si la variante puntual no existe en S3, caemos al desktop como último recurso.
+      
       const fallbackKey = key.replace(/_(?:tablet|mobile|small)(\.[a-z0-9]+)$/i, '_desktop$1');
       if (fallbackKey !== key) {
         const obj = await this.imageStorage.getObjectBuffer(fallbackKey);
@@ -608,24 +732,26 @@ export class BannerService {
     }
   }
 
-  async getAllBanners(fields?: string[]): Promise<{
+  async getAllBanners(fields?: string[], activeOnly = false): Promise<{
     data: Banners[];
     message: string;
     success: boolean;
   }> {
     try {
-      let selectOptions: any = undefined;
+      let query = this.bannerRepository.createQueryBuilder('b').orderBy('b.createdAt', 'DESC');
+
       if (fields && fields.length > 0) {
-        selectOptions = fields.reduce((acc, field) => {
-          acc[field] = true;
-          return acc;
-        }, {} as any);
+        query = query.select(fields.map((field) => `b.${field}`));
       }
 
-      const banners = await this.bannerRepository.find({
-        select: selectOptions,
-        order: { createdAt: 'DESC' },
-      });
+      if (activeOnly) {
+        query = query
+          .andWhere('b.estado = :estado', { estado: 'activo' })
+          .andWhere('(b.fechaDesde IS NULL OR b.fechaDesde <= NOW())')
+          .andWhere('(b.fechaHasta IS NULL OR b.fechaHasta >= NOW())');
+      }
+
+      const banners = await query.getMany();
 
       return {
         data: banners,
@@ -693,6 +819,37 @@ export class BannerService {
     }
   }
 
+  private async deleteStoredFilesForBanner(
+    banner: Banners,
+    bannerId: string,
+  ): Promise<void> {
+    const targets = new Set<string>();
+    for (const entry of Object.values(banner.dimensiones || {})) {
+      const target = this.imageStorage.isS3()
+        ? (entry as any)?.key
+        : (entry as any)?.filePath;
+      if (target) targets.add(target);
+    }
+
+    for (const target of targets) {
+      try {
+        if (this.imageStorage.isS3()) {
+          await this.imageStorage.deleteObject(target);
+        } else if (fs.existsSync(target)) {
+          fs.unlinkSync(target);
+        }
+      } catch (deleteError) {
+        await this.bannerErrorService.logFileProcessingError(
+          bannerId,
+          target,
+          'unknown',
+          deleteError,
+          'deleteStoredFilesForBanner',
+        );
+      }
+    }
+  }
+
   async deleteBanner(
     id: string,
   ): Promise<{ data: null; message: string; success: boolean }> {
@@ -706,7 +863,6 @@ export class BannerService {
       }
       const banner = await this.bannerRepository.findOne({ where: { id } });
       if (!banner) {
-        const error = new NotFoundException('Banner no encontrado');
         await this.bannerErrorService.logValidationError(
           id,
           'deleteBanner',
@@ -720,31 +876,7 @@ export class BannerService {
         };
       }
 
-      const baseFileName = `${banner.id}_${banner.nombre.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      for (const device of Object.keys(this.dimensions)) {
-        const fileName = `${baseFileName}_${device}.webp`;
-        const key = this.imageStorage.buildKey(fileName);
-
-        if (this.imageStorage.isS3()) {
-          await this.imageStorage.deleteObject(key);
-          continue;
-        }
-
-        const filePath = path.join(this.bannersDir, fileName);
-        if (fs.existsSync(filePath)) {
-          try {
-            fs.unlinkSync(filePath);
-          } catch (deleteError) {
-            await this.bannerErrorService.logFileProcessingError(
-              id,
-              fileName,
-              device,
-              deleteError,
-              'deleteBanner',
-            );
-          }
-        }
-      }
+      await this.deleteStoredFilesForBanner(banner, id);
 
       await this.bannerRepository.delete(id);
       return {
@@ -831,6 +963,53 @@ export class BannerService {
       return {
         data: null as any,
         message: `Error al cambiar el estado del banner: ${error}`,
+        success: false,
+      };
+    }
+  }
+
+  async updateBanner(
+    id: string,
+    updateData: {
+      nombre?: string;
+      variante?: string;
+      fechaDesde?: string | Date | null;
+      fechaHasta?: string | Date | null;
+      meta?: Record<string, any>;
+      modificadoPor?: string;
+    },
+  ): Promise<{ data: Banners | null; message: string; success: boolean }> {
+    try {
+      const banner = await this.bannerRepository.findOne({ where: { id } });
+      if (!banner) {
+        return { data: null, message: 'Banner no encontrado', success: false };
+      }
+
+      const patch: Partial<Banners> = {};
+      if (updateData.nombre !== undefined) patch.nombre = updateData.nombre;
+      if (updateData.variante !== undefined) patch.variante = updateData.variante;
+      if (updateData.meta !== undefined) patch.meta = updateData.meta;
+      if (updateData.modificadoPor !== undefined) patch.modificadoPor = updateData.modificadoPor;
+      if (updateData.fechaDesde !== undefined) {
+        patch.fechaDesde = updateData.fechaDesde ? new Date(updateData.fechaDesde) : null;
+      }
+      if (updateData.fechaHasta !== undefined) {
+        patch.fechaHasta = updateData.fechaHasta ? new Date(updateData.fechaHasta) : null;
+      }
+
+      await this.bannerRepository.update(id, patch);
+      const updatedBanner = await this.bannerRepository.findOne({ where: { id } });
+
+      return {
+        data: updatedBanner,
+        message: 'Banner actualizado exitosamente',
+        success: true,
+      };
+    } catch (error) {
+      await this.bannerErrorService.logMicroserviceError(error, id, 'updateBanner');
+      return {
+        data: null,
+        message: `Error al actualizar el banner: ${error}`,
         success: false,
       };
     }

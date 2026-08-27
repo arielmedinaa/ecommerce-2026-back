@@ -31,6 +31,10 @@ spec:
           value: "content_db"
         - name: DATABASE_NAME_REPLIC
           value: "content_db"
+        # Carritos ("Crear Análisis") vive en el schema del microservicio
+        # cart, mismo server MariaDB (mismo host/usuario que DATABASE_HOST).
+        - name: CART_DB_DATABASE
+          value: "cart_db"
 ---
 apiVersion: v1
 kind: Service

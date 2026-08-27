@@ -24,7 +24,7 @@ export class HttpLoggingInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       catchError((err) => {
-        // Keep error logging light; BaseHttpException/SneakyThrows will format the response.
+        
         this.logger.error(
           { method, url, statusCode: err?.status || err?.statusCode || 500 },
           err?.stack,

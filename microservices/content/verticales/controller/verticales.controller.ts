@@ -35,5 +35,17 @@ export class VerticalController {
         return this.verticalesService.remove(Number(id));
     }
 
+    @MessagePattern({ cmd: 'upload_vertical_logo' })
+    async uploadVerticalLogo(@Payload() payload: any) {
+        const { id, file } = payload;
+        return this.verticalesService.uploadLogo(Number(id), file);
+    }
+
+    @MessagePattern({ cmd: 'get_vertical_logo_file' })
+    async getVerticalLogoFile(@Payload() payload: any) {
+        const { nombreSanitizado, fileName } = payload;
+        return this.verticalesService.getLogoFile(nombreSanitizado, fileName);
+    }
+
 }
 

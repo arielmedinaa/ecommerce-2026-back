@@ -6,14 +6,13 @@ import { In, Repository } from 'typeorm';
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
-  // Códigos de verificación de email en memoria (dev). Para prod, mover a Redis/DB.
+  
   private emailCodes = new Map<string, { code: string; exp: number }>();
 
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
   ) {}
 
-  // Busca un usuario por email (excluyendo opcionalmente un id, p.ej. el invitado actual).
   async findUserByEmail(email: string, excludeUserId?: number) {
     const e = String(email || '').trim();
     if (!e) return { exists: false };
@@ -22,13 +21,12 @@ export class UserService {
     return { exists: true, userId: u.id, nombre: u.nombre };
   }
 
-  // Genera y "envía" (simulado) un código de verificación de 6 dígitos al email.
   async sendEmailCode(email: string) {
     const e = String(email || '').trim().toLowerCase();
     if (!e) return { success: false, message: 'EMAIL REQUERIDO' };
     const code = String(Math.floor(100000 + Math.random() * 900000));
     this.emailCodes.set(e, { code, exp: Date.now() + 10 * 60 * 1000 });
-    // TODO: integrar proveedor real (SES/SMTP). Por ahora se registra/devuelve en dev.
+    
     this.logger.log(`[email-code] (simulado) -> ${e}: ${code}`);
     return {
       success: true,
@@ -126,7 +124,6 @@ export class UserService {
   }> {
     const page = Math.max(1, Number(params.page) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(params.pageSize) || 20));
-    const search = String(params.search ?? '').trim();
     const sort = ['fechaCreacion', 'nombre', 'email', 'ultimoInicioSesion'].includes(params.sort)
       ? params.sort
       : 'fechaCreacion';
@@ -153,8 +150,6 @@ export class UserService {
     };
   }
 
-  // Aplica los filtros de clientes a un QueryBuilder. Devuelve null si un filtro
-  // de ids (whitelist) quedó vacío (sin coincidencias posibles).
   private construirQueryClientes(params: any = {}): any | null {
     const qb = this.userRepository
       .createQueryBuilder('u')
@@ -191,8 +186,6 @@ export class UserService {
     return qb;
   }
 
-  // Devuelve TODOS los ids de clientes que cumplen los filtros (sin paginar),
-  // para "seleccionar todos" a través de páginas.
   async listClienteIds(params: any = {}): Promise<{ data: number[]; total: number; success: boolean; message: string }> {
     const qb = this.construirQueryClientes(params);
     if (!qb) return { data: [], total: 0, success: true, message: 'SIN COINCIDENCIAS' };
@@ -256,9 +249,23 @@ export class UserService {
     };
   }
 
-  // Envío masivo de mensajes (SIMULADO): no hay proveedor SMS/WhatsApp conectado.
-  // Resuelve teléfonos de los usuarios, "envía" a los que tienen y reporta el resumen.
-  // Dejar este punto listo para enchufar un proveedor real más adelante.
+  async getUsuariosPorRol(): Promise<{
+    data: { total: number; cantidad: number; filas: Array<{ perfil: string; total: number }> };
+    success: boolean;
+    message: string;
+  }> {
+    try {
+      const rows = await this.userRepository.query(
+        `SELECT perfil, COUNT(*) AS total FROM usuarios GROUP BY perfil ORDER BY total DESC`,
+      );
+      const filas = (rows || []).map((r: any) => ({ perfil: r.perfil, total: Number(r.total) }));
+      const total = filas.reduce((acc: number, f: any) => acc + f.total, 0);
+      return { data: { total, cantidad: filas.length, filas }, success: true, message: 'Usuarios por rol obtenidos' };
+    } catch (error) {
+      return { data: { total: 0, cantidad: 0, filas: [] }, success: false, message: 'ERROR AL OBTENER USUARIOS POR ROL' };
+    }
+  }
+
   async enviarMensajeMasivo(payload: {
     userIds: (number | string)[];
     mensaje: string;
@@ -276,7 +283,7 @@ export class UserService {
     for (const u of usuarios) {
       const tel = String(u.numeroCelular ?? '').trim();
       if (tel) {
-        // TODO: integrar proveedor real (Twilio/WhatsApp). Por ahora se registra como enviado.
+        
         this.logger.log(`[mensaje-masivo] (simulado) a ${tel} (user ${u.id})`);
         enviados.push({ id: u.id, telefono: tel });
       } else {
@@ -288,6 +295,229 @@ export class UserService {
       message: `Enviados ${enviados.length}, sin teléfono ${sinTelefono.length}`,
       data: { enviados, sinTelefono, bannerUrl: payload?.bannerUrl || null },
     };
+  }
+
+  async getProfile(userId: number): Promise<{ data: any; success: boolean; message: string }> {
+    const id = Number(userId);
+    if (!Number.isFinite(id)) return { data: null, success: false, message: 'USUARIO INVÁLIDO' };
+    const u = await this.userRepository.findOne({ where: { id } });
+    if (!u) return { data: null, success: false, message: 'USUARIO NO ENCONTRADO' };
+    let datosLaborales: any = null;
+    if (u.datosLaborales != null) {
+      datosLaborales =
+        typeof u.datosLaborales === 'string'
+          ? this.safeParse(u.datosLaborales)
+          : u.datosLaborales;
+    }
+    return {
+      data: {
+        nombre: u.nombre || '',
+        email: u.email || '',
+        numeroCelular: u.numeroCelular || '',
+        numeroDocumento: u.numeroDocumento || '',
+        parentescos: u.parentescos || '',
+        datosLaborales,
+      },
+      success: true,
+      message: 'PERFIL DEL USUARIO',
+    };
+  }
+
+  async findByNumeroDocumento(numeroDocumento: string): Promise<{
+    nombre: string;
+    email: string;
+    numeroCelular: string;
+    numeroDocumento: string;
+    parentescos: string;
+    datosLaborales: any;
+  } | null> {
+    const doc = String(numeroDocumento ?? '').trim().split('-')[0].replace(/\D/g, '');
+    if (!doc) return null;
+    const u = await this.userRepository
+      .createQueryBuilder('u')
+      .where(
+        "u.numeroDocumento = :doc OR SUBSTRING_INDEX(u.numeroDocumento, '-', 1) = :doc",
+        { doc },
+      )
+      .orderBy('(u.datosLaborales IS NULL)', 'ASC')
+      .addOrderBy('u.id', 'DESC')
+      .getOne()
+      .catch(() => null);
+    if (!u) return null;
+    let datosLaborales: any = null;
+    if (u.datosLaborales != null) {
+      datosLaborales =
+        typeof u.datosLaborales === 'string'
+          ? this.safeParse(u.datosLaborales)
+          : u.datosLaborales;
+    }
+    return {
+      nombre: u.nombre || '',
+      email: u.email || '',
+      numeroCelular: u.numeroCelular || '',
+      numeroDocumento: u.numeroDocumento || '',
+      parentescos: u.parentescos || '',
+      datosLaborales,
+    };
+  }
+
+  private safeParse(s: string): any {
+    try {
+      return JSON.parse(s);
+    } catch {
+      return null;
+    }
+  }
+
+  async updateProfile(
+    userId: number,
+    patch: { nombre?: string; numeroCelular?: string; numeroDocumento?: string; email?: string; parentescos?: string; datosLaborales?: any },
+  ): Promise<{ data: any; success: boolean; message: string }> {
+    const id = Number(userId);
+    if (!Number.isFinite(id)) return { data: null, success: false, message: 'USUARIO INVÁLIDO' };
+    const updates: any = {};
+    if (patch?.nombre != null) updates.nombre = String(patch.nombre).trim();
+    if (patch?.numeroCelular != null) updates.numeroCelular = String(patch.numeroCelular).trim();
+    if (patch?.numeroDocumento != null) updates.numeroDocumento = String(patch.numeroDocumento).trim();
+    if (patch?.email != null) {
+      const email = String(patch.email).trim().toLowerCase();
+      if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) updates.email = email;
+    }
+    
+    if (patch?.parentescos != null) {
+      const refs =
+        typeof patch.parentescos === 'string' ? this.safeParse(patch.parentescos) : patch.parentescos;
+      // Igual que datosLaborales: un array vacío o de referencias en blanco
+      // no debe pisar los parentescos previamente guardados con datos reales.
+      if (
+        Array.isArray(refs) &&
+        refs.some(
+          (r) =>
+            r &&
+            typeof r === 'object' &&
+            Object.values(r).some((v) => v != null && String(v).trim() !== '' && String(v).trim() !== '0'),
+        )
+      ) {
+        updates.parentescos = JSON.stringify(refs);
+      }
+    }
+
+    if (patch?.datosLaborales != null) {
+      const lab =
+        typeof patch.datosLaborales === 'string'
+          ? this.safeParse(patch.datosLaborales)
+          : patch.datosLaborales;
+      // "0"/0 son valores default (sin dato real, p. ej. ciudad/salario sin
+      // completar) y no deben contar como "tiene contenido" — de lo
+      // contrario un objeto casi vacío (con solo esos defaults) pasa el
+      // chequeo y pisa un datosLaborales previamente guardado con datos
+      // reales.
+      if (
+        lab &&
+        typeof lab === 'object' &&
+        Object.values(lab).some((v) => v != null && String(v).trim() !== '' && String(v).trim() !== '0')
+      ) {
+        updates.datosLaborales = lab;
+      }
+    }
+    if (Object.keys(updates).length === 0) return { data: null, success: false, message: 'NADA QUE ACTUALIZAR' };
+    await this.userRepository.update(id, updates);
+    return { data: updates, success: true, message: 'PERFIL ACTUALIZADO' };
+  }
+
+  private genDireccionId(): string {
+    return `dir_${Date.now().toString(36)}_${Math.floor(Math.random() * 1e6).toString(36)}`;
+  }
+
+  private normalizarDireccion(input: any = {}): any {
+    const ubic = input.ubicacion || {};
+    return {
+      etiqueta: String(input.etiqueta ?? '').trim() || 'Mi dirección',
+      callePrincipal: String(input.callePrincipal ?? '').trim(),
+      calleSecundaria: String(input.calleSecundaria ?? '').trim(),
+      numerocasa: String(input.numerocasa ?? '').trim(),
+      ciudad: String(input.ciudad ?? '').trim(),
+      ciudadId: input.ciudadId != null ? Number(input.ciudadId) : null,
+      barrio: String(input.barrio ?? '').trim(),
+      referencia: String(input.referencia ?? '').trim(),
+      ubicacion: {
+        lat: ubic.lat != null ? Number(ubic.lat) : null,
+        lng: ubic.lng != null ? Number(ubic.lng) : null,
+      },
+      predeterminada: !!input.predeterminada,
+    };
+  }
+
+  async getUserAddresses(userId: number): Promise<{ data: any[]; success: boolean; message: string }> {
+    const id = Number(userId);
+    if (!Number.isFinite(id)) return { data: [], success: false, message: 'USUARIO INVÁLIDO' };
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) return { data: [], success: false, message: 'USUARIO NO ENCONTRADO' };
+    return { data: Array.isArray(user.direcciones) ? user.direcciones : [], success: true, message: 'DIRECCIONES DEL USUARIO' };
+  }
+
+  async addUserAddress(userId: number, address: any): Promise<{ data: any[]; nueva?: any; success: boolean; message: string }> {
+    const id = Number(userId);
+    if (!Number.isFinite(id)) return { data: [], success: false, message: 'USUARIO INVÁLIDO' };
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) return { data: [], success: false, message: 'USUARIO NO ENCONTRADO' };
+
+    const lista = Array.isArray(user.direcciones) ? [...user.direcciones] : [];
+    const norm = this.normalizarDireccion(address);
+
+    const claveDir = (d: any) =>
+      [d.callePrincipal, d.calleSecundaria, d.numerocasa, d.ciudadId ?? '', d.barrio]
+        .map((v) => String(v ?? '').trim().toLowerCase())
+        .join('|');
+    const yaExiste = lista.find((d) => claveDir(d) === claveDir(norm));
+    if (yaExiste) {
+      return { data: lista, nueva: yaExiste, success: true, message: 'DIRECCIÓN YA EXISTENTE' };
+    }
+    const nueva = { id: this.genDireccionId(), ...norm };
+    
+    if (nueva.predeterminada || lista.length === 0) {
+      lista.forEach((d) => (d.predeterminada = false));
+      nueva.predeterminada = true;
+    }
+    lista.push(nueva);
+    await this.userRepository.update(id, { direcciones: lista });
+    return { data: lista, nueva, success: true, message: 'DIRECCIÓN GUARDADA' };
+  }
+
+  async updateUserAddress(userId: number, addressId: string, patch: any): Promise<{ data: any[]; success: boolean; message: string }> {
+    const id = Number(userId);
+    if (!Number.isFinite(id)) return { data: [], success: false, message: 'USUARIO INVÁLIDO' };
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) return { data: [], success: false, message: 'USUARIO NO ENCONTRADO' };
+
+    const lista = Array.isArray(user.direcciones) ? [...user.direcciones] : [];
+    const idx = lista.findIndex((d) => d.id === addressId);
+    if (idx === -1) return { data: lista, success: false, message: 'DIRECCIÓN NO ENCONTRADA' };
+
+    const actualizada = { ...lista[idx], ...this.normalizarDireccion({ ...lista[idx], ...patch }), id: addressId };
+    lista[idx] = actualizada;
+    if (actualizada.predeterminada) {
+      lista.forEach((d, i) => { if (i !== idx) d.predeterminada = false; });
+    }
+    await this.userRepository.update(id, { direcciones: lista });
+    return { data: lista, success: true, message: 'DIRECCIÓN ACTUALIZADA' };
+  }
+
+  async deleteUserAddress(userId: number, addressId: string): Promise<{ data: any[]; success: boolean; message: string }> {
+    const id = Number(userId);
+    if (!Number.isFinite(id)) return { data: [], success: false, message: 'USUARIO INVÁLIDO' };
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) return { data: [], success: false, message: 'USUARIO NO ENCONTRADO' };
+
+    let lista = Array.isArray(user.direcciones) ? [...user.direcciones] : [];
+    const tenia = lista.some((d) => d.id === addressId);
+    lista = lista.filter((d) => d.id !== addressId);
+    
+    if (tenia && lista.length > 0 && !lista.some((d) => d.predeterminada)) {
+      lista[0].predeterminada = true;
+    }
+    await this.userRepository.update(id, { direcciones: lista });
+    return { data: lista, success: true, message: tenia ? 'DIRECCIÓN ELIMINADA' : 'NO EXISTÍA LA DIRECCIÓN' };
   }
 
   async updateUsers(filters: any, updates: any): Promise<{

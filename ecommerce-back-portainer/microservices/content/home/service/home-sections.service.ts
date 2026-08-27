@@ -26,6 +26,15 @@ export class HomeSectionsService {
     }
   }
 
+  async getByKey(key: string): Promise<HomeSection | null> {
+    try {
+      return await this.homeSectionRepoRead.findOne({ where: { key } });
+    } catch (error) {
+      this.logger.error(`Error al obtener home section ${key}`, error);
+      return null;
+    }
+  }
+
   async listAll(): Promise<HomeSection[]> {
     try {
       return await this.homeSectionRepoRead.find({
@@ -63,6 +72,16 @@ export class HomeSectionsService {
     } catch (error) {
       this.logger.error('Error al upsert home section', error);
       return null;
+    }
+  }
+
+  async deleteByKey(key: string): Promise<boolean> {
+    try {
+      const result = await this.homeSectionRepoWrite.delete({ key });
+      return !!result.affected && result.affected > 0;
+    } catch (error) {
+      this.logger.error('Error al eliminar home section', error);
+      return false;
     }
   }
 }

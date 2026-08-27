@@ -1,185 +1,263 @@
-# deploy/docker-compose.yml
-version: '3.8'
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  env_file:
+    - .env
+  environment: &service-env
+    IS_DOCKER: "true"
+    RUN_MODE: "all"
+    LOG_FORMAT: "json"
+    AUTH_SERVICE_URL: auth-service
+    CART_SERVICE_URL: cart-service
+    CONTENT_SERVICE_URL: content-service
+    PAYMENTS_SERVICE_URL: payments-service
+    PRODUCTS_SERVICE_URL: products-service
+    IMAGE_SERVICE_URL: image-service
+    MAIL_SERVICE_URL: mail-service
+    ETL_SERVICE_URL: etl-service
+    AUTH_PORT: "3101"
+    CART_PORT: "3102"
+    CONTENT_PORT: "3103"
+    PAYMENTS_PORT: "3105"
+    PRODUCTS_PORT: "3106"
+    IMAGE_PORT: "3107"
+    MAIL_PORT: "3108"
+    ETL_PORT: "3109"
+  networks:
+    - ecommerce-net
+  depends_on:
+    mariadb:
+      condition: service_healthy
+    redis:
+      condition: service_started
+    nats:
+      condition: service_started
 
 services:
-
-  # Balanceador de Carga (Nginx)
-  nginx-lb:
-    image: nginx:latest
+  mariadb:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-ecommerce_root}
+      MARIADB_USER: ${DATABASE_USER:-ecommerce}
+      MARIADB_PASSWORD: ${DATABASE_PASSWORD:-ecommerce}
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - mariadb-data:/var/lib/mysql
+      - ./mariadb-init:/docker-entrypoint-initdb.d:ro
+      - ./mariadb-read-only.cnf:/etc/mysql/mariadb.conf.d/60-read-only.cnf:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - ecommerce-net
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    networks:
+      - ecommerce-net
+
+  nats:
+    image: nats:2.10-alpine
+    restart: unless-stopped
+    command: ["-c", "/etc/nats/nats-server.conf", "-js"]
+    volumes:
+      - ./nats-server.conf:/etc/nats/nats-server.conf:ro
+    networks:
+      - ecommerce-net
+
+  localstack:
+    image: localstack/localstack:3.5
+    restart: unless-stopped
+    environment:
+      SERVICES: s3,sqs
+      DEBUG: ${LOCALSTACK_DEBUG:-0}
+      PERSISTENCE: "1"
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
     ports:
-      - "3100:80"
-    depends_on:
-      - api-gateway
+      - "4566:4566"
+    volumes:
+      - localstack-data:/var/lib/localstack
     networks:
-      - app-network
-  # API Gateway
+      - ecommerce-net
+
   api-gateway:
-    build: 
+    <<: *service-defaults
+    image: localhost/ecommerce-api-gateway:latest
+    build:
       context: ..
-      dockerfile: deploy/Dockerfile.dev
-    # ports:
-    #   - "3100:3100"
+      dockerfile: deploy/docker/Dockerfile.prod
+      args:
+        SERVICE_MAIN: dist/microservices/main.js
     environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - PORT=3100
-      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:5173}
-      - IS_DOCKER=true
-      # Service ports
-      - AUTH_PORT=3101
-      - CART_PORT=3102
-      - CONTENT_PORT=3103
-      - ORDERS_PORT=3104
-      - PAYMENTS_PORT=3105
-      - PRODUCTS_PORT=3106
-      - IMAGE_PORT=3107
-    volumes:
-      - ../:/usr/src/app
-      - /usr/src/app/node_modules
-      - ../imagesEcommerce:/home/appuser/Documents/projects/newEcommerce2026/imagesEcommerce
-    command: yarn start:dev:gateway
+      <<: *service-env
+      PORT: "3100"
+      GATEWAY_PORT: "3100"
+    ports:
+      - "3100:3100"
     depends_on:
-      - auth
-      - products
-      - cart
-      - content
-      - orders
-      - payments
-      - image
-    networks:
-      - app-network
+      - auth-service
+      - cart-service
+      - content-service
+      - payments-service
+      - products-service
+      - image-service
+      - mail-service
+      - etl-service
 
-  # Auth Service
-  auth:
-    build: 
+  auth-service:
+    <<: *service-defaults
+    image: localhost/ecommerce-auth-service:latest
+    build:
       context: ..
-      dockerfile: deploy/Dockerfile.dev
-    env_file:
-      - ../.env
+      dockerfile: deploy/docker/Dockerfile.prod
+      args:
+        SERVICE_MAIN: dist/microservices/auth/main.js
     environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - PORT=3101
-      - AUTH_PORT=3101
-      - IS_DOCKER=true
-    # ports:
-    #   - "3101:3101"
-    volumes:
-      - ../:/usr/src/app
-      - /usr/src/app/node_modules
-    command: yarn start:dev:auth
-    networks:
-      - app-network
+      <<: *service-env
+      PORT: "3101"
+      SERVICE_NAME: AUTH_SERVICE
 
-  # Products Service
-  products:
-    build: 
+  cart-service:
+    <<: *service-defaults
+    image: localhost/ecommerce-cart-service:latest
+    build:
       context: ..
-      dockerfile: deploy/Dockerfile.dev
-    env_file:
-      - ../.env
+      dockerfile: deploy/docker/Dockerfile.prod
+      args:
+        SERVICE_MAIN: dist/microservices/cart/main.js
     environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - PORT=3106
-      - PRODUCTS_PORT=3106
-      #- MONGO_URL=${MONGO_URL}
-      - IS_DOCKER=true
-    # ports:
-    #   - "3106:3106"
-    volumes:
-      - ../:/usr/src/app
-      - /usr/src/app/node_modules
-    command: yarn start:dev:products
-    networks:
-      - app-network
+      <<: *service-env
+      PORT: "3102"
+      SERVICE_NAME: CART_SERVICE
 
-  # Cart Service
-  cart:
-    build: 
+  content-service:
+    <<: *service-defaults
+    image: localhost/ecommerce-content-service:latest
+    build:
       context: ..
-      dockerfile: deploy/Dockerfile.dev
+      dockerfile: deploy/docker/Dockerfile.prod
+      args:
+        SERVICE_MAIN: dist/microservices/content/main.js
     environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - PORT=3102
-      - CART_PORT=3102
-      #- MONGO_URL=${MONGO_URL}
-      - IS_DOCKER=true
-    # ports:
-    #   - "3102:3102"
-    volumes:
-      - ../:/usr/src/app
-      - /usr/src/app/node_modules
-    command: yarn start:dev:cart
-    networks:
-      - app-network
-  
-  # Content Service
-  content:
-    build: 
-      context: ..
-      dockerfile: deploy/Dockerfile.dev
-    environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - PORT=3103
-      - CONTENT_PORT=3103
-      - AUTH_SERVICE_PORT=3101
-      - CART_SERVICE_PORT=3102
-      - ORDERS_SERVICE_PORT=3104
-      - PAYMENTS_SERVICE_PORT=3105
-      - PRODUCTS_SERVICE_PORT=3106
-      - IMAGE_SERVICE_PORT=3107
-      #- MONGO_URL=${MONGO_URL}
-      - IS_DOCKER=true
-    # ports:
-    #   - "3103:3103"
-    volumes:
-      - ../:/usr/src/app
-      - /usr/src/app/node_modules
-    command: yarn start:dev:content
-    networks:
-      - app-network
+      <<: *service-env
+      PORT: "3103"
+      SERVICE_NAME: CONTENT_SERVICE
 
-  # Payments Service
-  payments:
-    build: 
+  payments-service:
+    <<: *service-defaults
+    image: localhost/ecommerce-payments-service:latest
+    build:
       context: ..
-      dockerfile: deploy/Dockerfile.dev
+      dockerfile: deploy/docker/Dockerfile.prod
+      args:
+        SERVICE_MAIN: dist/microservices/payments/main.js
     environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - PORT=3105
-      - PAYMENTS_PORT=3105
-      #- MONGO_URL=${MONGO_URL}
-      - IS_DOCKER=true
-    # ports:
-    #   - "3105:3105"
-    volumes:
-      - ../:/usr/src/app
-      - /usr/src/app/node_modules
-    command: yarn start:dev:payments
-    networks:
-      - app-network
+      <<: *service-env
+      PORT: "3105"
+      SERVICE_NAME: PAYMENTS_SERVICE
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      nats:
+        condition: service_started
+      localstack:
+        condition: service_started
 
-  # Image Service
-  image:
-    build: 
+  products-service:
+    <<: *service-defaults
+    image: localhost/ecommerce-products-service:latest
+    build:
       context: ..
-      dockerfile: deploy/Dockerfile.dev
+      dockerfile: deploy/docker/Dockerfile.prod
+      args:
+        SERVICE_MAIN: dist/microservices/products/main.js
     environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - PORT=4093
-      - IMAGE_PORT=3107
-      #- MONGO_URL=${MONGO_URL}
-      - IS_DOCKER=true
-    # ports:
-    #   - "3107:3107"
-    volumes:
-      - ../:/usr/src/app
-      - /usr/src/app/node_modules
-      - ../imagesEcommerce:/home/appuser/Documents/projects/newEcommerce2026/imagesEcommerce
-    command: yarn start:dev:image
-    networks:
-      - app-network
+      <<: *service-env
+      PORT: "3106"
+      SERVICE_NAME: PRODUCTS_SERVICE
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      nats:
+        condition: service_started
+      localstack:
+        condition: service_started
+
+  image-service:
+    <<: *service-defaults
+    image: localhost/ecommerce-image-service:latest
+    build:
+      context: ..
+      dockerfile: deploy/docker/Dockerfile.prod
+      args:
+        SERVICE_MAIN: dist/microservices/image/main.js
+    environment:
+      <<: *service-env
+      PORT: "3107"
+      SERVICE_NAME: IMAGE_SERVICE
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      nats:
+        condition: service_started
+      localstack:
+        condition: service_started
+
+  mail-service:
+    <<: *service-defaults
+    image: localhost/ecommerce-mail-service:latest
+    build:
+      context: ..
+      dockerfile: deploy/docker/Dockerfile.prod
+      args:
+        SERVICE_MAIN: dist/microservices/mail/main.js
+    environment:
+      <<: *service-env
+      PORT: "3108"
+      SERVICE_NAME: MAIL_SERVICE
+
+  etl-service:
+    <<: *service-defaults
+    image: localhost/ecommerce-etl-service:latest
+    build:
+      context: ..
+      dockerfile: deploy/docker/Dockerfile.prod
+      args:
+        SERVICE_MAIN: dist/microservices/etl/main.js
+    environment:
+      <<: *service-env
+      PORT: "3109"
+      SERVICE_NAME: ETL_SERVICE
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      nats:
+        condition: service_started
+      localstack:
+        condition: service_started
+      products-service:
+        condition: service_started
+
 networks:
-  app-network:
+  ecommerce-net:
     driver: bridge
-    attachable: true
+
+volumes:
+  mariadb-data:
+  redis-data:
+  localstack-data:

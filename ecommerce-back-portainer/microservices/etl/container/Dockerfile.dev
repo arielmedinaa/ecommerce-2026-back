@@ -1,0 +1,42 @@
+# ---- deps: instala dependencias (incluye sharp/libvips y curl, ambos
+# necesarios para el agente: procesar imágenes de producto y probar la IP
+# pública contra la API del proveedor) ----
+FROM node:20-alpine AS deps
+WORKDIR /usr/src/app
+
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    libc6-compat \
+    vips-dev \
+    curl
+
+COPY microservices/etl/package*.json ./
+COPY yarn.lock ./
+COPY tsconfig.json ./
+COPY tsconfig.paths.json ./
+
+RUN yarn install --network-timeout 600000
+
+# ---- runtime ----
+FROM node:20-alpine
+WORKDIR /usr/src/app
+
+RUN apk add --no-cache libc6-compat vips curl
+
+RUN npm install -g nodemon ts-node tsconfig-paths
+
+COPY --from=deps /usr/src/app/node_modules ./node_modules
+COPY microservices/etl/package*.json ./
+COPY yarn.lock ./
+COPY tsconfig.json ./
+COPY tsconfig.paths.json ./
+
+COPY microservices/etl/ ./microservices/etl/
+COPY microservices/products/ ./microservices/products/
+COPY shared/ ./shared/
+
+EXPOSE 3109
+
+CMD ["yarn", "start:dev:etl"]

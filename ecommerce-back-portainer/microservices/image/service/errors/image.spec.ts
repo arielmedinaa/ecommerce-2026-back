@@ -15,7 +15,7 @@ export class BannerValidationService {
     modificadoPor: string,
     bannerId?: string,
   ): Promise<{ isValid: boolean; error?: any }> {
-    // Validar archivo
+    
     if (!file) {
       const error = new Error('No se proporcionó ninguna imagen');
       await this.bannerErrorService.logValidationError(
@@ -36,8 +36,7 @@ export class BannerValidationService {
       };
     }
 
-    // Validar tipo de archivo
-    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    const allowedMimes = ['image/webp', 'video/mp4'];
     if (!allowedMimes.includes(file.mimetype)) {
       const error = new Error('Tipo de archivo no válido');
       await this.bannerErrorService.logValidationError(
@@ -52,14 +51,13 @@ export class BannerValidationService {
         isValid: false,
         error: {
           success: false,
-          message: 'Solo se permiten archivos de imagen (jpeg, png, webp, gif)',
+          message: 'Solo se permiten imágenes .webp',
           data: [],
         },
       };
     }
 
-    // Validar tamaño del archivo
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 10 * 1024 * 1024; 
     if (file.size > maxSize) {
       const error = new Error('Archivo demasiado grande');
       await this.bannerErrorService.logValidationError(
@@ -80,7 +78,6 @@ export class BannerValidationService {
       };
     }
 
-    // Validar nombre
     if (!nombre || nombre.trim() === '') {
       const error = new Error('Nombre del banner es requerido');
       await this.bannerErrorService.logValidationError(
@@ -101,7 +98,6 @@ export class BannerValidationService {
       };
     }
 
-    // Validar variante
     if (!variante || variante.trim() === '') {
       const error = new Error('Variante del banner es requerida');
       await this.bannerErrorService.logValidationError(
@@ -122,7 +118,6 @@ export class BannerValidationService {
       };
     }
 
-    // Validar usuarios
     if (!creadoPor || creadoPor.trim() === '') {
       const error = new Error('Usuario creador es requerido');
       await this.bannerErrorService.logValidationError(
@@ -186,7 +181,6 @@ export class BannerValidationService {
       };
     }
 
-    // Validar formato de UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(id)) {
       const error = new Error('ID de banner no tiene formato válido');
@@ -216,13 +210,12 @@ export class BannerValidationService {
     operation: string = 'validateBannerUpdate',
     userId?: string,
   ): Promise<{ isValid: boolean; error?: any }> {
-    // Primero validar el ID
+    
     const idValidation = await this.validateBannerId(id, operation);
     if (!idValidation.isValid) {
       return idValidation;
     }
 
-    // Validar que haya datos para actualizar
     if (!updateData || Object.keys(updateData).length === 0) {
       const error = new Error('No se proporcionaron datos para actualizar');
       await this.bannerErrorService.logValidationError(
@@ -243,7 +236,6 @@ export class BannerValidationService {
       };
     }
 
-    // Validar nombre si se proporciona
     if (updateData.nombre !== undefined) {
       if (!updateData.nombre || updateData.nombre.trim() === '') {
         const error = new Error('El nombre no puede estar vacío');
@@ -266,7 +258,6 @@ export class BannerValidationService {
       }
     }
 
-    // Validar variante si se proporciona
     if (updateData.variante !== undefined) {
       if (!updateData.variante || updateData.variante.trim() === '') {
         const error = new Error('La variante no puede estar vacía');

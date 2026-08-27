@@ -44,6 +44,11 @@ export class UserController {
     return this.userService.getClientesStats();
   }
 
+  @MessagePattern({ cmd: 'get_usuarios_por_rol' })
+  async getUsuariosPorRol() {
+    return this.userService.getUsuariosPorRol();
+  }
+
   @MessagePattern({ cmd: 'list_cliente_ids' })
   async listClienteIds(@Payload() params: any) {
     return this.userService.listClienteIds(params || {});

@@ -17,6 +17,7 @@ import {
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import { timeout } from 'rxjs/operators';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -178,9 +179,14 @@ export class PromotionsController {
   @Get('econt')
   @UseGuards(JwtAuthGuard)
   @SneakyThrows('PromotionsController', 'listEcontPromotions')
-  async listEcontPromotions() {
+  async listEcontPromotions(
+    @Query('desde') desde?: string,
+    @Query('hasta') hasta?: string,
+  ) {
     return await firstValueFrom(
-      this.productsClient.send({ cmd: 'list_econt_promotions' }, {}),
+      this.productsClient
+        .send({ cmd: 'list_econt_promotions' }, { desde, hasta })
+        .pipe(timeout(15000)),
     );
   }
 
@@ -188,7 +194,38 @@ export class PromotionsController {
   @SneakyThrows('PromotionsController', 'getEcontPromotionProducts')
   async getEcontPromotionProducts(@Param('id', ParseIntPipe) id: number) {
     return await firstValueFrom(
-      this.productsClient.send({ cmd: 'get_econt_promotion_products' }, { idPromo: id }),
+      this.productsClient
+        .send({ cmd: 'get_econt_promotion_products' }, { idPromo: id })
+        .pipe(timeout(15000)),
+    );
+  }
+
+  @Get('econt/:id/rendimiento')
+  @UseGuards(JwtAuthGuard)
+  @SneakyThrows('PromotionsController', 'getPromocionRendimiento')
+  async getPromocionRendimiento(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('desde') desde: string,
+    @Query('hasta') hasta: string,
+  ) {
+    return await firstValueFrom(
+      this.productsClient
+        .send(
+          { cmd: 'get_promocion_rendimiento' },
+          { idPromo: id, desde, hasta },
+        )
+        .pipe(timeout(15000)),
+    );
+  }
+
+  @Get('econt/documento/:secuencia')
+  @UseGuards(JwtAuthGuard)
+  @SneakyThrows('PromotionsController', 'buscarDocumentoPorSecuencia')
+  async buscarDocumentoPorSecuencia(@Param('secuencia', ParseIntPipe) secuencia: number) {
+    return await firstValueFrom(
+      this.productsClient
+        .send({ cmd: 'buscar_documento_por_secuencia' }, { secuencia })
+        .pipe(timeout(15000)),
     );
   }
 

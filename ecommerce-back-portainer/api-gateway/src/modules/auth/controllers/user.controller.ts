@@ -1,15 +1,86 @@
-import { Body, Controller, Get, Param, Post, Put, Query, Inject } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Delete, Query, Inject, Req, UnauthorizedException } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import { Request } from 'express';
 
 @Controller('users')
 export class UserController {
   constructor(
     @Inject('AUTH_SERVICE') private readonly authClient: ClientProxy,
     @Inject('CART_SERVICE') private readonly cartClient: ClientProxy,
+    @Inject('CONTENT_SERVICE') private readonly contentClient: ClientProxy,
+    @Inject('PRODUCTS_SERVICE') private readonly productsClient: ClientProxy,
   ) {}
 
-  // Estado de un email: si existe (en otra cuenta) y si tuvo movimientos (carritos) en 30d.
+  @Get('me/recomendacion')
+  async getRecomendacion(@Req() req: Request) {
+    try {
+      const userId = await this.resolverUserId(req);
+      const cartsRes: any = await firstValueFrom(
+        this.cartClient.send({ cmd: 'get_carts_by_user' }, { userId, estado: '0' }),
+      );
+      const carts: any[] = Array.isArray(cartsRes?.data) ? cartsRes.data.slice(0, 5) : [];
+      
+      const codigos = new Set<string>();
+      for (const c of carts) {
+        const art = c?.articulos || {};
+        for (const tipo of ['contado', 'credito']) {
+          for (const it of Array.isArray(art?.[tipo]) ? art[tipo] : []) {
+            const cod = String(it?.codigo ?? it?.codigo_articulo ?? '').trim();
+            if (cod) codigos.add(cod);
+          }
+        }
+      }
+      if (codigos.size === 0) return { data: { familia: null, productos: [] }, success: true, message: 'SIN HISTORIAL' };
+
+      const prodsRes: any = await firstValueFrom(
+        this.productsClient.send({ cmd: 'get_products_by_codigos' }, { codigos: [...codigos], limit: 200 }),
+      );
+      const comprados: any[] = Array.isArray(prodsRes?.data) ? prodsRes.data : [];
+      const tally = new Map<string, number>();
+      for (const p of comprados) {
+        const fam = String(p?.familia ?? '').trim();
+        if (fam) tally.set(fam, (tally.get(fam) || 0) + 1);
+      }
+      if (tally.size === 0) return { data: { familia: null, productos: [] }, success: true, message: 'SIN FAMILIA' };
+      const topFamilia = [...tally.entries()].sort((a, b) => b[1] - a[1])[0][0];
+
+      const recomRes: any = await firstValueFrom(
+        this.productsClient.send(
+          { cmd: 'get_products' },
+          { categoria: topFamilia, limit: 12, offset: 0, soloConStock: true },
+        ),
+      );
+      const rows: any[] = Array.isArray(recomRes?.data) ? recomRes.data : [];
+      const productos = rows
+        .filter((p) => !codigos.has(String(p?.codigo_articulo ?? '').trim()))
+        .slice(0, 10)
+        .map((p) => ({
+          codigo: String(p?.codigo_articulo ?? ''),
+          nombre: String(p?.nombre_articulo ?? p?.nombre ?? ''),
+          precio: p?.precio ?? p?.precioventa ?? null,
+          imagenes: Array.isArray(p?.imagenes) ? p.imagenes : [],
+        }));
+      return { data: { familia: topFamilia, productos }, success: true, message: 'RECOMENDACION' };
+    } catch (e) {
+      
+      return { data: { familia: null, productos: [] }, success: true, message: 'SIN RECOMENDACION' };
+    }
+  }
+
+  private async resolverUserId(req: Request): Promise<number> {
+    const token =
+      (req as any).cookies?.access_token ||
+      req.headers.authorization?.replace('Bearer ', '');
+    if (!token) throw new UnauthorizedException('NO AUTENTICADO');
+    const perfil: any = await firstValueFrom(
+      this.authClient.send({ cmd: 'get_user_profile' }, { token }),
+    );
+    const id = Number(perfil?.user?.id);
+    if (!Number.isFinite(id)) throw new UnauthorizedException('TOKEN INVÁLIDO');
+    return id;
+  }
+
   @Get('email-status')
   async emailStatus(@Query('email') email: string, @Query('excludeUserId') excludeUserId?: string) {
     const found: any = await firstValueFrom(
@@ -38,7 +109,6 @@ export class UserController {
     }
   }
 
-  // Listado de clientes para el admin: paginado + búsqueda + filtros.
   @Get('clientes')
   async listClientes(@Query() query: any) {
     return await firstValueFrom(
@@ -53,7 +123,6 @@ export class UserController {
     );
   }
 
-  // Todos los ids de clientes que cumplen los filtros (para "seleccionar todos").
   @Get('clientes/ids')
   async clientesIds(@Query() query: any) {
     return await firstValueFrom(
@@ -63,8 +132,57 @@ export class UserController {
 
   @Get(':id/cupones')
   async userCoupons(@Param('id') id: string) {
-    return await firstValueFrom(
+    const uc: any = await firstValueFrom(
       this.authClient.send({ cmd: 'get_user_coupons' }, { userId: Number(id) }),
+    );
+    const userCoupons: any[] = Array.isArray(uc?.data) ? uc.data : [];
+    const ids = [...new Set(userCoupons.map((c) => Number(c.idCupon)).filter(Boolean))];
+    let masterById = new Map<number, any>();
+    if (ids.length > 0) {
+      const det: any = await firstValueFrom(
+        this.contentClient.send({ cmd: 'obtener_cupones_por_ids' }, { ids }),
+      );
+      for (const m of Array.isArray(det?.data) ? det.data : []) masterById.set(Number(m.id), m);
+    }
+    const data = userCoupons.map((c) => {
+      const m = masterById.get(Number(c.idCupon));
+      return {
+        ...c,
+        codigo: m?.codigo ?? null,
+        tipoDescuento: m?.tipoDescuento ?? null,
+        porcentajeDescuento: m?.porcentajeDescuento ?? null,
+        valorDescuento: m?.valorDescuento ?? null,
+        montoMinimoCompra: m?.montoMinimoCompra ?? null,
+        vigente: m?.vigente ?? false,
+      };
+    });
+    return { data, success: true, message: 'CUPONES DEL USUARIO' };
+  }
+
+  @Post('track')
+  trackEvent(@Body() body: { userId?: string; guestId?: string; tipo: string; metadata?: any } | any) {
+    try {
+      const events = Array.isArray(body) ? body : [body];
+      const normalized = events
+        .map((e) => ({
+          userId: String(e?.userId ?? e?.guestId ?? '').trim(),
+          tipo: e?.tipo,
+          metadata: e?.metadata ?? {},
+        }))
+        .filter((e) => e.userId && e.tipo);
+      if (normalized.length > 0) {
+        this.authClient.emit('track_user_event', normalized).subscribe({ error: () => undefined });
+      }
+    } catch {
+      
+    }
+    return { success: true };
+  }
+
+  @Get(':id/tracking')
+  async userTracking(@Param('id') id: string) {
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'get_user_track' }, { userId: String(id) }),
     );
   }
 
@@ -86,6 +204,93 @@ export class UserController {
       console.error('Error in searchUsers:', error);
       throw new Error('Error al buscar usuarios: ' + error.message);
     }
+  }
+
+  @Get('me/perfil')
+  async getMiPerfil(@Req() req: Request) {
+    const userId = await this.resolverUserId(req);
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'get_user_profile_db' }, { userId }),
+    );
+  }
+
+  @Get('erp-cliente/:documento')
+  async getClienteErp(@Param('documento') documento: string) {
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'get_cliente_erp' }, { documento }),
+    );
+  }
+
+  @Get('erp-cargos-rubros')
+  async getCargosRubros() {
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'get_cargos_rubros' }, {}),
+    );
+  }
+
+  @Put('me/perfil')
+  async updateMiPerfil(
+    @Req() req: Request,
+    @Body() patch: { nombre?: string; numeroCelular?: string; numeroDocumento?: string; email?: string; parentescos?: string; datosLaborales?: any },
+  ) {
+    const userId = await this.resolverUserId(req);
+    const res: any = await firstValueFrom(
+      this.authClient.send({ cmd: 'update_user_personal' }, { userId, patch }),
+    );
+
+    if (res?.success) {
+      try {
+        await firstValueFrom(
+          this.cartClient.send(
+            { cmd: 'sync_cart_cliente' },
+            {
+              userId,
+              cliente: {
+                razonsocial: patch?.nombre,
+                correo: patch?.email,
+                telefono: patch?.numeroCelular,
+                documento: patch?.numeroDocumento,
+              },
+            },
+          ),
+        );
+      } catch (e) {
+        console.error('sync_cart_cliente falló tras update_user_personal:', e);
+      }
+    }
+    return res;
+  }
+
+  @Get('me/direcciones')
+  async getMisDirecciones(@Req() req: Request) {
+    const userId = await this.resolverUserId(req);
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'get_user_addresses' }, { userId }),
+    );
+  }
+
+  @Post('me/direcciones')
+  async addMiDireccion(@Req() req: Request, @Body() address: any) {
+    const userId = await this.resolverUserId(req);
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'add_user_address' }, { userId, address }),
+    );
+  }
+
+  @Put('me/direcciones/:addressId')
+  async updateMiDireccion(@Req() req: Request, @Param('addressId') addressId: string, @Body() patch: any) {
+    const userId = await this.resolverUserId(req);
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'update_user_address' }, { userId, addressId, patch }),
+    );
+  }
+
+  @Delete('me/direcciones/:addressId')
+  async deleteMiDireccion(@Req() req: Request, @Param('addressId') addressId: string) {
+    const userId = await this.resolverUserId(req);
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'delete_user_address' }, { userId, addressId }),
+    );
   }
 
   @Put()

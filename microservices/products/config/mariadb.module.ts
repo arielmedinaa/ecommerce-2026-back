@@ -1,48 +1,116 @@
-import { Module, DynamicModule } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { Module, DynamicModule, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { TypeOrmModule, getDataSourceToken, getRepositoryToken } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { Product } from '../schemas/product.schemas';
-import { Promo } from '../schemas/promo.schemas';
-import { Oferta } from '../schemas/oferta.schemas';
-import { ProductoOferta } from '../schemas/producto-oferta.schemas';
-import { ProductsImage } from '../schemas/products-image.schema';
-import { SearchTerm } from '../schemas/search-term.schema';
-import { ProductsSello } from '../schemas/products-sello.schema';
-import { ProductsSeller } from '../schemas/products-seller.schema';
-import { Proveedor } from '../schemas/proveedor.schema';
-import { CmsCombo } from '../schemas/cms-combo.schemas';
-import { CmsComboDetalle } from '../schemas/cms-combo-detalle.schemas';
-import { EcontComboImagen } from '../schemas/econt-combo-imagen.schemas';
-import { Notification } from '../schemas/notification.schema';
+import { DataSource } from 'typeorm';
+import { Product } from '../schemas/products/product.schemas';
+import { Promo } from '../schemas/promos/promo.schemas';
+import { Oferta } from '../schemas/ofertas/oferta.schemas';
+import { ProductoOferta } from '../schemas/ofertas/producto-oferta.schemas';
+import { ProductsImage } from '../schemas/products/products-image.schema';
+import { SearchTerm } from '../schemas/search/search-term.schema';
+import { ProductsSello } from '../schemas/products/products-sello.schema';
+import { ProductsSeller } from '../schemas/products-seller/products-seller.schema';
+import { ProductsExcelHistorial } from '../schemas/products/products-excel-historial.schema';
+import { ProductsExcelHistorialDetalle } from '../schemas/products/products-excel-historial-detalle.schema';
+import { Proveedor } from '../schemas/products-seller/proveedor.schema';
+import { ProveedorDocumento } from '../schemas/products-seller/proveedor-documento.schema';
+import { ProveedorApiToken } from '../schemas/products-seller/proveedor-api-token.schema';
+import { CmsCombo } from '../schemas/combos/cms-combo.schemas';
+import { CmsComboDetalle } from '../schemas/combos/cms-combo-detalle.schemas';
+import { EcontComboImagen } from '../schemas/combos/econt-combo-imagen.schemas';
+import { Notification } from '../schemas/notifications/notification.schema';
+import { PushSubscription } from '../schemas/notifications/push-subscription.schema';
 
-@Module({
-  imports: [],
-  exports: [TypeOrmModule],
-})
+@Module({})
 export class MariaDbModule {
-  static forWrite(): DynamicModule {
-    return TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      name: 'WRITE_CONNECTION',
-      useFactory: (configService: ConfigService) => ({
-        type: 'mysql',
-        host: configService.get<string>('ECONT_DB_HOST'),
-        port: configService.get<number>('ECONT_DB_PORT', 3306),
-        username: configService.get<string>('ECONT_DB_USER'),
-        password: configService.get<string>('ECONT_DB_PASSWORD'),
-        database: configService.get<string>('ECONT_DB_DATABASE'),
-        entities: [Product, Promo, Oferta, ProductoOferta, ProductsImage],
-        synchronize: false,
-        logging: false,
-        keepConnectionAlive: true,
-        retryAttempts: Number(process.env.DB_RETRY_ATTEMPTS || 10),
-        retryDelay: Number(process.env.DB_RETRY_DELAY_MS || 3000),
-        extra: {
-          connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
-        },
-      }),
+  private static createErpDataSourceProvider(connectionName: string) {
+    return {
+      provide: getDataSourceToken(connectionName),
+      useFactory: async (configService: ConfigService) => {
+        const logger = new Logger(`ErpDataSource:${connectionName}`);
+        const dataSource = new DataSource({
+          type: 'mysql',
+          host: configService.get<string>('ECONT_DB_HOST'),
+          port: configService.get<number>('ECONT_DB_PORT', 3306),
+          username: configService.get<string>('ECONT_DB_USER'),
+          password: configService.get<string>('ECONT_DB_PASSWORD'),
+          database: configService.get<string>('ECONT_DB_DATABASE'),
+          entities: [Product, Promo, Oferta, ProductoOferta, ProductsImage],
+          synchronize: false,
+          logging: false,
+          extra: {
+            connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
+          },
+        });
+
+        const tryConnect = async () => {
+          if (dataSource.isInitialized) return;
+          try {
+            await dataSource.initialize();
+            logger.log(`Conectado al ERP (${connectionName})`);
+          } catch (error) {
+            logger.error(`ERP no disponible para ${connectionName}: ${error.message}`);
+          }
+        };
+
+        await tryConnect();
+        if (!dataSource.isInitialized) {
+          const retryDelay = Number(process.env.DB_RETRY_DELAY_MS || 3000) * 10;
+          setInterval(tryConnect, retryDelay);
+        }
+
+        return dataSource;
+      },
       inject: [ConfigService],
-    });
+    };
+  }
+
+  private static createErpRepositoryProvider(entity: Function, connectionName: string) {
+    return {
+      provide: getRepositoryToken(entity, connectionName),
+      useFactory: (dataSource: DataSource) => {
+        const nonCallableProps = new Set([
+          'then',
+          'onModuleInit',
+          'onModuleDestroy',
+          'onApplicationBootstrap',
+          'beforeApplicationShutdown',
+          'onApplicationShutdown',
+        ]);
+        return new Proxy(
+          {},
+          {
+            get(_target, prop) {
+              if (!dataSource.isInitialized) {
+                if (typeof prop === 'symbol' || nonCallableProps.has(prop as string)) {
+                  return undefined;
+                }
+                return (..._args: any[]) => {
+                  throw new ServiceUnavailableException(
+                    `ERP no disponible: no se pudo acceder a ${entity.name} (${connectionName})`,
+                  );
+                };
+              }
+              const repo: any = dataSource.getRepository(entity);
+              const value = repo[prop];
+              return typeof value === 'function' ? value.bind(repo) : value;
+            },
+          },
+        );
+      },
+      inject: [getDataSourceToken(connectionName)],
+    };
+  }
+
+  static forWrite(): DynamicModule {
+    const provider = MariaDbModule.createErpDataSourceProvider('WRITE_CONNECTION');
+    return {
+      global: true,
+      module: MariaDbModule,
+      imports: [ConfigModule],
+      providers: [provider],
+      exports: [provider.provide],
+    };
   }
 
   static forWriteEcommerceProducts(): DynamicModule {
@@ -56,7 +124,7 @@ export class MariaDbModule {
         username: configService.get<string>('DATABASE_USER'),
         password: configService.get<string>('DATABASE_PASSWORD'),
         database: configService.get<string>('DATABASE_NAME'),
-        entities: [ProductsImage, SearchTerm, ProductsSello, ProductsSeller, Proveedor, Notification],
+        entities: [ProductsImage, SearchTerm, ProductsSello, ProductsSeller, ProductsExcelHistorial, ProductsExcelHistorialDetalle, Proveedor, ProveedorDocumento, ProveedorApiToken, Notification, PushSubscription],
         synchronize: process.env.SYNCRONICE === 'true',
         logging: process.env.SYNCRONICE === 'true',
         keepConnectionAlive: true,
@@ -64,6 +132,7 @@ export class MariaDbModule {
         retryDelay: Number(process.env.DB_RETRY_DELAY_MS || 3000),
         extra: {
           connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
+          connectionLimit: Number(process.env.DB_POOL_SIZE_WRITE_ECOMMERCE_PRODUCTS || 5),
         },
       }),
       inject: [ConfigService],
@@ -81,7 +150,7 @@ export class MariaDbModule {
         username: configService.get<string>('DATABASE_USER'),
         password: configService.get<string>('DATABASE_PASSWORD'),
         database: configService.get<string>('DATABASE_NAME'),
-        entities: [ProductsImage, SearchTerm, ProductsSello, ProductsSeller, Proveedor, Notification],
+        entities: [ProductsImage, SearchTerm, ProductsSello, ProductsSeller, ProductsExcelHistorial, ProductsExcelHistorialDetalle, Proveedor, ProveedorDocumento, ProveedorApiToken, Notification, PushSubscription],
         synchronize: process.env.SYNCRONICE === 'true',
         logging: process.env.SYNCRONICE === 'true',
         keepConnectionAlive: true,
@@ -89,6 +158,7 @@ export class MariaDbModule {
         retryDelay: Number(process.env.DB_RETRY_DELAY_MS || 3000),
         extra: {
           connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
+          connectionLimit: Number(process.env.DB_POOL_SIZE_READ_ECOMMERCE_PRODUCTS || 5),
         },
       }),
       inject: [ConfigService],
@@ -96,28 +166,14 @@ export class MariaDbModule {
   }
 
   static forRead(): DynamicModule {
-    return TypeOrmModule.forRootAsync({
+    const provider = MariaDbModule.createErpDataSourceProvider('READ_CONNECTION');
+    return {
+      global: true,
+      module: MariaDbModule,
       imports: [ConfigModule],
-      name: 'READ_CONNECTION',
-      useFactory: (configService: ConfigService) => ({
-        type: 'mysql',
-        host: configService.get<string>('ECONT_DB_HOST'),
-        port: configService.get<number>('ECONT_DB_PORT'),
-        username: configService.get<string>('ECONT_DB_USER'),
-        password: configService.get<string>('ECONT_DB_PASSWORD'),
-        database: configService.get<string>('ECONT_DB_DATABASE'),
-        entities: [Product, Promo, Oferta, ProductoOferta, ProductsImage],
-        synchronize: false,
-        logging: false,
-        keepConnectionAlive: true,
-        retryAttempts: Number(process.env.DB_RETRY_ATTEMPTS || 10),
-        retryDelay: Number(process.env.DB_RETRY_DELAY_MS || 3000),
-        extra: {
-          connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
-        },
-      }),
-      inject: [ConfigService],
-    });
+      providers: [provider],
+      exports: [provider.provide],
+    };
   }
 
   static forOfertasWrite(): DynamicModule {
@@ -139,6 +195,7 @@ export class MariaDbModule {
         retryDelay: Number(process.env.DB_RETRY_DELAY_MS || 3000),
         extra: {
           connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
+          connectionLimit: Number(process.env.DB_POOL_SIZE_OFERTAS || 5),
         },
       }),
       inject: [ConfigService],
@@ -164,6 +221,7 @@ export class MariaDbModule {
         retryDelay: Number(process.env.DB_RETRY_DELAY_MS || 3000),
         extra: {
           connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
+          connectionLimit: Number(process.env.DB_POOL_SIZE_OFERTAS_READ || 5),
         },
       }),
       inject: [ConfigService],
@@ -189,6 +247,7 @@ export class MariaDbModule {
         retryDelay: Number(process.env.DB_RETRY_DELAY_MS || 3000),
         extra: {
           connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
+          connectionLimit: Number(process.env.DB_POOL_SIZE_COMBOS || 5),
         },
       }),
       inject: [ConfigService],
@@ -214,6 +273,7 @@ export class MariaDbModule {
         retryDelay: Number(process.env.DB_RETRY_DELAY_MS || 3000),
         extra: {
           connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
+          connectionLimit: Number(process.env.DB_POOL_SIZE_COMBOS_READ || 5),
         },
       }),
       inject: [ConfigService],
@@ -229,15 +289,22 @@ export class MariaDbModule {
   }
 
   static forFeature(): DynamicModule {
-    return TypeOrmModule.forFeature([Product, Promo, ProductsImage], 'WRITE_CONNECTION');
+    const providers = [Product, Promo, ProductsImage].map((entity) =>
+      MariaDbModule.createErpRepositoryProvider(entity, 'WRITE_CONNECTION'),
+    );
+    return {
+      module: MariaDbModule,
+      providers,
+      exports: providers.map((p) => p.provide),
+    };
   }
 
   static forEcommerceProductsFeature(): DynamicModule {
-    return TypeOrmModule.forFeature([ProductsImage, SearchTerm, ProductsSello, ProductsSeller, Proveedor, Notification], 'WRITE_ECOMMERCE_PRODUCTS_CONNECTION');
+    return TypeOrmModule.forFeature([ProductsImage, SearchTerm, ProductsSello, ProductsSeller, ProductsExcelHistorial, ProductsExcelHistorialDetalle, Proveedor, ProveedorDocumento, ProveedorApiToken, Notification, PushSubscription], 'WRITE_ECOMMERCE_PRODUCTS_CONNECTION');
   }
 
   static forEcommerceProductsFeatureRead(): DynamicModule {
-    return TypeOrmModule.forFeature([ProductsImage, SearchTerm, ProductsSello, ProductsSeller, Proveedor, Notification], 'READ_ECOMMERCE_PRODUCTS_CONNECTION');
+    return TypeOrmModule.forFeature([ProductsImage, SearchTerm, ProductsSello, ProductsSeller, ProductsExcelHistorial, ProductsExcelHistorialDetalle, Proveedor, ProveedorDocumento, ProveedorApiToken, Notification, PushSubscription], 'READ_ECOMMERCE_PRODUCTS_CONNECTION');
   }
   
   static forOfertasFeature(): DynamicModule {
@@ -249,6 +316,13 @@ export class MariaDbModule {
   }
 
   static forFeatureRead(): DynamicModule {
-    return TypeOrmModule.forFeature([Product, Promo, ProductsImage], 'READ_CONNECTION');
+    const providers = [Product, Promo, ProductsImage].map((entity) =>
+      MariaDbModule.createErpRepositoryProvider(entity, 'READ_CONNECTION'),
+    );
+    return {
+      module: MariaDbModule,
+      providers,
+      exports: providers.map((p) => p.provide),
+    };
   }
 }

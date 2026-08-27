@@ -1,8 +1,9 @@
-import { Controller, Post, Body, UsePipes, ValidationPipe, Inject, Req, Query, Get, Param } from '@nestjs/common';
+import { Controller, Post, Patch, Body, UsePipes, ValidationPipe, Inject, Req, Query, Get, Param, UseGuards } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { Request } from 'express';
 import { SneakyThrows } from '@decorators/sneaky-throws-new.decorator';
+import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 
 @Controller('cart')
 export class CartController {
@@ -33,7 +34,6 @@ export class CartController {
     return result;
   }
 
-  // Admin: carritos de un cliente puntual (no depende del token del cliente).
   @Get('byUser/:userId')
   @SneakyThrows('CartService', 'getCartsByUser')
   async getCartsByUser(@Param('userId') userId: string, @Query() query: any) {
@@ -45,7 +45,92 @@ export class CartController {
     );
   }
 
-  // Quitar un ítem del carrito activo (estado global → DB).
+  @Get('orders')
+  @UseGuards(JwtAuthGuard)
+  @SneakyThrows('CartService', 'getUserOrders')
+  async getUserOrders(@Req() request: any) {
+    const userId = request.user?.sub;
+    return await firstValueFrom(
+      this.cartClient.send({ cmd: 'get_user_orders' }, { userId }),
+    );
+  }
+
+  @Patch('orders/:codigo')
+  @UseGuards(JwtAuthGuard)
+  @SneakyThrows('CartService', 'updateOrder')
+  async updateOrder(
+    @Param('codigo') codigo: string,
+    @Body() body: any,
+    @Req() request: any,
+  ) {
+    const userId = request.user?.sub;
+    return await firstValueFrom(
+      this.cartClient.send({ cmd: 'update_order' }, { userId, codigo, patch: body }),
+    );
+  }
+
+  @Post('orders/:codigo/rating')
+  @UseGuards(JwtAuthGuard)
+  @SneakyThrows('CartService', 'rateOrder')
+  async rateOrder(
+    @Param('codigo') codigo: string,
+    @Body() body: any,
+    @Req() request: any,
+  ) {
+    const userId = request.user?.sub;
+    return await firstValueFrom(
+      this.cartClient.send({ cmd: 'rate_order' }, { userId, codigo, body }),
+    );
+  }
+
+  @Get('orders/:codigo/rating-eligibility')
+  @UseGuards(JwtAuthGuard)
+  @SneakyThrows('CartService', 'shouldPromptRating')
+  async shouldPromptRating(
+    @Param('codigo') codigo: string,
+    @Req() request: any,
+  ) {
+    const userId = request.user?.sub;
+    return await firstValueFrom(
+      this.cartClient.send({ cmd: 'should_prompt_rating' }, { userId, codigo }),
+    );
+  }
+
+  @Get('orders/byUser/:userId')
+  @SneakyThrows('CartService', 'getOrdersByUserAdmin')
+  async getOrdersByUserAdmin(@Param('userId') userId: string) {
+    return await firstValueFrom(
+      this.cartClient.send({ cmd: 'get_user_orders' }, { userId }),
+    );
+  }
+
+  @Get('orders/byProduct/:codigo')
+  @SneakyThrows('CartService', 'getOrdersByProduct')
+  async getOrdersByProduct(@Param('codigo') codigo: string) {
+    return await firstValueFrom(
+      this.cartClient.send({ cmd: 'get_orders_by_product' }, { codigo }),
+    );
+  }
+
+  @Get('top-pedidos-hoy')
+  @SneakyThrows('CartService', 'getTopPedidosHoy')
+  async getTopPedidosHoy(@Query('limit') limit?: string) {
+    return await firstValueFrom(
+      this.cartClient.send(
+        { cmd: 'get_top_pedidos_hoy' },
+        { limit: limit ? Number(limit) : undefined },
+      ),
+    );
+  }
+
+  @Get(':codigo/estado-pedido')
+  @SneakyThrows('CartService', 'getEstadoPedido')
+  async getEstadoPedido(@Param('codigo') codigo: string) {
+    return await firstValueFrom(
+      this.cartClient.send({ cmd: 'get_estado_pedido' }, { codigo }),
+    );
+  }
+
   @Post('removeItem')
   @SneakyThrows('CartService', 'removeCartItem')
   async removeItem(@Body() body: any, @Req() request: Request) {
@@ -58,7 +143,6 @@ export class CartController {
     );
   }
 
-  // Setear la cantidad de un ítem del carrito activo.
   @Post('itemQty')
   @SneakyThrows('CartService', 'setCartItemQty')
   async setItemQty(@Body() body: any, @Req() request: Request) {
@@ -71,7 +155,6 @@ export class CartController {
     );
   }
 
-  // Quitar varios ítems del carrito activo en una sola operación (atómica).
   @Post('removeItems')
   @SneakyThrows('CartService', 'removeCartItems')
   async removeItems(@Body() body: any, @Req() request: Request) {
@@ -84,7 +167,25 @@ export class CartController {
     );
   }
 
-  // Vaciar el carrito activo.
+  @Post('changeCondition')
+  @SneakyThrows('CartService', 'changeCartItemCondition')
+  async changeCondition(@Body() body: any, @Req() request: Request) {
+    const token = request.headers.authorization?.split(' ')[1] || '';
+    return await firstValueFrom(
+      this.cartClient.send(
+        { cmd: 'change_cart_item_condition' },
+        {
+          token,
+          productoCodigo: body?.productoCodigo,
+          fromTipo: body?.fromTipo,
+          toTipo: body?.toTipo,
+          precio: body?.precio,
+          cuota: body?.cuota,
+        },
+      ),
+    );
+  }
+
   @Post('clear')
   @SneakyThrows('CartService', 'clearCart')
   async clear(@Req() request: Request) {
@@ -92,7 +193,6 @@ export class CartController {
     return await firstValueFrom(this.cartClient.send({ cmd: 'clear_cart' }, { token }));
   }
 
-  // Mergear el carrito del invitado (por email) al usuario logueado.
   @Post('mergeGuest')
   @SneakyThrows('CartService', 'mergeGuestCart')
   async mergeGuest(@Body() body: { guestEmail: string }, @Req() request: Request) {
@@ -102,7 +202,6 @@ export class CartController {
     );
   }
 
-  // Resumen de compras por usuario (para clasificar tipo de cliente).
   @Post('comprasResumen')
   @SneakyThrows('CartService', 'getComprasResumen')
   async getComprasResumen(@Body() body: { userIds: (number | string)[] }) {
@@ -163,10 +262,13 @@ export class CartController {
   @UsePipes(new ValidationPipe())
   @SneakyThrows('CartService', 'getCartWithoutToken')
   async getCartWithoutToken(@Body() body: {
-    limit: number;
-    skip: number;
-    sort: string;
-    order: string;
+    limit?: number;
+    offset?: number;
+    skip?: number;
+    search?: string;
+    situacion?: 'en_proceso' | 'abandonado' | 'finalizado';
+    desde?: string;
+    hasta?: string;
   }){
     return await firstValueFrom(
       this.cartClient.send({

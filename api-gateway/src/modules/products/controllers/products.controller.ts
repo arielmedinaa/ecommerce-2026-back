@@ -4,7 +4,9 @@ import { firstValueFrom } from 'rxjs';
 import { timeout, catchError } from 'rxjs/operators';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '@gateway/common/guards/jwt-auth.guard';
+import { ProviderAuthGuard } from '@gateway/common/guards/provider-auth.guard';
 import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
+import { GetProductsByCodigosDto } from '@products/schemas/dto/get-products-by-codigos.dto';
 import { Response } from 'express';
 import { assertSafeExternalUrl, UnsafeUrlError } from '@gateway/modules/products/utils/ssrf-guard';
 
@@ -56,6 +58,42 @@ export const SellerExcelFileInterceptor = () =>
     })
   );
 
+// Para el flujo de corrección de imágenes de proveedores: acepta cualquier
+// imagen común (no exige .webp, la conversión ocurre en el backend), archivo
+// opcional (el proveedor puede en cambio mandar una URL en el body).
+export const SellerImageValidationInterceptor = () =>
+  UseInterceptors(
+    FileInterceptor('file', {
+      fileFilter: (req, file, callback) => {
+        if (!file.mimetype?.startsWith('image/')) {
+          return callback(new BadRequestException('El archivo debe ser una imagen'), false);
+        }
+        callback(null, true);
+      },
+      limits: {
+        fileSize: 1 * 1024 * 1024,
+      }
+    })
+  );
+
+// Documentación del proveedor (para iniciar su integración de dropshipping):
+// PDF, TXT, JSON, CSV o Excel.
+export const ProveedorDocumentoFileInterceptor = () =>
+  UseInterceptors(
+    FileInterceptor('file', {
+      fileFilter: (req, file, callback) => {
+        const allowed = ['.pdf', '.txt', '.json', '.csv', '.xls', '.xlsx'];
+        if (!allowed.some((ext) => file.originalname.toLowerCase().endsWith(ext))) {
+          return callback(new BadRequestException('Solo se permiten archivos .pdf, .txt, .json, .csv o Excel'), false);
+        }
+        callback(null, true);
+      },
+      limits: {
+        fileSize: 5 * 1024 * 1024,
+      }
+    })
+  );
+
 export const SelloFileInterceptor = () =>
   UseInterceptors(
     FileInterceptor('file', {
@@ -80,6 +118,7 @@ export const SelloFileInterceptor = () =>
 export class ProductsController {
   constructor(
     @Inject('PRODUCTS_SERVICE') private readonly productsClient: ClientProxy,
+    @Inject('ETL_SERVICE') private readonly etlClient: ClientProxy,
   ) {}
 
   @UseGuards(JwtAuthGuard)
@@ -90,11 +129,13 @@ export class ProductsController {
     )
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(ProviderAuthGuard)
   @Get('sellers/template')
   async getProductsSellersTemplate(@Res() res: Response) {
     const result = await firstValueFrom(
-      this.productsClient.send({ cmd: 'get_products_sellers_template' }, {}),
+      this.productsClient
+        .send({ cmd: 'get_products_sellers_template' }, {})
+        .pipe(timeout(40000)),
     );
     const buf = Buffer.isBuffer(result?.data) ? result.data : Buffer.from(result?.data?.data || result?.data);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -102,7 +143,7 @@ export class ProductsController {
     return res.send(buf);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(ProviderAuthGuard)
   @Post('sellers/import')
   @SellerExcelFileInterceptor()
   async importProductsSellers(
@@ -114,10 +155,107 @@ export class ProductsController {
     const creadoPor = request.user?.email || request.user?.sub || 'proveedor';
     return await firstValueFrom(
       this.productsClient.send(
-        { cmd: 'import_products_sellers_excel' },
-        { buffer: file.buffer, idProveedor: Number(body.idProveedor), creadoPor },
+        { cmd: 'initiate_import_products_sellers_excel' },
+        { buffer: file.buffer, idProveedor: Number(body.idProveedor), creadoPor, nombreArchivo: file.originalname },
       ),
     );
+  }
+
+  @UseGuards(ProviderAuthGuard)
+  @Get('sellers/excel-historial')
+  async listExcelHistorial(@Query('email') email: string) {
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) return { data: [], message: 'Proveedor no encontrado', success: false };
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'list_excel_historial' }, { idProveedor }),
+    );
+  }
+
+  @UseGuards(ProviderAuthGuard)
+  @Get('sellers/excel-historial/:id/status')
+  async getExcelHistorialStatus(@Param('id') id: string, @Query('email') email: string) {
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) return { data: null, message: 'Proveedor no encontrado', success: false };
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_excel_historial_status' }, { idHistorial: Number(id), idProveedor }),
+    );
+  }
+
+  @UseGuards(ProviderAuthGuard)
+  @Get('sellers/excel-historial/:id/detalle')
+  async getExcelHistorialDetalle(
+    @Param('id') id: string,
+    @Query('email') email: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('soloRechazados') soloRechazados?: string,
+  ) {
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) return { data: [], total: 0, message: 'Proveedor no encontrado', success: false };
+    return await firstValueFrom(
+      this.productsClient.send(
+        { cmd: 'get_excel_historial_detalle' },
+        {
+          idHistorial: Number(id),
+          idProveedor,
+          page: page ? Number(page) : undefined,
+          limit: limit ? Number(limit) : undefined,
+          soloRechazados: soloRechazados === 'true',
+        },
+      ),
+    );
+  }
+
+  @UseGuards(ProviderAuthGuard)
+  @Patch('sellers/excel-historial/detalle/:idDetalle/retry')
+  async retryExcelHistorialDetalle(
+    @Param('idDetalle') idDetalle: string,
+    @Body() body: { email: string; correccion: Record<string, string> },
+  ) {
+    const idProveedor = await this.resolveIdProveedor(body.email);
+    if (!idProveedor) return { data: null, message: 'Proveedor no encontrado', success: false };
+    return await firstValueFrom(
+      this.productsClient.send(
+        { cmd: 'retry_excel_historial_detalle' },
+        { idDetalle: Number(idDetalle), idProveedor, modificadoPor: body.email, correccion: body.correccion || {} },
+      ),
+    );
+  }
+
+  @UseGuards(ProviderAuthGuard)
+  @Post('sellers/validate-image')
+  @SellerImageValidationInterceptor()
+  async validateSellerImage(
+    @UploadedFile() file: any,
+    @Body() body: { email: string; codigoArticulo: string; campo: string; url?: string },
+  ) {
+    const idProveedor = await this.resolveIdProveedor(body.email);
+    if (!idProveedor) return { success: false, url: null, message: 'Proveedor no encontrado' };
+    return await firstValueFrom(
+      this.productsClient.send(
+        { cmd: 'validate_seller_image' },
+        { idProveedor, codigoArticulo: body.codigoArticulo, campo: body.campo, url: body.url, buffer: file?.buffer },
+      ),
+    );
+  }
+
+  @UseGuards(ProviderAuthGuard)
+  @Get('sellers/excel-historial/:id/download')
+  async downloadExcelHistorial(@Param('id') id: string, @Query('email') email: string, @Res() res: Response) {
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) return res.status(404).json({ message: 'Proveedor no encontrado' });
+
+    const result: any = await firstValueFrom(
+      this.productsClient.send({ cmd: 'download_excel_historial' }, { idHistorial: Number(id), idProveedor }),
+    );
+    if (!result?.success || !result?.buffer) {
+      return res.status(404).json({ message: result?.message || 'Archivo no encontrado' });
+    }
+    const raw = result.buffer as any;
+    const buf = Buffer.isBuffer(raw) ? raw : raw && Array.isArray(raw.data) ? Buffer.from(raw.data) : Buffer.from(raw);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${result.nombreArchivo || 'catalogo.xlsx'}"`);
+    return res.send(buf);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -135,7 +273,12 @@ export class ProductsController {
   @Patch('sellers/:id/approve')
   async approveProductSeller(
     @Param('id') id: string,
-    @Body() body: { codigo_marca?: string; codigo_categoria?: string; codigo_subcategoria?: string },
+    @Body() body: {
+      codigo_marca?: string;
+      codigo_categoria?: string;
+      codigo_subcategoria?: string;
+      aceptar_precio_sugerido?: boolean;
+    },
     @Req() request: any,
   ) {
     const modificadoPor = request.user?.email || request.user?.sub || 'admin';
@@ -163,6 +306,150 @@ export class ProductsController {
     );
   }
 
+  @UseGuards(ProviderAuthGuard)
+  @Get('proveedores/perfil')
+  async getProveedorProfile(@Query('email') email: string) {
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) return { data: null, message: 'Proveedor no encontrado', success: false };
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_proveedor_profile' }, { idProveedor }),
+    );
+  }
+
+  @UseGuards(ProviderAuthGuard)
+  @Patch('proveedores/perfil')
+  async updateProveedorProfile(
+    @Query('email') email: string,
+    @Body() body: { nombre?: string; ruc?: string; telefono?: string; direccion?: string },
+  ) {
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) return { data: null, message: 'Proveedor no encontrado', success: false };
+    return await firstValueFrom(
+      this.productsClient.send(
+        { cmd: 'update_proveedor_profile' },
+        { idProveedor, payload: body || {} },
+      ),
+    );
+  }
+
+  @UseGuards(ProviderAuthGuard)
+  @Get('proveedores/documentos')
+  async listProveedorDocumentos(@Query('email') email: string) {
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) return { data: [], message: 'Proveedor no encontrado', success: false };
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'list_proveedor_documentos' }, { idProveedor }),
+    );
+  }
+
+  @UseGuards(ProviderAuthGuard)
+  @Post('proveedores/documentos')
+  @ProveedorDocumentoFileInterceptor()
+  async uploadProveedorDocumento(@Query('email') email: string, @UploadedFile() file: any) {
+    if (!file) return { success: false, message: 'Falta el archivo' };
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) return { data: null, message: 'Proveedor no encontrado', success: false };
+    return await firstValueFrom(
+      this.productsClient.send(
+        { cmd: 'upload_proveedor_documento' },
+        {
+          idProveedor,
+          file: { originalname: file.originalname, mimetype: file.mimetype, buffer: file.buffer },
+        },
+      ),
+    );
+  }
+
+  @UseGuards(ProviderAuthGuard)
+  @Delete('proveedores/documentos/:idDocumento')
+  async deleteProveedorDocumento(@Query('email') email: string, @Param('idDocumento') idDocumento: string) {
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) return { message: 'Proveedor no encontrado', success: false };
+    return await firstValueFrom(
+      this.productsClient.send(
+        { cmd: 'delete_proveedor_documento' },
+        { idProveedor, idDocumento: Number(idDocumento) },
+      ),
+    );
+  }
+
+  @UseGuards(ProviderAuthGuard)
+  @Post('proveedores/api-token')
+  async generateProveedorApiToken(@Query('email') email: string) {
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) return { data: null, message: 'Proveedor no encontrado', success: false };
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'generate_proveedor_api_token' }, { idProveedor }),
+    );
+  }
+
+  @UseGuards(ProviderAuthGuard)
+  @Delete('proveedores/api-token')
+  async revokeProveedorApiToken(@Query('email') email: string) {
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) return { message: 'Proveedor no encontrado', success: false };
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'revoke_proveedor_api_token' }, { idProveedor }),
+    );
+  }
+
+  @UseGuards(ProviderAuthGuard)
+  @Post('proveedores/etl/generar')
+  async generateEtlIntegration(@Query('email') email: string) {
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) return { data: null, message: 'Proveedor no encontrado', success: false };
+    return await firstValueFrom(
+      this.etlClient.send({ cmd: 'generate_etl_integration' }, { idProveedor, email }),
+    );
+  }
+
+  @UseGuards(ProviderAuthGuard)
+  @Get('proveedores/etl/estado')
+  async getEtlStatus(@Query('email') email: string) {
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) return { data: null, message: 'Proveedor no encontrado', success: false };
+    return await firstValueFrom(
+      this.etlClient.send({ cmd: 'get_etl_status' }, { idProveedor }),
+    );
+  }
+
+  @Get('sellers/catalog')
+  async getSellerCatalog(
+    @Query('search') search?: string,
+    @Query('categoria') categoria?: string,
+    @Query('marca') marca?: string,
+    @Query('proveedor') proveedor?: string,
+    @Query('precioMin') precioMin?: string,
+    @Query('precioMax') precioMax?: string,
+    @Query('soloConStock') soloConStock?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return await firstValueFrom(
+      this.productsClient.send(
+        { cmd: 'get_seller_catalog' },
+        {
+          search, categoria, marca, proveedor,
+          precioMin: precioMin ? Number(precioMin) : undefined,
+          precioMax: precioMax ? Number(precioMax) : undefined,
+          soloConStock: soloConStock === 'true' || soloConStock === '1',
+          limit: limit ? Number(limit) : undefined,
+          offset: offset ? Number(offset) : undefined,
+        },
+      ),
+    );
+  }
+
+  @Get('sellers/catalog/facets')
+  async getSellerCatalogFacets() {
+    return await firstValueFrom(this.productsClient.send({ cmd: 'get_seller_catalog_facets' }, {}));
+  }
+
+  @Get('sellers/catalog/:codigo')
+  async getSellerCatalogDetail(@Param('codigo') codigo: string) {
+    return await firstValueFrom(this.productsClient.send({ cmd: 'get_seller_catalog_detail' }, { codigo }));
+  }
+
   // Sin guard: se consulta en el login, antes de tener token — solo confirma
   // si el email pertenece a un proveedor, no expone datos sensibles.
   @Get('sellers/resolve-proveedor')
@@ -171,7 +458,7 @@ export class ProductsController {
     return { data: { idProveedor, esProveedor: !!idProveedor }, message: 'Ok', success: true };
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(ProviderAuthGuard)
   @Get('sellers/mine')
   async listMySellers(@Query('email') email: string) {
     const idProveedor = await this.resolveIdProveedor(email);
@@ -187,7 +474,13 @@ export class ProductsController {
     return await firstValueFrom(this.productsClient.send({ cmd: 'get_rejection_codes' }, {}));
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(ProviderAuthGuard)
+  @Get('sellers/import-error-codes')
+  async getImportErrorCodes() {
+    return await firstValueFrom(this.productsClient.send({ cmd: 'get_import_error_codes' }, {}));
+  }
+
+  @UseGuards(ProviderAuthGuard)
   @Post('sellers/bulk-resubmit')
   async bulkResubmitProductsSellers(
     @Body() body: { ids: number[]; correcciones?: Record<number, any>; email: string },
@@ -204,7 +497,7 @@ export class ProductsController {
     );
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(ProviderAuthGuard)
   @Get('sellers/dashboard')
   async getProviderDashboard(@Query('email') email: string) {
     const idProveedor = await this.resolveIdProveedor(email);
@@ -252,6 +545,39 @@ export class ProductsController {
         { cmd: 'mark_all_notifications_read' },
         { destinatarioTipo: body.destinatarioTipo, idProveedor },
       ),
+    );
+  }
+
+  // Sin guard: la key pública no es sensible, se necesita antes de tener
+  // sesión completa para armar la suscripción push en el navegador.
+  @Get('notifications/push/vapid-public-key')
+  async getVapidPublicKey() {
+    return await firstValueFrom(this.productsClient.send({ cmd: 'get_vapid_public_key' }, {}));
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('notifications/push/subscribe')
+  async subscribePush(
+    @Body() body: { destinatarioTipo: 'admin' | 'provider'; email?: string; subscription: any },
+  ) {
+    let idProveedor: number | null = null;
+    if (body.destinatarioTipo === 'provider') {
+      idProveedor = await this.resolveIdProveedor(body.email);
+      if (!idProveedor) return { success: false, message: 'Proveedor no encontrado' };
+    }
+    return await firstValueFrom(
+      this.productsClient.send(
+        { cmd: 'subscribe_push' },
+        { destinatarioTipo: body.destinatarioTipo, idProveedor, subscription: body.subscription },
+      ),
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('notifications/push/unsubscribe')
+  async unsubscribePush(@Body() body: { endpoint: string }) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'unsubscribe_push' }, { endpoint: body.endpoint }),
     );
   }
 
@@ -454,7 +780,7 @@ export class ProductsController {
     try {
       const products = await firstValueFrom(
         this.productsClient.send({ cmd: 'get_products_jota' }, filters).pipe(
-          timeout(10000),
+          timeout(20000),
           catchError((error) => {
             console.error('Error in productsClient.send:', {
               message: error.message,
@@ -649,12 +975,16 @@ export class ProductsController {
   }
 
   @Post('/by-codigos')
-  async getProductsByCodigos(
-    @Body() body: { codigos: string[]; limit?: number },
-  ) {
-    return await firstValueFrom(
-      this.productsClient.send({ cmd: 'get_products_by_codigos' }, body),
-    );
+  async getProductsByCodigos(@Body() body: GetProductsByCodigosDto) {
+    try {
+      return await firstValueFrom(
+        this.productsClient
+          .send({ cmd: 'get_products_by_codigos' }, body)
+          .pipe(timeout(40000)),
+      );
+    } catch (error) {
+      throw new Error('Error al obtener productos por códigos: ' + error.message);
+    }
   }
   
   @UseGuards(JwtAuthGuard)

@@ -16,7 +16,7 @@ export class PaymentsValidationService {
     cliente?: any,
     descripcion?: string,
   ): Promise<{ isValid: boolean; error?: any }> {
-    // Validar código de carrito
+    
     if (!codigoCarrito || codigoCarrito <= 0) {
       const error = new Error('Código de carrito inválido');
       await this.paymentErrorService.logMicroserviceError(
@@ -39,7 +39,6 @@ export class PaymentsValidationService {
       };
     }
 
-    // Validar carrito
     if (!carrito) {
       const error = new Error('Carrito es null o undefined');
       await this.paymentErrorService.logMicroserviceError(
@@ -63,7 +62,6 @@ export class PaymentsValidationService {
       };
     }
 
-    // Validar método de pago
     const metodosPagoValidos = ['pagopar', 'bancard', 'efectivo contra entrega', 'tarjeta contra entrega'];
     if (!metodoPago || !metodosPagoValidos.includes(metodoPago)) {
       const error = new Error('Método de pago inválido');
@@ -89,7 +87,6 @@ export class PaymentsValidationService {
       };
     }
 
-    // Validar monto
     if (!monto || monto <= 0) {
       const error = new Error('Monto inválido');
       await this.paymentErrorService.logMicroserviceError(
@@ -113,7 +110,6 @@ export class PaymentsValidationService {
       };
     }
 
-    // Validar moneda
     if (!moneda || moneda.trim() === '') {
       const error = new Error('Moneda inválida');
       await this.paymentErrorService.logMicroserviceError(
@@ -137,30 +133,6 @@ export class PaymentsValidationService {
       };
     }
 
-    // Validar cliente (opcional pero si existe debe tener email)
-    // if (cliente && (!cliente.email || cliente.email.trim() === '')) {
-    //   const error = new Error('Cliente sin email');
-    //   await this.paymentErrorService.logMicroserviceError(
-    //     error,
-    //     codigoCarrito?.toString(),
-    //     'validatePaymentPayload',
-    //     {
-    //       motivo: 'cliente_sin_email',
-    //       cliente,
-    //       codigoCarrito,
-    //     },
-    //   );
-    //   this.logger.error('Error al validar cliente', error);
-    //   return {
-    //     isValid: false,
-    //     error: {
-    //       success: false,
-    //       message: 'Cliente no válido - el email es requerido',
-    //       data: [],
-    //     },
-    //   };
-    // }
-
     return { isValid: true };
   }
 
@@ -168,7 +140,7 @@ export class PaymentsValidationService {
     idTransaccion: string,
     estado: string,
   ): Promise<{ isValid: boolean; error?: any }> {
-    // Validar ID de transacción
+    
     if (!idTransaccion || idTransaccion.trim() === '') {
       const error = new Error('ID de transacción inválido');
       await this.paymentErrorService.logMicroserviceError(
@@ -191,7 +163,6 @@ export class PaymentsValidationService {
       };
     }
 
-    // Validar estado
     const estadosValidos = ['pendiente', 'procesando', 'completado', 'fallido', 'cancelado', 'reembolsado'];
     if (!estado || !estadosValidos.includes(estado)) {
       const error = new Error('Estado de pago inválido');

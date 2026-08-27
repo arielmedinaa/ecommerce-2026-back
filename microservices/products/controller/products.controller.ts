@@ -1,15 +1,17 @@
 import { Body, Controller, Logger } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { MessagePattern, EventPattern, Payload } from '@nestjs/microservices';
 import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
-import { ProductsService } from '@products/service/products.service';
-import { ProductsImagesService } from '@products/service/products-images.service';
-import { Product } from '@products/schemas/product.schema';
+import { ProductsService } from '@products/service/products/products.service';
+import { ProductsImagesService } from '@products/service/products/products-images.service';
+import { Product } from '@products/schemas/products/product.schema';
 
-import { OfertasService } from '@products/service/ofertas.service';
-import { PromosService } from '@products/service/promos.service';
-import { CombosService } from '@products/service/combos.service';
-import { ProductsSellersService } from '@products/service/products-sellers.service';
-import { NotificationsService } from '@products/service/notifications.service';
+import { OfertasService } from '@products/service/ofertas/ofertas.service';
+import { PromosService } from '@products/service/promos/promos.service';
+import { CombosService } from '@products/service/combos/combos.service';
+import { ProductsSellersService } from '@products/service/products-seller/products-sellers.service';
+import { SellerCatalogService } from '@products/service/products-seller/seller-catalog.service';
+import { NotificationsService } from '@products/service/notifications/notifications.service';
+import { PushNotificationService } from '@products/service/notifications/push-notification.service';
 
 @Controller()
 export class ProductsController {
@@ -21,13 +23,67 @@ export class ProductsController {
     private readonly productsImagesService: ProductsImagesService,
     private readonly combosService: CombosService,
     private readonly productsSellersService: ProductsSellersService,
+    private readonly sellerCatalogService: SellerCatalogService,
     private readonly notificationsService: NotificationsService,
+    private readonly pushNotificationService: PushNotificationService,
   ) {}
 
-  @MessagePattern({ cmd: 'import_products_sellers_excel' })
-  importProductsSellersExcel(@Payload() data: { buffer: any; idProveedor: number; creadoPor: string }) {
+  @MessagePattern({ cmd: 'get_vapid_public_key' })
+  getVapidPublicKey() {
+    return { data: { publicKey: this.pushNotificationService.getVapidPublicKey() }, message: 'Ok', success: true };
+  }
+
+  @MessagePattern({ cmd: 'subscribe_push' })
+  subscribePush(@Payload() data: { destinatarioTipo: 'admin' | 'provider'; idProveedor?: number | null; subscription: any }) {
+    return this.pushNotificationService.saveSubscription(data.destinatarioTipo, data.idProveedor ?? null, data.subscription);
+  }
+
+  @MessagePattern({ cmd: 'unsubscribe_push' })
+  unsubscribePush(@Payload() data: { endpoint: string }) {
+    return this.pushNotificationService.removeSubscription(data.endpoint);
+  }
+
+  @MessagePattern({ cmd: 'initiate_import_products_sellers_excel' })
+  async initiateImportProductsSellersExcel(@Payload() data: { buffer: any; idProveedor: number; creadoPor: string; nombreArchivo?: string }) {
     const buffer = Buffer.isBuffer(data.buffer) ? data.buffer : Buffer.from(data.buffer);
-    return this.productsSellersService.importExcel(buffer, data.idProveedor, data.creadoPor);
+    const result = await this.productsSellersService.initiateImport(buffer, data.idProveedor, data.creadoPor, data.nombreArchivo);
+    if (result.success && result.data) {
+      this.productsSellersService.processImportJob(result.data.idHistorial).catch((err) => {
+        this.logger.error(`Error en processImportJob: ${err?.message || err}`);
+      });
+    }
+    return result;
+  }
+
+  @MessagePattern({ cmd: 'list_excel_historial' })
+  listExcelHistorial(@Payload() data: { idProveedor: number }) {
+    return this.productsSellersService.listHistorialExcel(data.idProveedor);
+  }
+
+  @MessagePattern({ cmd: 'get_excel_historial_detalle' })
+  getExcelHistorialDetalle(@Payload() data: { idHistorial: number; idProveedor: number; page?: number; limit?: number; soloRechazados?: boolean }) {
+    return this.productsSellersService.getHistorialDetalle(data.idHistorial, data.idProveedor, data.page, data.limit, data.soloRechazados);
+  }
+
+  @MessagePattern({ cmd: 'retry_excel_historial_detalle' })
+  retryExcelHistorialDetalle(@Payload() data: { idDetalle: number; idProveedor: number; modificadoPor: string; correccion: Record<string, string> }) {
+    return this.productsSellersService.retryHistorialDetalleRow(data.idDetalle, data.idProveedor, data.modificadoPor, data.correccion || {});
+  }
+
+  @MessagePattern({ cmd: 'get_excel_historial_status' })
+  getExcelHistorialStatus(@Payload() data: { idHistorial: number; idProveedor: number }) {
+    return this.productsSellersService.getExcelHistorialStatus(data.idHistorial, data.idProveedor);
+  }
+
+  @MessagePattern({ cmd: 'download_excel_historial' })
+  downloadExcelHistorial(@Payload() data: { idHistorial: number; idProveedor: number }) {
+    return this.productsSellersService.downloadHistorialExcel(data.idHistorial, data.idProveedor);
+  }
+
+  @MessagePattern({ cmd: 'validate_seller_image' })
+  validateSellerImage(@Payload() data: { idProveedor: number; codigoArticulo: string; campo: string; url?: string; buffer?: any }) {
+    const buffer = data.buffer ? (Buffer.isBuffer(data.buffer) ? data.buffer : Buffer.from(data.buffer)) : undefined;
+    return this.productsSellersService.validateSellerImage(data.idProveedor, data.codigoArticulo, data.campo, { url: data.url, buffer });
   }
 
   @MessagePattern({ cmd: 'get_products_sellers_template' })
@@ -50,7 +106,12 @@ export class ProductsController {
   approveProductSeller(@Payload() data: {
     id: number;
     modificadoPor: string;
-    correccion?: { codigo_marca?: string; codigo_categoria?: string; codigo_subcategoria?: string };
+    correccion?: {
+      codigo_marca?: string;
+      codigo_categoria?: string;
+      codigo_subcategoria?: string;
+      aceptar_precio_sugerido?: boolean;
+    };
   }) {
     return this.productsSellersService.approve(data.id, data.modificadoPor, data.correccion);
   }
@@ -65,10 +126,40 @@ export class ProductsController {
     return this.productsSellersService.getRejectionCodes();
   }
 
+  @MessagePattern({ cmd: 'get_import_error_codes' })
+  getImportErrorCodes() {
+    return this.productsSellersService.getImportErrorCodes();
+  }
+
   @MessagePattern({ cmd: 'resolve_proveedor_by_email' })
   async resolveProveedorByEmail(@Payload() data: { email: string }) {
     const idProveedor = await this.productsSellersService.resolveProveedorIdByEmail(data.email);
     return { data: { idProveedor }, message: 'Ok', success: true };
+  }
+
+  @MessagePattern({ cmd: 'get_seller_catalog' })
+  async getSellerCatalog(@Payload() data: { search?: string; categoria?: string; marca?: string; limit?: number; offset?: number }) {
+    return this.sellerCatalogService.listCatalog(data || {});
+  }
+
+  @MessagePattern({ cmd: 'get_seller_catalog_detail' })
+  async getSellerCatalogDetail(@Payload() data: { codigo: string }) {
+    return this.sellerCatalogService.getByCodigo(data.codigo);
+  }
+
+  @MessagePattern({ cmd: 'get_seller_catalog_facets' })
+  async getSellerCatalogFacets() {
+    return this.sellerCatalogService.getFacets();
+  }
+
+  @MessagePattern({ cmd: 'create_proveedor' })
+  async createProveedor(@Payload() data: { nombre: string; email: string }) {
+    return this.productsSellersService.createProveedor(data);
+  }
+
+  @MessagePattern({ cmd: 'list_proveedores' })
+  async listProveedores() {
+    return this.productsSellersService.listProveedores();
   }
 
   @MessagePattern({ cmd: 'get_provider_dashboard_stats' })
@@ -79,6 +170,47 @@ export class ProductsController {
   @MessagePattern({ cmd: 'bulk_resubmit_products_sellers' })
   bulkResubmitProductsSellers(@Payload() data: { ids: number[]; correcciones: Record<number, any>; idProveedor: number }) {
     return this.productsSellersService.bulkResubmit(data.ids, data.correcciones || {}, data.idProveedor);
+  }
+
+  @MessagePattern({ cmd: 'get_proveedor_profile' })
+  getProveedorProfile(@Payload() data: { idProveedor: number }) {
+    return this.productsSellersService.getProveedorProfile(data.idProveedor);
+  }
+
+  @MessagePattern({ cmd: 'update_proveedor_profile' })
+  updateProveedorProfile(@Payload() data: { idProveedor: number; payload: { nombre?: string; ruc?: string; telefono?: string; direccion?: string } }) {
+    return this.productsSellersService.updateProveedorProfile(data.idProveedor, data.payload || {});
+  }
+
+  @MessagePattern({ cmd: 'list_proveedor_documentos' })
+  listProveedorDocumentos(@Payload() data: { idProveedor: number }) {
+    return this.productsSellersService.listProveedorDocumentos(data.idProveedor);
+  }
+
+  @MessagePattern({ cmd: 'upload_proveedor_documento' })
+  uploadProveedorDocumento(@Payload() data: { idProveedor: number; file: { originalname: string; mimetype: string; buffer: any } }) {
+    const buffer = Buffer.isBuffer(data.file.buffer) ? data.file.buffer : Buffer.from(data.file.buffer);
+    return this.productsSellersService.uploadProveedorDocumento(data.idProveedor, { ...data.file, buffer });
+  }
+
+  @MessagePattern({ cmd: 'delete_proveedor_documento' })
+  deleteProveedorDocumento(@Payload() data: { idProveedor: number; idDocumento: number }) {
+    return this.productsSellersService.deleteProveedorDocumento(data.idProveedor, data.idDocumento);
+  }
+
+  @MessagePattern({ cmd: 'generate_proveedor_api_token' })
+  generateProveedorApiToken(@Payload() data: { idProveedor: number }) {
+    return this.productsSellersService.generateProveedorApiToken(data.idProveedor);
+  }
+
+  @MessagePattern({ cmd: 'revoke_proveedor_api_token' })
+  revokeProveedorApiToken(@Payload() data: { idProveedor: number }) {
+    return this.productsSellersService.revokeProveedorApiToken(data.idProveedor);
+  }
+
+  @MessagePattern({ cmd: 'etl_upsert_product_seller' })
+  etlUpsertProductSeller(@Payload() data: { idProveedor: number; payload: any; creadoPor: string }) {
+    return this.productsSellersService.upsertFromEtl(data.idProveedor, data.payload, data.creadoPor);
   }
 
   @MessagePattern({ cmd: 'get_notifications' })
@@ -375,10 +507,10 @@ export class ProductsController {
   }
 
   @MessagePattern({ cmd: 'list_econt_promotions' })
-  async listEcontPromotions() {
+  async listEcontPromotions(@Payload() payload: { desde?: string; hasta?: string }) {
     try {
-      const data = await this.productsService.listEcontPromotions();
-      return { data, success: true, message: 'Promociones activas de ECONT' };
+      const data = await this.productsService.listEcontPromotions(payload);
+      return { data, success: true, message: 'Promociones de ECONT' };
     } catch (error) {
       this.logger.error('Error in list_econt_promotions:', error);
       throw error;
@@ -393,6 +525,22 @@ export class ProductsController {
       this.logger.error('Error in get_econt_promotion_products:', error);
       throw error;
     }
+  }
+
+  @MessagePattern({ cmd: 'get_promocion_rendimiento' })
+  async getPromocionRendimiento(
+    @Payload() payload: { idPromo: number; desde: string; hasta: string },
+  ) {
+    return this.productsService.getRendimientoPromocion(
+      Number(payload?.idPromo),
+      payload?.desde,
+      payload?.hasta,
+    );
+  }
+
+  @MessagePattern({ cmd: 'buscar_documento_por_secuencia' })
+  async buscarDocumentoPorSecuencia(@Payload() payload: { secuencia: number }) {
+    return this.productsService.buscarDocumentoPorSecuencia(Number(payload?.secuencia));
   }
 
   @MessagePattern({ cmd: 'update_product_sello' })

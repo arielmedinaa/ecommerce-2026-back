@@ -7,18 +7,22 @@ import { MariaDbModule } from './config/mariadb.module';
 import { CuponesModule } from './cupones/cupones.module';
 import { EventsModule } from './events/events.module';
 import { PromotionsModule } from './promotions/promotions.module';
+import { RedisModule } from '@shared/common/cache/redis.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    RedisModule,
     HomeModule,
     LandingsModule,
     VerticalesModule,
     CuponesModule,
     EventsModule,
     PromotionsModule,
+    DashboardModule,
     MariaDbModule,
   ],
   exports: [
@@ -27,6 +31,7 @@ import { PromotionsModule } from './promotions/promotions.module';
     VerticalesModule,
     EventsModule,
     PromotionsModule,
+    DashboardModule,
   ],
 })
 export class ContentModule {}

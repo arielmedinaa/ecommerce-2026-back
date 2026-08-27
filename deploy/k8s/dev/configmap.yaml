@@ -22,6 +22,7 @@ data:
   PRODUCTS_PORT: "3106"
   IMAGE_PORT: "3107"
   MAIL_PORT: "3108"
+  ETL_PORT: "3109"
 
   AUTH_SERVICE_URL: "auth-service"
   CART_SERVICE_URL: "cart-service"
@@ -30,6 +31,13 @@ data:
   PRODUCTS_SERVICE_URL: "products-service"
   IMAGE_SERVICE_URL: "image-service"
   MAIL_SERVICE_URL: "mail-service"
+  ETL_SERVICE_URL: "etl-service"
+
+  # Agente de generación de ETL de Dropshipping (microservicio etl).
+  # ANTHROPIC_API_KEY NO va acá: vive como clave dentro del secret `econt-db`
+  # (aplicado directo al cluster, nunca commiteado en este archivo).
+  ETL_CLAUDE_MODEL: "claude-sonnet-5"
+  ETL_DEFAULT_CRON: "0 */6 * * *"
 
   # Dominio público del storefront: usado por mail-service para armar links de
   # tracking/carrito y por products/combos para la imagen del logo en los correos.
@@ -91,6 +99,11 @@ data:
   IMAGE_S3_SIGNED_URL_TTL_SECONDS: "300"
   IMAGE_S3_EXTERNAL_BASE_URL: "http://s3.us-east-1.localhost.localstack.cloud:4566/ecommerce-images"
   IMAGE_CDN_BASE_URL: ""
+
+  # Web Push (VAPID) para notificaciones al navegador de admin/proveedores.
+  VAPID_PUBLIC_KEY: "BCv2UueT9O_I94D9NUePESm9fCjxBfL_v-sEf5lp0W4kG30QebjQX4MR4Tpg5AHQNrwbph3cwzCnQPu69AlpCbc"
+  VAPID_PRIVATE_KEY: "ApDGJfQ_l3E7cpgu0LcTG0wH8hmPq1lyMt4mU0kVefM"
+  VAPID_SUBJECT: "mailto:informatica@centralshop.com.py"
 
   VPOS_CLAVE_PUBLICA: "iuooOrDVDmnDEmSnp0OrZjzwyevyvLAL"
   VPOS_CLAVE_PRIVADA: "8O(1VXAOn8Q0(+xCnFx(zxIv,I8D6rW153y1hg,n"

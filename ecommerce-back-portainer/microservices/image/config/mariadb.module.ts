@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Banners } from '../schemas/banners/banners.schema';
 import { BannerError } from '../schemas/errors/banners.error.schema';
+import { CartScreenshot } from '../schemas/cart-screenshots/cart-screenshot.schema';
 import { MariaDbConnectionService } from './mariadb-connection.service';
 
 @Module({
@@ -27,7 +28,7 @@ export class MariaDbModule {
         username: configService.get<string>('DATABASE_USER'),
         password: configService.get<string>('DATABASE_PASSWORD'),
         database: configService.get<string>('DATABASE_NAME'),
-        entities: [Banners, BannerError],
+        entities: [Banners, BannerError, CartScreenshot],
         synchronize: process.env.SYNCRONICE === 'true',
         logging: process.env.SYNCRONICE === 'true',
         timezone: '-03:00',
@@ -54,7 +55,7 @@ export class MariaDbModule {
         username: configService.get<string>('DATABASE_USER_REPLIC'),
         password: configService.get<string>('DATABASE_PASSWORD_REPLIC'),
         database: configService.get<string>('DATABASE_NAME_REPLIC'),
-        entities: [Banners, BannerError],
+        entities: [Banners, BannerError, CartScreenshot],
         synchronize: process.env.SYNCRONICE === 'true',
         logging: process.env.SYNCRONICE === 'true',
         timezone: '-03:00',
@@ -71,10 +72,10 @@ export class MariaDbModule {
   }
 
   static forFeature(): DynamicModule {
-    return TypeOrmModule.forFeature([Banners, BannerError], 'WRITE_CONNECTION');
+    return TypeOrmModule.forFeature([Banners, BannerError, CartScreenshot], 'WRITE_CONNECTION');
   }
 
   static forFeatureRead(): DynamicModule {
-    return TypeOrmModule.forFeature([Banners, BannerError], 'READ_CONNECTION');
+    return TypeOrmModule.forFeature([Banners, BannerError, CartScreenshot], 'READ_CONNECTION');
   }
 }

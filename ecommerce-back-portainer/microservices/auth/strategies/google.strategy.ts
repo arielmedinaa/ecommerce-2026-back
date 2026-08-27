@@ -14,7 +14,6 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       process.env.GOOGLE_CALLBACK_URL ||
       'http://localhost:3101/auth/google/callback';
 
-    // `super(...)` must be the first statement (ts-node/TS restriction for derived classes).
     super({
       clientID: clientID || 'DISABLED',
       clientSecret: clientSecret || 'DISABLED',

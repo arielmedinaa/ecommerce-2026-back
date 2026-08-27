@@ -37,6 +37,11 @@ export class CartController {
     }
   }
 
+  @MessagePattern({ cmd: 'get_ventas_por_codigos' })
+  async getVentasPorCodigos(@Payload() payload: { codigos: string[] }) {
+    return this.cartService.getVentasPorCodigos(payload?.codigos || []);
+  }
+
   @MessagePattern({ cmd: 'get_cart' })
   async getCart(@Payload() payload: any) {
     const { token, cuenta, codigo } = payload;
@@ -94,6 +99,76 @@ export class CartController {
     return this.cartService.getComprasResumenByUsers(payload?.userIds || []);
   }
 
+  @MessagePattern({ cmd: 'get_user_top_categorias' })
+  async getUserTopCategorias(
+    @Payload() payload: { userId: number | string; limit?: number },
+  ) {
+    return this.cartService.getUserTopCategorias(payload?.userId, payload?.limit ?? 5);
+  }
+
+  @MessagePattern({ cmd: 'get_user_orders' })
+  async getUserOrders(@Payload() payload: { userId: number | string }) {
+    return this.cartService.getUserOrders(payload?.userId);
+  }
+
+  @MessagePattern({ cmd: 'get_estado_pedido' })
+  async getEstadoPedido(@Payload() payload: { codigo: number }) {
+    return this.cartService.obtenerEstadoPedido(Number(payload?.codigo));
+  }
+
+  @MessagePattern({ cmd: 'update_order' })
+  async updateOrder(
+    @Payload() payload: { userId: number | string; codigo: string; patch: any },
+  ) {
+    return this.cartService.updateOrder(payload?.userId, payload?.codigo, payload?.patch || {});
+  }
+
+  @MessagePattern({ cmd: 'rate_order' })
+  async rateOrder(
+    @Payload() payload: { userId: number | string; codigo: string; body: any },
+  ) {
+    return this.cartService.rateOrder(payload?.userId, payload?.codigo, payload?.body || {});
+  }
+
+  @MessagePattern({ cmd: 'should_prompt_rating' })
+  async shouldPromptRating(
+    @Payload() payload: { userId: number | string; codigo: string },
+  ) {
+    return this.cartService.shouldPromptRating(payload?.userId, payload?.codigo);
+  }
+
+  @MessagePattern({ cmd: 'get_orders_by_product' })
+  async getOrdersByProduct(@Payload() payload: { codigo: string }) {
+    return this.cartService.getOrdersByProduct(payload?.codigo);
+  }
+
+  @MessagePattern({ cmd: 'get_top_pedidos_hoy' })
+  async getTopPedidosHoy(@Payload() payload: { limit?: number }) {
+    return this.cartService.getTopPedidosHoy(payload?.limit);
+  }
+
+  @MessagePattern({ cmd: 'count_carritos_activos' })
+  async countCarritosActivos() {
+    return this.cartService.countCarritosActivos();
+  }
+
+  @MessagePattern({ cmd: 'count_carritos_abandonados' })
+  async countCarritosAbandonados(@Payload() payload: { desde?: string; hasta?: string }) {
+    return this.cartService.countCarritosAbandonados(payload?.desde, payload?.hasta);
+  }
+
+  @MessagePattern({ cmd: 'get_top_productos_vendidos' })
+  async getTopProductosVendidos(@Payload() payload: { desde: string; hasta: string; limit?: number }) {
+    return this.cartService.getTopProductosVendidos(payload?.desde, payload?.hasta, payload?.limit);
+  }
+
+  @MessagePattern({ cmd: 'sync_cart_cliente' })
+  async syncCartCliente(
+    @Payload() payload: { userId: number | string; cliente: { razonsocial?: string; correo?: string; telefono?: string; documento?: string } },
+  ) {
+    return this.cartService.syncClienteByUser(payload?.userId, payload?.cliente || {});
+  }
+
   @MessagePattern({ cmd: 'remove_cart_item' })
   async removeCartItem(@Payload() payload: { token: string; productoCodigo: string | number; tipo?: 'contado' | 'credito' }) {
     return this.cartService.removeCartItem(payload?.token, payload?.productoCodigo, payload?.tipo);
@@ -102,6 +177,28 @@ export class CartController {
   @MessagePattern({ cmd: 'remove_cart_items' })
   async removeCartItems(@Payload() payload: { token: string; items: Array<{ codigo: string | number; tipo?: 'contado' | 'credito' }> }) {
     return this.cartService.removeCartItems(payload?.token, payload?.items);
+  }
+
+  @MessagePattern({ cmd: 'change_cart_item_condition' })
+  async changeCartItemCondition(
+    @Payload()
+    payload: {
+      token: string;
+      productoCodigo: string | number;
+      fromTipo: 'contado' | 'credito';
+      toTipo: 'contado' | 'credito';
+      precio: number;
+      cuota?: number;
+    },
+  ) {
+    return this.cartService.changeCartItemCondition(
+      payload?.token,
+      payload?.productoCodigo,
+      payload?.fromTipo,
+      payload?.toTipo,
+      payload?.precio,
+      payload?.cuota,
+    );
   }
 
   @MessagePattern({ cmd: 'clear_cart' })

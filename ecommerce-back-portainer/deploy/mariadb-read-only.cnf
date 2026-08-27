@@ -1,0 +1,8 @@
+# Este MariaDB local quedó sin uso tras la unificación de la base de datos
+# hacia worker-RDS (10.116.0.7). Se mantiene arriba como red de seguridad,
+# pero en modo solo-lectura para evitar escrituras accidentales.
+# Montado desde el host para que sobreviva a un `--force-recreate` del
+# contenedor (a diferencia de un `SET GLOBAL`/edición manual dentro del
+# contenedor, que se pierde si el contenedor se recrea).
+[mariadb]
+read_only = 1

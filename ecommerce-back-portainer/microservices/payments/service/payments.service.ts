@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Payment } from '../schemas/payments.schema';
-import moment from 'moment-timezone';
+import moment = require('moment-timezone');
 import { PaymentErrorService } from './errors/payment-error.service';
 import { PaymentsQueueService } from '../queue/payments.queue.service';
 import { PaymentIntent } from '../schemas/payment-intent.schema';
@@ -338,7 +338,6 @@ export class PaymentsService {
         };
       }
 
-      // Actualizar campos
       Object.assign(pagoActualizado, updateData);
       await this.paymentRepositoryWrite.save(pagoActualizado);
 
@@ -362,6 +361,12 @@ export class PaymentsService {
     return `TXN_${timestamp}_${random}`;
   }
 
+  private generarShopProcessId(): string {
+    const timestamp = Date.now().toString();
+    const random = Math.floor(Math.random() * 90 + 10).toString();
+    return `${timestamp}${random}`;
+  }
+
   private calcularFechaExpiracion(metodoPago: string): Date {
     const ahora = new Date();
 
@@ -369,12 +374,123 @@ export class PaymentsService {
       case 'pagopar':
         return new Date(ahora.getTime() + 24 * 60 * 60 * 1000);
       case 'bancard':
+      case 'bancard_vpos':
         return new Date(ahora.getTime() + 30 * 60 * 1000);
       case 'efectivo contra entrega':
       case 'tarjeta contra entrega':
         return new Date(ahora.getTime() + 7 * 24 * 60 * 60 * 1000);
       default:
         return new Date(ahora.getTime() + 24 * 60 * 60 * 1000);
+    }
+  }
+
+  async registrarPagoVpos(
+    codigoCarrito: number,
+    carrito: any,
+    monto: number,
+    moneda: string = 'PYG',
+    cliente?: any,
+    descripcion?: string,
+    zimple?: string,
+  ): Promise<{ data: any; success: boolean; message: string }> {
+    const idTransaccion = this.generarIdTransaccion();
+    const shopProcessId = this.generarShopProcessId();
+    try {
+      const intent = this.paymentIntentRepositoryWrite.create({
+        idTransaccion,
+        shopProcessId,
+        codigoCarrito,
+        estado: 'creado',
+        metodoPago: 'bancard_vpos',
+        monto,
+        moneda,
+        descripcion: descripcion || `Pago VPOS del carrito ${codigoCarrito}`,
+        carrito: carrito || {},
+        cliente: cliente || {},
+        metadatos: { zimple },
+        expiraEn: this.calcularFechaExpiracion('bancard_vpos'),
+      } as any);
+
+      const intentSaved = await this.paymentIntentRepositoryWrite.save(intent as any);
+
+      return {
+        data: {
+          idIntentoPago: intentSaved.id,
+          idTransaccion,
+          shopProcessId,
+          estado: intentSaved.estado,
+          codigoCarrito,
+          metodoPago: 'bancard_vpos',
+          monto,
+          moneda,
+        },
+        success: true,
+        message: 'INTENTO DE PAGO VPOS CREADO',
+      };
+    } catch (error) {
+      this.paymentErrorService.logMicroserviceError(error, idTransaccion, 'registrarPagoVpos');
+      return {
+        data: null,
+        success: false,
+        message: `ERROR AL REGISTRAR PAGO VPOS: ${error.message}`,
+      };
+    }
+  }
+
+  async marcarIntentoVposFallido(shopProcessId: string, motivo: string) {
+    await this.paymentIntentRepositoryWrite.update(
+      { shopProcessId },
+      { estado: 'fallido', ultimoError: motivo } as any,
+    );
+  }
+
+  async getVposIntentEstado(shopProcessId: string) {
+    const intent = await this.paymentIntentRepositoryRead.findOne({
+      where: { shopProcessId },
+    });
+    if (!intent) return null;
+    return { estado: intent.estado, ultimoError: intent.ultimoError };
+  }
+
+  async processVposConfirmation(operation: any) {
+    const shopProcessId = operation?.shop_process_id;
+    if (!shopProcessId) return { status: 'ignored' };
+
+    try {
+      const paymentIntent = await this.paymentIntentRepositoryRead.findOne({
+        where: { shopProcessId: String(shopProcessId) },
+      });
+
+      if (!paymentIntent) {
+        this.paymentErrorService.logMicroserviceError(
+          new Error('PaymentIntent no encontrado para shopProcessId'),
+          String(shopProcessId),
+          'processVposConfirmation',
+        );
+        return { status: 'not_found' };
+      }
+
+      if (paymentIntent.estado === 'completado' || paymentIntent.estado === 'fallido') {
+        return { status: 'already_processed', estado: paymentIntent.estado };
+      }
+
+      const estado = operation.response_code === '00' ? 'completado' : 'fallido';
+      await this.paymentIntentRepositoryWrite.update(
+        { id: paymentIntent.id },
+        {
+          estado,
+          respuestaBancard: operation,
+          ultimoError: estado === 'fallido' ? operation.response_description : null,
+        } as any,
+      );
+
+      if (estado === 'completado') {
+        await this.registrarPagoDesdeIntento(paymentIntent.id);
+      }
+      return { status: 'ok', estado };
+    } catch (error) {
+      this.paymentErrorService.logMicroserviceError(error, String(shopProcessId), 'processVposConfirmation');
+      return { status: 'error' };
     }
   }
 }

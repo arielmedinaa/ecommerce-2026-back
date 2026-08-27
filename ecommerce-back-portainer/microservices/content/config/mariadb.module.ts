@@ -9,12 +9,16 @@ import { Cupon } from '@content/cupones/schemas/cupon.schema';
 import { CuponesPorProducto } from '@content/cupones/schemas/cupon-productos.schema';
 import { Event } from '@content/events/schemas/event.schema';
 import { EventProduct } from '@content/events/schemas/event-product.schema';
-// Order/OrderItem (tabla `ordenes`) pertenecen a cart; content los consulta por RPC.
+
 import { EventCondition } from '@content/events/schemas/event-condition.schema';
 import { HomeSection } from '@content/home/schemas/home-section.schema';
 import { Promotion } from '@content/promotions/schemas/promotion.schema';
 import { PromotionProduct } from '@content/promotions/schemas/promotion-product.schema';
 import { PromotionVisit } from '@content/promotions/schemas/promotion-visit.schema';
+import { MetaVentas } from '@content/dashboard/schemas/meta-ventas.schema';
+import { IngresoExterno } from '@content/dashboard/schemas/ingreso-externo.schema';
+import { HistorialDashboard } from '@content/dashboard/schemas/historial-dashboard.schema';
+import { DashboardWidget } from '@content/dashboard/schemas/dashboard-widget.schema';
 
 @Module({
   imports: [
@@ -51,6 +55,10 @@ export class MariaDbModule {
           Promotion,
           PromotionProduct,
           PromotionVisit,
+          MetaVentas,
+          IngresoExterno,
+          HistorialDashboard,
+          DashboardWidget,
         ],
         synchronize: process.env.SYNCRONICE === 'true',
         logging: process.env.SYNCRONICE === 'true',
@@ -92,6 +100,10 @@ export class MariaDbModule {
           Promotion,
           PromotionProduct,
           PromotionVisit,
+          MetaVentas,
+          IngresoExterno,
+          HistorialDashboard,
+          DashboardWidget,
         ],
         synchronize: process.env.SYNCRONICE === 'true',
         logging: process.env.SYNCRONICE === 'true',

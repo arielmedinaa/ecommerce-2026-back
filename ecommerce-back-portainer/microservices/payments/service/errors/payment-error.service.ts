@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import moment from 'moment-timezone';
+import moment = require('moment-timezone');
 
 @Injectable()
 export class PaymentErrorService {
@@ -64,19 +64,19 @@ export class PaymentErrorService {
   }
 
   async getErrorLogs(paymentId?: string, limit = 100): Promise<any[]> {
-    // Implementación simple sin MongoDB
+    
     this.logger.log(`Getting error logs for payment: ${paymentId}, limit: ${limit}`);
     return [];
   }
 
   async getErrorStats(): Promise<any> {
-    // Implementación simple sin MongoDB
+    
     this.logger.log('Getting error stats');
     return {};
   }
 
   async getPaymentErrorHistory(paymentId: string): Promise<any[]> {
-    // Implementación simple sin MongoDB
+    
     this.logger.log(`Getting payment error history for: ${paymentId}`);
     return [];
   }

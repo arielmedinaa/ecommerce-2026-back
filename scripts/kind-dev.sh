@@ -15,6 +15,7 @@ SERVICES=(
   "payments-service"
   "products-service"
   "mail-service"
+  "etl-service"
   "api-gateway"
 )
 
@@ -31,7 +32,7 @@ Usage:
   scripts/kind-dev.sh port-forward
 
 Services:
-  auth-service cart-service content-service image-service payments-service products-service mail-service api-gateway
+  auth-service cart-service content-service image-service payments-service products-service mail-service etl-service api-gateway
 EOF
 }
 
@@ -50,6 +51,7 @@ dockerfile_for() {
     payments-service) printf 'microservices/payments/container/Dockerfile.dev' ;;
     products-service) printf 'microservices/products/container/Dockerfile.dev' ;;
     mail-service) printf 'microservices/mail/container/Dockerfile.dev' ;;
+    etl-service) printf 'microservices/etl/container/Dockerfile.dev' ;;
     api-gateway) printf 'api-gateway/container/Dockerfile' ;;
     *) return 1 ;;
   esac
@@ -65,6 +67,7 @@ manifest_for() {
     payments-service) printf 'deploy/k8s/dev/payments.yaml' ;;
     products-service) printf 'deploy/k8s/dev/products.yaml' ;;
     mail-service) printf 'deploy/k8s/dev/mail.yaml' ;;
+    etl-service) printf 'deploy/k8s/dev/etl.yaml' ;;
     api-gateway) printf 'deploy/k8s/dev/api-gateway.yaml' ;;
     *) return 1 ;;
   esac
@@ -86,6 +89,7 @@ resolve_services() {
       payments|payments-service) printf '%s\n' 'payments-service' ;;
       products|products-service) printf '%s\n' 'products-service' ;;
       mail|mail-service) printf '%s\n' 'mail-service' ;;
+      etl|etl-service) printf '%s\n' 'etl-service' ;;
       gateway|api-gateway) printf '%s\n' 'api-gateway' ;;
       *)
         printf 'Unknown service: %s\n' "$requested" >&2

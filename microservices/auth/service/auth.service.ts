@@ -1,4 +1,5 @@
 import { User } from '@auth/schemas/user.schemas';
+import { Rol } from '@auth/schemas/rol.schema';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -14,6 +15,7 @@ export class AuthService {
 
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
+    @InjectRepository(Rol) private readonly rolRepository: Repository<Rol>,
     private readonly jwtService: JwtService,
     private readonly userCouponService: UserCouponService,
     private readonly resilientService: ResilientService,
@@ -130,19 +132,64 @@ export class AuthService {
     const userCoupons = await this.userCouponService.getCouponsForToken(
       user.id,
     );
-    const payload = {
+    const payload: Record<string, any> = {
       sub: user.id.toString(),
       email: user.email,
       name: user.nombre,
       provider: user.proveedor,
       etiquetas: user.etiquetas || [],
       cupones: userCoupons,
-      perfil: user.perfil || "administrador",
-      numeroCelular: user.numeroCelular || "",
-      numeroDocumento: user.numeroDocumento || ""
+      perfil: user.perfil || 'cliente',
+      numeroCelular: user.numeroCelular || '',
+      numeroDocumento: user.numeroDocumento || '',
     };
 
+    if (user.perfil === 'administrador') {
+      payload.tipo = 'admin';
+      payload.rol = user.rol?.nombre ?? null;
+      payload.modulosPermitidos = user.rol?.modulos ?? [];
+    }
+
     return this.jwtService.sign(payload, { expiresIn: '24h' });
+  }
+
+  async createAdminUser(payload: {
+    nombre: string;
+    email: string;
+    rolId: number;
+  }): Promise<{ data: User | null; success: boolean; message: string }> {
+    const existente = await this.userRepository.findOne({ where: { email: payload.email } });
+    if (existente) {
+      return { data: null, success: false, message: 'El email ya está registrado' };
+    }
+
+    const rol = await this.rolRepository.findOne({ where: { id: payload.rolId } });
+    if (!rol) {
+      return { data: null, success: false, message: 'El rol indicado no existe' };
+    }
+
+    const admin = this.userRepository.create({
+      email: payload.email,
+      nombre: payload.nombre,
+      proveedor: 'usuario basico',
+      idProveedor: payload.email,
+      esInvitado: false,
+      estaActivo: true,
+      perfil: 'administrador',
+      rolId: rol.id,
+      etiquetas: ['ADMINISTRADOR'],
+    });
+
+    await this.userRepository.save(admin);
+    return { data: admin, success: true, message: 'Administrador creado exitosamente' };
+  }
+
+  async listAdminUsers(): Promise<{ data: User[]; success: boolean; message: string }> {
+    const data = await this.userRepository.find({
+      where: { perfil: 'administrador' },
+      order: { fechaCreacion: 'DESC' },
+    });
+    return { data, success: true, message: 'OK' };
   }
 
   async validateGoogleUser(profile: any): Promise<User> {

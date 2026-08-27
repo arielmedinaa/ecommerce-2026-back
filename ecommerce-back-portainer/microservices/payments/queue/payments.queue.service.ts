@@ -30,4 +30,19 @@ export class PaymentsQueueService {
       return false;
     }
   }
+
+  async enqueueVposConfirmation(operation: any) {
+    try {
+      const queueUrl = await this.getQueueUrl();
+      await this.sqs.sendJson(queueUrl, {
+        type: 'vpos_confirmation',
+        confirmation: operation,
+        ts: new Date().toISOString(),
+      });
+      return true;
+    } catch (error) {
+      this.logger.error('Failed to enqueue vpos confirmation job', error?.stack || error);
+      return false;
+    }
+  }
 }

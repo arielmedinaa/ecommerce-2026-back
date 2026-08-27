@@ -11,10 +11,6 @@ export class CommunicationService {
     private readonly configService: ConfigService,
   ) {}
 
-  /**
-   * Realiza comunicación TCP con un microservicio
-   * Prioridad: TCP -> HTTP fallback
-   */
   async communicateWithService(
     serviceName: string,
     pattern: any,
@@ -38,9 +34,6 @@ export class CommunicationService {
     }
   }
 
-  /**
-   * Comunicación HTTP como fallback
-   */
   private async communicateViaHttp(
     serviceName: string,
     pattern: any,
@@ -88,9 +81,6 @@ export class CommunicationService {
     }
   }
 
-  /**
-   * Construye endpoint HTTP basado en el patrón TCP
-   */
   private buildHttpEndpoint(pattern: any): string {
     const patternMap: { [key: string]: string } = {
       'get_products': '/products/list',
@@ -109,9 +99,6 @@ export class CommunicationService {
     return endpoint;
   }
 
-  /**
-   * Verifica disponibilidad antes de comunicar
-   */
   async checkServiceBeforeCommunication(serviceName: string): Promise<boolean> {
     this.logger.log(`Verificando disponibilidad de ${serviceName} antes de comunicar...`);
     
@@ -131,9 +118,6 @@ export class CommunicationService {
     return true;
   }
 
-  /**
-   * Método genérico para comunicación con reintentos
-   */
   async communicateWithRetry(
     serviceName: string,
     pattern: any,
@@ -172,9 +156,6 @@ export class CommunicationService {
     }
   }
 
-  /**
-   * Obtiene estadísticas de comunicación
-   */
   getCommunicationStats(): any {
     const allServices = this.serviceDiscovery.getAllServices();
     const availableServices = this.serviceDiscovery.getAvailableServices();
