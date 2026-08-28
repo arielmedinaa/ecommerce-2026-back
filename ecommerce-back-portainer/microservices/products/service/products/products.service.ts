@@ -370,7 +370,7 @@ export class ProductsService {
       };
     }
 
-    const { data } = await this.findAll({
+    const { data } = await this.getCachedPrismaProductos({
       search: termino,
       limit: 15,
       offset: 0,
@@ -413,8 +413,8 @@ export class ProductsService {
       await this.productsUtils.complementosDisponibles(
         candidatosComplementos,
         this.WEB_BASE_WHERE,
-        this.STOCK_EXISTS,
         this.cache,
+        this.CACHE_TTL,
         this.STOCK_EXISTS,
       )
     ).slice(0, 6);
@@ -437,7 +437,11 @@ export class ProductsService {
         message: 'SIN CODIGO',
       };
     try {
-      const { data } = await this.findAll({ search: cod, limit: 1, offset: 0 });
+      const { data } = await this.getCachedPrismaProductos({
+        search: cod,
+        limit: 1,
+        offset: 0,
+      });
       const p: any = Array.isArray(data) ? data[0] : null;
       if (!p)
         return {
@@ -455,15 +459,15 @@ export class ProductsService {
         this.productsUtils.complementosDisponibles(
           niveles.cercanos,
           this.WEB_BASE_WHERE,
-          this.STOCK_EXISTS,
           this.cache,
+          this.CACHE_TTL,
           this.STOCK_EXISTS,
         ),
         this.productsUtils.complementosDisponibles(
           niveles.lejanos,
           this.WEB_BASE_WHERE,
-          this.STOCK_EXISTS,
           this.cache,
+          this.CACHE_TTL,
           this.STOCK_EXISTS,
         ),
       ]);
@@ -1163,7 +1167,7 @@ export class ProductsService {
                 WHERE sd.comprobante = sc.comprobante AND sd.numero = sc.numero AND sd.id_promo = ?
               )
               AND sc.age_frecepcion BETWEEN ? AND ?
-              AND sc.comprobante IN (2260, 2560)
+              AND sc.comprobante IN (SELECT vd2.codigo FROM vendedor vd2 WHERE vd2.coordinador = 52)
               AND sc.estado_soli NOT IN ('31', '25', '37')
               AND sc.estado_soli IN ('19', '16')`,
           [idPromo, desde, hasta],
@@ -1178,7 +1182,7 @@ export class ProductsService {
              INNER JOIN tbl_estados_solicitud tes ON tes.codigo_estado_solicitud = sc.estado_soli
             WHERE sd.id_promo = ?
               AND sc.age_frecepcion BETWEEN ? AND ?
-              AND sc.comprobante IN (2260, 2560)
+              AND sc.comprobante IN (SELECT vd2.codigo FROM vendedor vd2 WHERE vd2.coordinador = 52)
               AND sc.estado_soli NOT IN ('31', '25', '37')
               AND sc.estado_soli IN (19, 16)
             ORDER BY sc.age_frecepcion, sc.comprobante, sc.numero`,

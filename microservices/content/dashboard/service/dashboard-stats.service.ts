@@ -305,6 +305,7 @@ export class DashboardStatsService {
     try {
       const ahora = new Date();
       const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0);
+      const finMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 0, 0, 0);
 
       const finSemanaActual = ahora;
       const inicioSemanaActual = new Date(ahora.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -319,7 +320,7 @@ export class DashboardStatsService {
         ingresosExternosMes,
         ingresosExternos,
       ] = await Promise.all([
-        this.sumFacturacion(inicioMes, ahora),
+        this.sumFacturacion(inicioMes, finMes),
         this.sumFacturacion(inicioSemanaActual, finSemanaActual),
         this.sumFacturacion(inicioSemanaAnterior, finSemanaAnterior),
         this.getMetaMensual(),

@@ -260,11 +260,14 @@ export class ProductsController {
 
   @UseGuards(JwtAuthGuard)
   @Get('sellers/pendientes')
-  async listProductsSellersPendientes(@Query('idProveedor') idProveedor?: string) {
+  async listProductsSellersPendientes(
+    @Query('idProveedor') idProveedor?: string,
+    @Query('estado') estado?: string,
+  ) {
     return await firstValueFrom(
       this.productsClient.send(
         { cmd: 'list_products_sellers_pendientes' },
-        { idProveedor: idProveedor ? Number(idProveedor) : undefined },
+        { idProveedor: idProveedor ? Number(idProveedor) : undefined, estado },
       ),
     );
   }
@@ -277,7 +280,6 @@ export class ProductsController {
       codigo_marca?: string;
       codigo_categoria?: string;
       codigo_subcategoria?: string;
-      aceptar_precio_sugerido?: boolean;
     },
     @Req() request: any,
   ) {

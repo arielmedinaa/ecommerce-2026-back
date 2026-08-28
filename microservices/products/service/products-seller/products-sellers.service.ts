@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';
@@ -21,6 +21,7 @@ import { ProductsSellersUtils } from '../../utils/utils-products-sellers';
 import { SellerImageValidatorUtil } from '../../utils/seller-image-validator.util';
 import { ImageStorageService } from '@shared/common/services/image-storage.service';
 import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
+import { ProductsSellerAiApprovalService } from './products-seller-ai-approval.service';
 
 const DOCUMENTOS_CONTENT_TYPES_PERMITIDOS = [
   'application/pdf',
@@ -71,6 +72,8 @@ export class ProductsSellersService {
     private readonly sellerImageValidator: SellerImageValidatorUtil,
     private readonly jwtService: JwtService,
     private readonly cache: CachePersistenteService,
+    @Inject(forwardRef(() => ProductsSellerAiApprovalService))
+    private readonly aiApproval: ProductsSellerAiApprovalService,
   ) {}
 
   private excelHistorialKey(idProveedor: number, nombreArchivo: string): string {
@@ -226,7 +229,6 @@ export class ProductsSellersService {
       nombre_articulo: string;
       descripcion?: string;
       precioventa: number;
-      precio_sugerido?: number | null;
       stock_actual: number;
       imagen_1: string;
       imagen_2?: string;
@@ -265,17 +267,19 @@ export class ProductsSellersService {
         nombre_articulo: payload.nombre_articulo,
         descripcion: payload.descripcion,
         precioventa: payload.precioventa,
-        precio_sugerido: payload.precio_sugerido ?? existente.precio_sugerido,
         stock_actual: payload.stock_actual,
         imagen_1: payload.imagen_1,
         imagen_2: payload.imagen_2,
         imagen_3: payload.imagen_3,
         imagen_4: payload.imagen_4,
         imagen_5: payload.imagen_5,
+        estado: 'pendiente',
         updated_by: creadoPor,
       });
       const data = await this.sellerRepository.findOne({ where: { id: existente.id } });
-      return { data, created: false, success: true, message: 'Producto actualizado (ya existía)' };
+      if (data) await this.aiApproval.evaluarYAplicar(data, 'ai-agent');
+      const dataFinal = await this.sellerRepository.findOne({ where: { id: existente.id } });
+      return { data: dataFinal, created: false, success: true, message: 'Producto actualizado (ya existía)' };
     }
 
     const marcaMatch = await this.sellersUtils.matchMarca(payload.codigo_marca || '');
@@ -288,7 +292,6 @@ export class ProductsSellersService {
         nombre_articulo: payload.nombre_articulo,
         descripcion: payload.descripcion,
         precioventa: payload.precioventa,
-        precio_sugerido: payload.precio_sugerido ?? null,
         stock_actual: payload.stock_actual,
         imagen_1: payload.imagen_1,
         imagen_2: payload.imagen_2,
@@ -306,7 +309,9 @@ export class ProductsSellersService {
         created_by: creadoPor,
       }),
     );
-    return { data: nuevo, created: true, success: true, message: 'Producto creado' };
+    await this.aiApproval.evaluarYAplicar(nuevo, 'ai-agent');
+    const dataFinal = await this.sellerRepository.findOne({ where: { id: nuevo.id } });
+    return { data: dataFinal, created: true, success: true, message: 'Producto creado' };
   }
 
   private readonly TEMPLATE_CACHE_KEY = 'products:sellers:template:v1';
@@ -336,7 +341,7 @@ export class ProductsSellersService {
 
     const columns = [
       'codigo_proveedor_interno', 'nombre_articulo', 'descripcion', 'marca',
-      'categoria', 'subcategoria', 'costo', 'precio_sugerido', 'codigo_de_barra',
+      'categoria', 'subcategoria', 'costo', 'codigo_de_barra',
       'stock_actual', 'imagen_1', 'imagen_2', 'imagen_3', 'imagen_4', 'imagen_5',
     ];
 
@@ -463,7 +468,7 @@ export class ProductsSellersService {
 
   private readonly CAMPOS_FILA_CATALOGO = [
     'codigo_proveedor_interno', 'nombre_articulo', 'descripcion', 'marca', 'categoria', 'subcategoria',
-    'precioventa', 'precio_sugerido', 'codigo_de_barra', 'stock_actual',
+    'costo', 'codigo_de_barra', 'stock_actual',
     'imagen_1', 'imagen_2', 'imagen_3', 'imagen_4', 'imagen_5',
   ] as const;
 
@@ -477,21 +482,18 @@ export class ProductsSellersService {
     const marcaTexto = (datos.marca || '').trim();
     const categoriaTexto = (datos.categoria || '').trim();
     const subcategoriaTexto = (datos.subcategoria || '').trim();
-    const precioventaStr = (datos.precioventa || '').trim();
-    const precioSugeridoStr = (datos.precio_sugerido || '').trim();
+    const costoStr = (datos.costo || '').trim();
     const stockStr = (datos.stock_actual || '').trim();
     const imagen1Texto = (datos.imagen_1 || '').trim();
 
-    const precioventa = Number(precioventaStr);
+    const costo = Number(costoStr);
     const stock = Number(stockStr || '0');
 
     if (!nombre) return { ok: false, codigo: 103 };
     if (!marcaTexto) return { ok: false, codigo: 104 };
     if (!categoriaTexto) return { ok: false, codigo: 105 };
-    if (!Number.isFinite(precioventa) || precioventa < 9000) return { ok: false, codigo: 106 };
+    if (!Number.isFinite(costo) || costo < 9000) return { ok: false, codigo: 106 };
     if (!Number.isFinite(stock) || stock < 0) return { ok: false, codigo: 107 };
-    const precioSugerido = precioSugeridoStr ? Number(precioSugeridoStr) : null;
-    if (precioSugeridoStr && !Number.isFinite(precioSugerido)) return { ok: false, codigo: 110 };
 
     const codigoArticuloTentativo = `SEL-${uuidv4().slice(0, 8)}`;
 
@@ -548,8 +550,7 @@ export class ProductsSellersService {
         codigo_categoria: categoriaMatch.codigo,
         codigo_subcategoria: subcategoriaMatch.codigo,
         requiere_revision_categoria: requiereRevisionCategoria,
-        precioventa,
-        precio_sugerido: precioSugerido,
+        precioventa: costo,
         codigo_de_barra: (datos.codigo_de_barra || '').trim() || undefined,
         stock_actual: stock,
         imagen_1: imagen1Final,
@@ -634,6 +635,12 @@ export class ProductsSellersService {
           const saved = await this.sellerRepository.save(entidadesBatch);
           const ids = saved.map((s) => s.id);
           if (ids.length > 0) await this.sellerRepository.update(ids, { id_historial_excel: idHistorial });
+          // Evaluación de IA: cada producto recién guardado ('pendiente') se
+          // resuelve acá mismo a aprobado/rechazado — nunca queda pendiente
+          // esperando a un admin.
+          for (const seller of saved) {
+            await this.aiApproval.evaluarYAplicar(seller, 'ai-agent');
+          }
           entidadesBatch = [];
         }
         if (detalleBatch.length > 0) {
@@ -741,9 +748,9 @@ export class ProductsSellersService {
     await this.excelHistorialRepository.update(idHistorial, { estado: 'error', total_filas: 0, rechazados: 1 });
   }
 
-  async listPendientes(idProveedor?: number): Promise<{ data: ProductsSeller[]; message: string; success: boolean }> {
+  async listPendientes(idProveedor?: number, estado: string = 'pendiente'): Promise<{ data: ProductsSeller[]; message: string; success: boolean }> {
     try {
-      const where: any = { estado: 'pendiente' };
+      const where: any = { estado };
       if (idProveedor) where.id_proveedor = idProveedor;
       const data = await this.sellerRepository.find({ where, order: { created_at: 'DESC' } });
       return { data, message: 'Ok', success: true };
@@ -771,7 +778,6 @@ export class ProductsSellersService {
       codigo_marca?: string;
       codigo_categoria?: string;
       codigo_subcategoria?: string;
-      aceptar_precio_sugerido?: boolean;
     },
   ): Promise<{ data: ProductsSeller | null; message: string; success: boolean }> {
     try {
@@ -786,8 +792,6 @@ export class ProductsSellersService {
         return { data: null, message: 'No se puede aprobar sin marca y categoría resueltas', success: false };
       }
 
-      const aceptarPrecioSugerido = !!correccion?.aceptar_precio_sugerido && seller.precio_sugerido != null;
-
       await this.sellerRepository.update(id, {
         codigo_marca: codigoMarca,
         codigo_categoria: codigoCategoria,
@@ -796,7 +800,6 @@ export class ProductsSellersService {
         requiere_revision_categoria: false,
         estado: 'aprobado',
         updated_by: modificadoPor,
-        ...(aceptarPrecioSugerido ? { precioventa: seller.precio_sugerido } : {}),
       });
       const data = await this.sellerRepository.findOne({ where: { id } });
 
@@ -908,6 +911,8 @@ export class ProductsSellersService {
         aceptados: historial.aceptados + 1,
         rechazados: Math.max(historial.rechazados - 1, 0),
       });
+
+      await this.aiApproval.evaluarYAplicar(seller as ProductsSeller, 'ai-agent');
 
       const data = await this.sellerRepository.findOne({ where: { id: (seller as ProductsSeller).id } });
       return { data, message: 'Fila corregida y aceptada', success: true };
@@ -1072,7 +1077,6 @@ export class ProductsSellersService {
         codigo_categoria: correccion.codigo_categoria ?? seller.codigo_categoria,
         codigo_subcategoria: correccion.codigo_subcategoria ?? seller.codigo_subcategoria,
         precioventa: correccion.precioventa ?? seller.precioventa,
-        precio_sugerido: correccion.precio_sugerido !== undefined ? correccion.precio_sugerido : seller.precio_sugerido,
         codigo_de_barra: correccion.codigo_de_barra ?? seller.codigo_de_barra,
         stock_actual: correccion.stock_actual ?? seller.stock_actual,
         imagen_1: correccion.imagen_1 ?? seller.imagen_1,
@@ -1084,6 +1088,9 @@ export class ProductsSellersService {
         codigo_rechazo: null,
         motivo_rechazo: null,
       });
+
+      const actualizado = await this.sellerRepository.findOne({ where: { id } });
+      if (actualizado) await this.aiApproval.evaluarYAplicar(actualizado, 'ai-agent');
 
       actualizados++;
       detalle.push({ fila: id, aceptado: true, codigo_articulo: seller.codigo_articulo });

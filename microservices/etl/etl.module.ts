@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EtlController } from './controller/etl.controller';
 import { EtlAgentService } from './service/etl-agent.service';
-import { ClaudeClientService } from './service/claude-client.service';
+import { ClaudeClientService } from '@shared/common/services/claude-client.service';
 import { EtlConfigStoreService } from './service/etl-config-store.service';
 import { ProviderRunnerService } from './service/provider-runner.service';
 import { SchedulerService } from './service/scheduler.service';

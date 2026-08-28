@@ -93,8 +93,8 @@ export class ProductsController {
   }
 
   @MessagePattern({ cmd: 'list_products_sellers_pendientes' })
-  listProductsSellersPendientes(@Payload() data: { idProveedor?: number }) {
-    return this.productsSellersService.listPendientes(data?.idProveedor);
+  listProductsSellersPendientes(@Payload() data: { idProveedor?: number; estado?: string }) {
+    return this.productsSellersService.listPendientes(data?.idProveedor, data?.estado);
   }
 
   @MessagePattern({ cmd: 'list_products_sellers_by_proveedor' })
@@ -110,7 +110,6 @@ export class ProductsController {
       codigo_marca?: string;
       codigo_categoria?: string;
       codigo_subcategoria?: string;
-      aceptar_precio_sugerido?: boolean;
     };
   }) {
     return this.productsSellersService.approve(data.id, data.modificadoPor, data.correccion);

@@ -28,10 +28,21 @@ export class MariaDbModule {
       provide: getDataSourceToken(connectionName),
       useFactory: async (configService: ConfigService) => {
         const logger = new Logger(`ErpDataSource:${connectionName}`);
+        const isRead = connectionName === 'READ_CONNECTION';
+        const host = isRead
+          ? configService.get<string>('ECONT_DB_READ_HOST') ||
+            configService.get<string>('ECONT_DB_HOST')
+          : configService.get<string>('ECONT_DB_HOST');
+        const port = isRead
+          ? configService.get<number>(
+              'ECONT_DB_READ_PORT',
+              configService.get<number>('ECONT_DB_PORT', 3306),
+            )
+          : configService.get<number>('ECONT_DB_PORT', 3306);
         const dataSource = new DataSource({
           type: 'mysql',
-          host: configService.get<string>('ECONT_DB_HOST'),
-          port: configService.get<number>('ECONT_DB_PORT', 3306),
+          host,
+          port,
           username: configService.get<string>('ECONT_DB_USER'),
           password: configService.get<string>('ECONT_DB_PASSWORD'),
           database: configService.get<string>('ECONT_DB_DATABASE'),
@@ -40,6 +51,9 @@ export class MariaDbModule {
           logging: false,
           extra: {
             connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
+            connectionLimit: Number(
+              process.env[`DB_POOL_SIZE_${connectionName}`] || 10,
+            ),
           },
         });
 

@@ -9,6 +9,7 @@ import { PromosService } from './service/promos/promos.service';
 import { OfertasService } from './service/ofertas/ofertas.service';
 import { CombosService } from './service/combos/combos.service';
 import { ProductsSellersService } from './service/products-seller/products-sellers.service';
+import { ProductsSellerAiApprovalService } from './service/products-seller/products-seller-ai-approval.service';
 import { SellerCatalogService } from './service/products-seller/seller-catalog.service';
 import { NotificationsService } from './service/notifications/notifications.service';
 import { PushNotificationService } from './service/notifications/push-notification.service';
@@ -22,6 +23,7 @@ import { PromoPricingUtil } from './utils/promo-pricing.util';
 import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
 import { ResilientService } from '@shared/common/decorators/resilient-client.decorator';
 import { ImageStorageService } from '@shared/common/services/image-storage.service';
+import { ClaudeClientService } from '@shared/common/services/claude-client.service';
 import { RedisModule } from '@shared/common/cache/redis.module';
 
 @Module({
@@ -61,6 +63,8 @@ import { RedisModule } from '@shared/common/cache/redis.module';
     OfertasService,
     CombosService,
     ProductsSellersService,
+    ProductsSellerAiApprovalService,
+    ClaudeClientService,
     SellerCatalogService,
     NotificationsService,
     PushNotificationService,

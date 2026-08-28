@@ -39,7 +39,6 @@ export interface ProductsSellerEtlPayload {
   nombre_articulo: string;
   descripcion?: string;
   precioventa: number;
-  precio_sugerido?: number | null;
   stock_actual: number;
   imagen_1: string;
   imagen_2?: string;

@@ -53,9 +53,6 @@ export class ProductsSeller {
   @Column({ name: 'precioventa', type: 'decimal', precision: 15, scale: 2 })
   precioventa: number;
 
-  @Column({ name: 'precio_sugerido', type: 'decimal', precision: 15, scale: 2, nullable: true })
-  precio_sugerido: number | null;
-
   @Column({ name: 'codigo_de_barra', nullable: true })
   codigo_de_barra: string;
 

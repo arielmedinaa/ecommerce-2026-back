@@ -37,7 +37,10 @@ export const REJECTION_CODES: Record<number, RejectionCodeInfo> = {
   307: {
     codigo: 307,
     motivo: 'Precio por debajo del mínimo permitido',
-    solucion: 'El precio de venta debe ser igual o mayor a Gs. 9.000.',
+    solucion: 'El costo debe ser igual o mayor a Gs. 9.000.',
+    // "campo" acá referencia el nombre del campo en la entidad ProductsSeller (usado por
+    // BulkCorrectionModal/bulkResubmit), no el header del Excel — se mantiene 'precioventa'
+    // aunque el label visible ya diga "Costo".
     campo: 'precioventa',
   },
   308: {

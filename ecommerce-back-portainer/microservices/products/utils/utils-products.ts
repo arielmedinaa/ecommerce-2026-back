@@ -188,36 +188,56 @@ export class ProductsUtils {
     ];
     if (unicos.length === 0) return [];
 
-    const resultados = await Promise.all(
-      unicos.map(async (termino) => {
-        const cacheKey = `complemento-existe:${termino.toLowerCase()}`;
-        const cached = await cache.get(cacheKey);
-        if (cached != null) return cached ? termino : null;
+    const disponible = new Map<string, boolean>();
+    const pendientes: string[] = [];
+    for (const termino of unicos) {
+      const cacheKey = `complemento-existe:${termino.toLowerCase()}`;
+      const cached = await cache.get(cacheKey);
+      if (cached != null) {
+        disponible.set(termino, !!cached);
+      } else {
+        pendientes.push(termino);
+      }
+    }
 
-        try {
-          const like = `%${termino}%`;
-          const rows = await this.productReadRepository.query(
-            `SELECT EXISTS (
+    if (pendientes.length > 0) {
+      try {
+        const unionSql = pendientes
+          .map(
+            (_, i) =>
+              `SELECT ${i} AS idx, EXISTS (
                  SELECT 1 FROM articulo a
                  LEFT JOIN subfamilia sf ON sf.codigo = a.subfamilia
                  WHERE ${WEB_BASE_WHERE} AND ${STOCK_EXISTS}
                    AND (a.nombre LIKE ? OR sf.nombre LIKE ?)
                ) AS existe`,
-            [like, like],
+          )
+          .join(' UNION ALL ');
+        const params = pendientes.flatMap((termino) => {
+          const like = `%${termino}%`;
+          return [like, like];
+        });
+        const rows = await this.productReadRepository.query(unionSql, params);
+        for (const row of rows) {
+          const termino = pendientes[Number(row.idx)];
+          const existe = !!Number(row.existe);
+          disponible.set(termino, existe);
+          await cache.set(
+            `complemento-existe:${termino.toLowerCase()}`,
+            existe,
+            CACHE_TTL,
           );
-          const existe = !!Number(rows?.[0]?.existe);
-          await cache.set(cacheKey, existe, CACHE_TTL);
-          return existe ? termino : null;
-        } catch (e) {
-          this.logger.error(
-            `Error chequeando disponibilidad de complemento "${termino}":`,
-            e,
-          );
-          return null;
         }
-      }),
-    );
-    return resultados.filter((t): t is string => t !== null);
+      } catch (e) {
+        this.logger.error(
+          'Error chequeando disponibilidad de complementos:',
+          e,
+        );
+        for (const termino of pendientes) disponible.set(termino, false);
+      }
+    }
+
+    return unicos.filter((t) => disponible.get(t));
   }
 
   async aplicarPreciosPromo(products: any[]): Promise<any[]> {

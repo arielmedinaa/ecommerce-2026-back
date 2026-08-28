@@ -19,6 +19,7 @@ import {
 import { ProductsImagesService } from './products-images.service';
 import { ProductsUtils } from '@products/utils/utils-products';
 import { PromoPricingUtil } from '@products/utils/promo-pricing.util';
+import { parseNota } from '@products/utils/parse-nota.util';
 import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
 import { CircuitBreaker } from '@shared/common/decorators/circuit-breaker.decorator';
 
@@ -414,7 +415,7 @@ export class ProductsService {
       };
     }
 
-    const { data } = await this.findAll({
+    const { data } = await this.getCachedPrismaProductos({
       search: termino,
       limit: 15,
       offset: 0,
@@ -481,7 +482,11 @@ export class ProductsService {
         message: 'SIN CODIGO',
       };
     try {
-      const { data } = await this.findAll({ search: cod, limit: 1, offset: 0 });
+      const { data } = await this.getCachedPrismaProductos({
+        search: cod,
+        limit: 1,
+        offset: 0,
+      });
       const p: any = Array.isArray(data) ? data[0] : null;
       if (!p)
         return {
@@ -1038,10 +1043,13 @@ export class ProductsService {
 
         const enriquecidos = productos.map((p: any) => {
           const cod = String(p.codigo_articulo).trim();
+          const { descripcion, caracteristicas } = parseNota(p.nota);
           return {
             ...p,
             codigo_articulo: cod,
             nombre_articulo: String(p.nombre ?? '').trim(),
+            descripcion,
+            caracteristicas,
             imagenes: imagenesMap.get(cod) || [],
             sello: selloMap.get(cod) || null,
           };
@@ -1130,18 +1138,22 @@ export class ProductsService {
           codigosProductos,
         );
 
-      const dataWithTrimmedNames = productos.map((item: any) => ({
-        ...item,
-        codigo_articulo: item.codigo_articulo.trim(),
-        nombre_articulo: item.nombre_articulo.trim(),
-        nombre_subcategoria: item.nombre_subcategoria.trim(),
-        nombre_marca: item.nombre_marca.trim(),
-        nombre_proveedor: item.nombre_proveedor.trim(),
-        codigo_de_barra: item.codigo_de_barra.trim(),
-        descripcion: item.nota.trim(),
-        imagenes: imagenesMap.get(item.codigo_articulo.trim()) || [],
-        sello: selloMap.get(item.codigo_articulo.trim()) || null,
-      }));
+      const dataWithTrimmedNames = productos.map((item: any) => {
+        const { descripcion, caracteristicas } = parseNota(item.nota);
+        return {
+          ...item,
+          codigo_articulo: item.codigo_articulo.trim(),
+          nombre_articulo: item.nombre_articulo.trim(),
+          nombre_subcategoria: item.nombre_subcategoria.trim(),
+          nombre_marca: item.nombre_marca.trim(),
+          nombre_proveedor: item.nombre_proveedor.trim(),
+          codigo_de_barra: item.codigo_de_barra.trim(),
+          descripcion,
+          caracteristicas,
+          imagenes: imagenesMap.get(item.codigo_articulo.trim()) || [],
+          sello: selloMap.get(item.codigo_articulo.trim()) || null,
+        };
+      });
 
       const data = dataWithTrimmedNames || [];
       const conCredito = await this.productsUtils.calculoCreditoProductos(data);
