@@ -713,6 +713,7 @@ export class ProductsUtils {
       return true;
     const search = String(filters?.search ?? '').trim();
     if (search && ProductsService.JOTA_KEYWORDS.test(search)) return true;
+    if (!Number.isFinite(categoria) && !search) return true;
     if (Array.isArray(rows) && rows.length) {
       const enFam = rows.filter((r) =>
         ProductsService.JOTA_FAMILIAS.has(Number(r?.codigo_categoria)),
