@@ -12,10 +12,6 @@ export interface ResilientOptions {
     failureThreshold?: number;
     resetTimeout?: number;
   };
-  // Timeout por llamada NATS. Antes no existía ningún timeout acá: si el
-  // servicio destino tardaba (ej. ERP lento), la petición HTTP colgaba hasta
-  // que nginx la cortaba a los 60s con un 504. Con esto, una llamada lenta
-  // cae al `fallback` en vez de trabar toda la respuesta.
   timeoutMs?: number;
 }
 
@@ -70,13 +66,6 @@ export class ResilientService {
     delay: number,
     timeoutMs: number,
   ): Promise<T> {
-    // Nota: esto NO reintenta (a pesar del nombre/parámetro `retries`, que
-    // hoy no se usa acá — bug preexistente, `createRetryObservable` está
-    // definida pero nunca se llama). Reintentar de verdad multiplicaría la
-    // latencia máxima de cada request de gateway que agrega varias llamadas
-    // en paralelo (ej. /api/content/home), así que por ahora se deja en un
-    // único intento con timeout, que es lo que evita el hang/504. Reintentos
-    // reales quedan como mejora aparte, con su propio presupuesto de tiempo.
     try {
       const response = client.send(pattern, data).pipe(rxTimeout(timeoutMs));
       const result = await firstValueFrom(response);
@@ -89,29 +78,6 @@ export class ResilientService {
       this.logger.error(`Full error details:`, error.stack || error);
       throw error;
     }
-  }
-
-  private createRetryObservable<T>(
-    observable: Observable<T>,
-    retries: number,
-    retryDelay: number,
-  ): Observable<T> {
-    if (retries <= 0) return observable;
-
-    return observable.pipe(
-      retryWhen((errors) =>
-        errors.pipe(
-          delay(retryDelay),
-          take(retries),
-          mergeMap((error: any, index: number) => {
-            this.logger.warn(
-              `Retry attempt ${index + 1}/${retries} for error: ${error.message}`,
-            );
-            return throwError(() => error);
-          }),
-        ),
-      ),
-    );
   }
 
   getCircuitBreakerStates() {

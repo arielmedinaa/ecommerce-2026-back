@@ -36,6 +36,8 @@ variables:
   # (VPN / Direct Connect / peering) desde el VPC hacia …100.100.
   ECONT_DB_HOST: REPLACE-econt-host
   ECONT_DB_PORT: "3306"
+  ECONT_DB_READ_HOST: webservice-replica.centralshop.com.py
+  ECONT_DB_READ_PORT: "3305"
   ECONT_DB_USER: REPLACE-econt-user
   ECONT_DB_DATABASE: ssss_emp1
   # Almacenamiento de imágenes de producto → S3 real.

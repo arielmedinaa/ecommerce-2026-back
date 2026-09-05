@@ -93,8 +93,8 @@ export class ProductsController {
   }
 
   @MessagePattern({ cmd: 'list_products_sellers_pendientes' })
-  listProductsSellersPendientes(@Payload() data: { idProveedor?: number }) {
-    return this.productsSellersService.listPendientes(data?.idProveedor);
+  listProductsSellersPendientes(@Payload() data: { idProveedor?: number; estado?: string }) {
+    return this.productsSellersService.listPendientes(data?.idProveedor, data?.estado);
   }
 
   @MessagePattern({ cmd: 'list_products_sellers_by_proveedor' })
@@ -110,7 +110,6 @@ export class ProductsController {
       codigo_marca?: string;
       codigo_categoria?: string;
       codigo_subcategoria?: string;
-      aceptar_precio_sugerido?: boolean;
     };
   }) {
     return this.productsSellersService.approve(data.id, data.modificadoPor, data.correccion);
@@ -180,6 +179,16 @@ export class ProductsController {
   @MessagePattern({ cmd: 'update_proveedor_profile' })
   updateProveedorProfile(@Payload() data: { idProveedor: number; payload: { nombre?: string; ruc?: string; telefono?: string; direccion?: string } }) {
     return this.productsSellersService.updateProveedorProfile(data.idProveedor, data.payload || {});
+  }
+
+  @MessagePattern({ cmd: 'verify_proveedor_password' })
+  verifyProveedorPassword(@Payload() data: { email: string; password: string }) {
+    return this.productsSellersService.verifyProveedorPassword(data.email, data.password);
+  }
+
+  @MessagePattern({ cmd: 'change_proveedor_password' })
+  changeProveedorPassword(@Payload() data: { idProveedor: number; currentPassword: string; newPassword: string }) {
+    return this.productsSellersService.changeProveedorPassword(data.idProveedor, data.currentPassword, data.newPassword);
   }
 
   @MessagePattern({ cmd: 'list_proveedor_documentos' })

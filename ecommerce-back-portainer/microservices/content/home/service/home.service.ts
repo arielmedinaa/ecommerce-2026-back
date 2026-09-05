@@ -136,6 +136,19 @@ export class HomeService implements OnModuleInit {
         fallback: async () => ({ data: [], message: 'fallback banners', success: true }),
         circuitBreaker: { failureThreshold: 3, resetTimeout: 30000 },
       };
+      const jotaOptions: ResilientOptions = {
+        retries: 3,
+        delay: 1000,
+        fallback: async () => {
+          this.logger.warn('Using fallback JOTA products');
+          const fallbackData = this.fallbackDataService.getFallbackJota() || [];
+          return { data: fallbackData, total: fallbackData.length };
+        },
+        circuitBreaker: {
+          failureThreshold: 3,
+          resetTimeout: 30000,
+        },
+      };
       const [verticales, banners, jota, ofertas, productos] = await Promise.all([
         this.verticalesService.findAll({ page: 1, limit: 5 }),
         this.resilientService.sendWithResilience(
@@ -152,7 +165,7 @@ export class HomeService implements OnModuleInit {
             offset,
             marca: "257"
           },
-          resilientOptions,
+          jotaOptions,
         ) as Promise<any>,
         this.resilientService.sendWithResilience(
           this.productsClient,

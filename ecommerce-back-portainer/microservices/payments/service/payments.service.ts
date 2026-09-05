@@ -198,6 +198,7 @@ export class PaymentsService {
       const pagos = await this.paymentRepositoryRead.find({
         where: { codigoCarrito },
         order: { codigoCarrito: 'DESC' },
+        take: 100,
       });
 
       if (!pagos || pagos.length === 0) {
@@ -230,6 +231,7 @@ export class PaymentsService {
         .createQueryBuilder('payment')
         .where('payment.codigoCarrito = :codigoCarrito', { codigoCarrito })
         .andWhere("JSON_EXTRACT(payment.reembolsos, '$') IS NOT NULL AND JSON_EXTRACT(payment.reembolsos, '$') != '[]'")
+        .take(100)
         .getMany();
 
       if (!pagos || pagos.length === 0) {

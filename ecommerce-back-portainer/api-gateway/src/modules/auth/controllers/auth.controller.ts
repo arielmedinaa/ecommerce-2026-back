@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { Request, Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard, RequireModulo } from '@gateway/common/guards/roles.guard';
+import { SneakyThrows } from '@decorators/sneaky-throws-new.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -23,34 +24,22 @@ export class AuthController {
   }
 
   @Post('guest')
+  @SneakyThrows('AuthService', 'createGuestSession')
   async createGuestSession(@Req() req: Request) {
-    try {
-      const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
-      const userAgent = req.headers['user-agent'] || 'unknown';
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
 
-      const result = await firstValueFrom(
-        this.authClient.send({ cmd: 'create_guest_session' }, { ipAddress, userAgent })
-      );
-
-      return result;
-    } catch (error) {
-      console.error('Error in createGuestSession:', error);
-      throw new Error('Error al crear sesión de invitado: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'create_guest_session' }, { ipAddress, userAgent })
+    );
   }
 
   @Post('basic')
+  @SneakyThrows('AuthService', 'createBasicUser')
   async createBasicUser(@Body() body: { email: string }) {
-    try {
-      const result = await firstValueFrom(
-        this.authClient.send({ cmd: 'create_basic_user' }, { email: body.email })
-      );
-
-      return result;
-    } catch (error) {
-      console.error('Error in createBasicUser:', error);
-      throw new Error('Error al crear usuario básico: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'create_basic_user' }, { email: body.email })
+    );
   }
 
   @Get('google')
@@ -104,89 +93,78 @@ export class AuthController {
   }
 
   @Post('logout')
+  @SneakyThrows('AuthService', 'logout')
   async logout(@Res() res: Response) {
-    try {
-      res.clearCookie('access_token');
-      res.json({ message: 'Logged out successfully' });
-    } catch (error) {
-      console.error('Error in logout:', error);
-      throw new Error('Error al cerrar sesión: ' + error.message);
-    }
+    res.clearCookie('access_token');
+    res.json({ message: 'Logged out successfully' });
   }
 
   @Post('validate-token')
+  @SneakyThrows('AuthService', 'validateToken')
   async validateToken(@Body() body: { token: string }) {
-    try {
-      const result = await firstValueFrom(
-        this.authClient.send({ cmd: 'get_user_profile' }, { token: body.token })
-      );
-
-      return result;
-    } catch (error) {
-      console.error('Error in validateToken:', error);
-      throw new Error('Error al validar token: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'get_user_profile' }, { token: body.token })
+    );
   }
 
   @Post('validateBasicUser')
-  async validateBasicUser(@Body() body: { email: string }, @Req() req: Request) {
+  @SneakyThrows('AuthService', 'validateBasicUser')
+  async validateBasicUser(@Body() body: { email: string; password?: string }, @Req() req: Request) {
     if (!body?.email) {
       throw new BadRequestException('email is required');
     }
-    const deviceInfo = req.headers['user-agent'];
-    const payload = { ...body, deviceInfo };
-    try {
-      const result = await firstValueFrom(
-        this.authClient.send({ cmd: 'validate_basic_user' }, payload)
+
+    // El login de proveedores requiere contraseña; el resto de los flujos
+    // (admins/clientes) no se ven afectados por este chequeo.
+    const idProveedor = await this.resolveIdProveedor(body.email);
+    if (idProveedor) {
+      const passwordCheck: any = await firstValueFrom(
+        this.productsClient.send(
+          { cmd: 'verify_proveedor_password' },
+          { email: body.email, password: body.password },
+        ),
       );
-
-      if (result?.success && result?.token) {
-        const idProveedor = await this.resolveIdProveedor(body.email);
-        if (idProveedor) {
-          const decoded = this.jwtService.decode(result.token) as Record<string, any>;
-          const { exp, iat, ...decodedClaims } = decoded;
-          const providerToken = this.jwtService.sign(
-            { ...decodedClaims, tipo: 'provider', idProveedor },
-            { expiresIn: '24h' },
-          );
-          return { ...result, token: providerToken };
-        }
+      if (!passwordCheck?.success) {
+        return { success: false, message: passwordCheck?.message || 'Credenciales inválidas' };
       }
-
-      return result;
-    } catch (error) {
-      console.error('Error in validateBasicUser:', error);
-      throw new Error('Error al validar usuario básico: ' + error.message);
     }
+
+    const deviceInfo = req.headers['user-agent'];
+    const payload = { email: body.email, deviceInfo };
+
+    const result = await firstValueFrom(
+      this.authClient.send({ cmd: 'validate_basic_user' }, payload)
+    );
+
+    if (result?.success && result?.token && idProveedor) {
+      const decoded = this.jwtService.decode(result.token) as Record<string, any>;
+      const { exp, iat, ...decodedClaims } = decoded;
+      const providerToken = this.jwtService.sign(
+        { ...decodedClaims, tipo: 'provider', idProveedor },
+        { expiresIn: '24h' },
+      );
+      return { ...result, token: providerToken };
+    }
+
+    return result;
   }
 
   @Post('ultimo-inicio-sesion')
+  @SneakyThrows('AuthService', 'ultimoInicioSesion')
   async ultimoInicioSesion(@Body() body: { token: string; email?: string }) {
-    try {
-      const result = await firstValueFrom(
-        this.authClient.send({ cmd: 'ultimo_inicio_sesion_usuario' }, body)
-      );
-
-      return result;
-    } catch (error) {
-      console.error('Error in ultimoInicioSesion:', error);
-      throw new Error('Error al actualizar último inicio de sesión: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'ultimo_inicio_sesion_usuario' }, body)
+    );
   }
 
   @Post('asignar-cupon')
+  @SneakyThrows('AuthService', 'asignarCupon')
   async asignarCupon(
     @Body() body: { userId: number; idCupon: number; descripcion: string; eventId?: string },
   ) {
-    try {
-      const result = await firstValueFrom(
-        this.authClient.send({ cmd: 'createUserCoupon' }, body),
-      );
-      return result;
-    } catch (error) {
-      console.error('Error in asignarCupon:', error);
-      throw new Error('Error al asignar el cupón al cliente: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'createUserCoupon' }, body),
+    );
   }
 
   @Post('asignar-cupon-masivo')

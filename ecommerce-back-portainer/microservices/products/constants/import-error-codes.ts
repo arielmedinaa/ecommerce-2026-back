@@ -44,10 +44,10 @@ export const IMPORT_ERROR_CODES: Record<number, ImportErrorCodeInfo> = {
   },
   106: {
     codigo: 106,
-    motivo: 'Precio de venta inválido',
-    descripcion: 'El precio de venta está vacío, no es un número, o es menor al mínimo permitido (Gs. 9.000).',
-    solucion: 'Completá precioventa con un número entero en guaraníes, sin puntos ni comas, de al menos Gs. 9.000.',
-    campo: 'precioventa',
+    motivo: 'Costo inválido',
+    descripcion: 'El costo está vacío, no es un número, o es menor al mínimo permitido (Gs. 9.000).',
+    solucion: 'Completá costo con un número entero en guaraníes, sin puntos ni comas, de al menos Gs. 9.000.',
+    campo: 'costo',
   },
   107: {
     codigo: 107,
@@ -69,13 +69,6 @@ export const IMPORT_ERROR_CODES: Record<number, ImportErrorCodeInfo> = {
     descripcion: 'La imagen indicada no se pudo descargar, no es una imagen válida, o pesa más de 1MB.',
     solucion: 'Usá una imagen de hasta 1MB accesible públicamente (sin usuario/contraseña), o pegala directamente en la celda de Excel.',
     campo: 'imagen_1',
-  },
-  110: {
-    codigo: 110,
-    motivo: 'Precio sugerido inválido',
-    descripcion: 'La columna precio_sugerido tiene un valor que no es un número.',
-    solucion: 'Dejá precio_sugerido vacío o completala con un número entero en guaraníes, sin puntos ni comas.',
-    campo: 'precio_sugerido',
   },
 };
 

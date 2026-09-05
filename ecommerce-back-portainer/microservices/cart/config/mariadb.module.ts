@@ -34,6 +34,7 @@ export class MariaDbModule {
         retryDelay: Number(process.env.DB_RETRY_DELAY_MS || 3000),
         extra: {
           connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
+          connectionLimit: Number(process.env.DB_POOL_SIZE_CART_WRITE || 5),
         },
       }),
       inject: [ConfigService],
@@ -61,6 +62,7 @@ export class MariaDbModule {
         retryDelay: Number(process.env.DB_RETRY_DELAY_MS || 3000),
         extra: {
           connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
+          connectionLimit: Number(process.env.DB_POOL_SIZE_CART_READ || 5),
         },
       }),
       inject: [ConfigService],

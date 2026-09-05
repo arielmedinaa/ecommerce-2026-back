@@ -675,6 +675,20 @@ export class BannerService {
     }
   }
 
+  private readonly MAX_NATS_BUFFER_BYTES = 4 * 1024 * 1024;
+
+  private assertSafeBufferSize(
+    buffer: Buffer,
+    contentType: string,
+  ): { buffer: Buffer; contentType: string } {
+    if (buffer.length > this.MAX_NATS_BUFFER_BYTES) {
+      throw new BadRequestException(
+        `Archivo demasiado grande para transporte (${buffer.length} bytes)`,
+      );
+    }
+    return { buffer, contentType };
+  }
+
   async getBannerFileBuffer(
     nombre: string,
     device: string = 'desktop',
@@ -697,7 +711,7 @@ export class BannerService {
                 : ext === '.mp4'
                   ? 'video/mp4'
                   : 'image/webp';
-        return { buffer: fs.readFileSync(filePath), contentType };
+        return this.assertSafeBufferSize(fs.readFileSync(filePath), contentType);
       }
     }
 
@@ -720,13 +734,13 @@ export class BannerService {
     if (!key) throw new NotFoundException('Imagen del banner no encontrada');
     try {
       const obj = await this.imageStorage.getObjectBuffer(key);
-      return { buffer: obj.buffer, contentType: obj.contentType || 'image/webp' };
+      return this.assertSafeBufferSize(obj.buffer, obj.contentType || 'image/webp');
     } catch {
       
       const fallbackKey = key.replace(/_(?:tablet|mobile|small)(\.[a-z0-9]+)$/i, '_desktop$1');
       if (fallbackKey !== key) {
         const obj = await this.imageStorage.getObjectBuffer(fallbackKey);
-        return { buffer: obj.buffer, contentType: obj.contentType || 'image/webp' };
+        return this.assertSafeBufferSize(obj.buffer, obj.contentType || 'image/webp');
       }
       throw new NotFoundException('Imagen del banner no encontrada');
     }
@@ -751,7 +765,7 @@ export class BannerService {
           .andWhere('(b.fechaHasta IS NULL OR b.fechaHasta >= NOW())');
       }
 
-      const banners = await query.getMany();
+      const banners = await query.take(300).getMany();
 
       return {
         data: banners,

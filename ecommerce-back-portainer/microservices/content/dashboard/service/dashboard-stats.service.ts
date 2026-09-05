@@ -9,6 +9,10 @@ import { IngresoExterno } from '../schemas/ingreso-externo.schema';
 import { HistorialDashboard } from '../schemas/historial-dashboard.schema';
 import { Between } from 'typeorm';
 
+const COORDINADOR_ECOMMERCE = 52;
+
+const VENDEDORES_ECOMMERCE_SUBQUERY = `(SELECT vd.codigo FROM vendedor vd WHERE vd.coordinador = ${COORDINADOR_ECOMMERCE})`;
+
 const FACTURACION_QUERY = `
   SELECT COALESCE(SUM(sc.gravada10), 0) AS total
   FROM solicitudcab sc
@@ -17,7 +21,7 @@ const FACTURACION_QUERY = `
       WHERE sd.comprobante = sc.comprobante AND sd.numero = sc.numero
     )
     AND sc.age_frecepcion BETWEEN ? AND ?
-    AND sc.comprobante IN (2260, 2560)
+    AND sc.comprobante IN ${VENDEDORES_ECOMMERCE_SUBQUERY}
     AND sc.estado_soli NOT IN ('31', '25', '37')
     AND sc.estado_soli IN ('19', '16')
 `;
@@ -30,7 +34,7 @@ const FACTURACION_EN_VIVO_QUERY = `
       WHERE sd.comprobante = sc.comprobante AND sd.numero = sc.numero
     )
     AND sc.age_frecepcion BETWEEN ? AND ?
-    AND sc.comprobante IN (2260, 2560)
+    AND sc.comprobante IN ${VENDEDORES_ECOMMERCE_SUBQUERY}
     AND sc.estado_soli = '19'
 `;
 
@@ -42,29 +46,31 @@ const FACTURACION_EN_VIVO_PUNTOS_DIA_QUERY = `
       WHERE sd.comprobante = sc.comprobante AND sd.numero = sc.numero
     )
     AND sc.age_frecepcion = ?
-    AND sc.comprobante IN (2260, 2560)
+    AND sc.comprobante IN ${VENDEDORES_ECOMMERCE_SUBQUERY}
     AND sc.estado_soli = '19'
   ORDER BY sc.a_horaini ASC
 `;
 
-const FACTURACION_CONTADO_CREDITO_QUERY = `
-  SELECT
-    COALESCE(SUM(CASE WHEN sc.cuota = 1 THEN sc.gravada10 ELSE 0 END), 0) AS total_contado,
-    COALESCE(SUM(CASE WHEN sc.cuota = 2 THEN sc.gravada10 ELSE 0 END), 0) AS total_credito,
-    COALESCE(SUM(sc.gravada10), 0) AS total,
-    COUNT(CASE WHEN sc.cuota = 1 THEN 1 END) AS cantidad_contado,
-    COUNT(CASE WHEN sc.cuota = 2 THEN 1 END) AS cantidad_credito,
-    COUNT(*) AS cantidad
-  FROM solicitudcab sc
-  WHERE EXISTS (
-      SELECT 1 FROM solicituddet sd
-      WHERE sd.comprobante = sc.comprobante AND sd.numero = sc.numero
-    )
-    AND sc.age_frecepcion BETWEEN ? AND ?
-    AND sc.comprobante IN (2260, 2560)
-    AND sc.estado_soli NOT IN ('31', '25', '37')
-    AND sc.estado_soli IN ('19', '16')
-`;
+function buildFacturacionContadoCreditoQuery(columnaFecha: string): string {
+  return `
+    SELECT
+      COALESCE(SUM(CASE WHEN sc.cuota = 1 THEN sc.gravada10 ELSE 0 END), 0) AS total_contado,
+      COALESCE(SUM(CASE WHEN sc.cuota = 2 THEN sc.gravada10 ELSE 0 END), 0) AS total_credito,
+      COALESCE(SUM(sc.gravada10), 0) AS total,
+      COUNT(CASE WHEN sc.cuota = 1 THEN 1 END) AS cantidad_contado,
+      COUNT(CASE WHEN sc.cuota = 2 THEN 1 END) AS cantidad_credito,
+      COUNT(*) AS cantidad
+    FROM solicitudcab sc
+    WHERE EXISTS (
+        SELECT 1 FROM solicituddet sd
+        WHERE sd.comprobante = sc.comprobante AND sd.numero = sc.numero
+      )
+      AND ${columnaFecha} BETWEEN ? AND ?
+      AND sc.comprobante IN ${VENDEDORES_ECOMMERCE_SUBQUERY}
+      AND sc.estado_soli NOT IN ('31', '25', '37')
+      AND sc.estado_soli IN ('19', '16')
+  `;
+}
 
 const TOTAL_FACTURADO_EMPRESA_QUERY = `
   SELECT COALESCE(SUM(vc.exenta + vc.gravada5 + vc.gravada10), 0) AS total
@@ -77,7 +83,6 @@ const A_FACTURAR_TOTAL_EMPRESA_QUERY = `
   SELECT COALESCE(SUM(s.gravada10), 0) AS total, COUNT(*) AS cantidad
   FROM solicitudcab s
   WHERE s.estado_soli = 16
-    AND s.age_frecepcion >= ?
     AND s.age_frecepcion < DATE_ADD(?, INTERVAL 1 DAY)
 `;
 
@@ -85,8 +90,7 @@ const A_FACTURAR_ECOMMERCE_QUERY = `
   SELECT COALESCE(SUM(s.gravada10), 0) AS total, COUNT(*) AS cantidad
   FROM solicitudcab s
   WHERE s.estado_soli = 16
-    AND s.comprobante IN (2260, 2560)
-    AND s.age_frecepcion >= ?
+    AND s.comprobante IN ${VENDEDORES_ECOMMERCE_SUBQUERY}
     AND s.age_frecepcion < DATE_ADD(?, INTERVAL 1 DAY)
 `;
 
@@ -97,7 +101,7 @@ const A_FACTURAR_ECOMMERCE_DETALLE_QUERY = `
   LEFT JOIN cliente cl ON cl.codigo = sc.cliente
   LEFT JOIN tbl_estados_solicitud tes ON tes.codigo_estado_solicitud = sc.estado_soli
   WHERE sc.estado_soli = 16
-    AND sc.comprobante IN (2260, 2560)
+    AND sc.comprobante IN ${VENDEDORES_ECOMMERCE_SUBQUERY}
     AND sc.age_frecepcion >= ?
     AND sc.age_frecepcion < DATE_ADD(?, INTERVAL 1 DAY)
   ORDER BY sc.age_frecepcion DESC, sc.secuencia DESC
@@ -113,7 +117,7 @@ const A_FACTURAR_CONTADO_CREDITO_QUERY = `
     COUNT(*) AS cantidad
   FROM solicitudcab sc
   WHERE sc.estado_soli = 16
-    AND sc.comprobante IN (2260, 2560)
+    AND sc.comprobante IN ${VENDEDORES_ECOMMERCE_SUBQUERY}
     AND sc.age_frecepcion >= ?
     AND sc.age_frecepcion < DATE_ADD(?, INTERVAL 1 DAY)
 `;
@@ -127,7 +131,7 @@ const FACTURACION_HASTA_HORA_QUERY = `
     )
     AND sc.age_frecepcion = ?
     AND sc.a_horaini <= ?
-    AND sc.comprobante IN (2260, 2560)
+    AND sc.comprobante IN ${VENDEDORES_ECOMMERCE_SUBQUERY}
     AND sc.estado_soli NOT IN ('31', '25', '37')
     AND sc.estado_soli IN ('19', '16')
 `;
@@ -301,6 +305,7 @@ export class DashboardStatsService {
     try {
       const ahora = new Date();
       const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0);
+      const finMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 0, 0, 0);
 
       const finSemanaActual = ahora;
       const inicioSemanaActual = new Date(ahora.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -315,7 +320,7 @@ export class DashboardStatsService {
         ingresosExternosMes,
         ingresosExternos,
       ] = await Promise.all([
-        this.sumFacturacion(inicioMes, ahora),
+        this.sumFacturacion(inicioMes, finMes),
         this.sumFacturacion(inicioSemanaActual, finSemanaActual),
         this.sumFacturacion(inicioSemanaAnterior, finSemanaAnterior),
         this.getMetaMensual(),
@@ -522,19 +527,18 @@ export class DashboardStatsService {
   }> {
     try {
       const ahora = new Date();
-      const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
       const hastaVentana = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + 3);
-      const desde = inicioMes.toISOString().slice(0, 10);
+      const desde = '';
       const hasta = hastaVentana.toISOString().slice(0, 10);
 
       const [empresaRows, ecommerceRows] = await Promise.all([
         this.econtDb.executeQuery<{ total: number; cantidad: number }>(
           A_FACTURAR_TOTAL_EMPRESA_QUERY,
-          [desde, hasta],
+          [hasta],
         ),
         this.econtDb.executeQuery<{ total: number; cantidad: number }>(
           A_FACTURAR_ECOMMERCE_QUERY,
-          [desde, hasta],
+          [hasta],
         ),
       ]);
 
@@ -876,7 +880,11 @@ export class DashboardStatsService {
   ): Promise<{ data: HistorialDashboard[]; message: string; success: boolean }> {
     try {
       const where = desde && hasta ? { fecha: Between(desde, hasta) } : {};
-      const data = await this.historialRepository.find({ where, order: { fecha: 'DESC' } });
+      const data = await this.historialRepository.find({
+        where,
+        order: { fecha: 'DESC' },
+        take: 365,
+      });
       return { data, message: 'Ok', success: true };
     } catch (error) {
       this.logger.error(`Error listando historial: ${error.message}`);
@@ -887,6 +895,7 @@ export class DashboardStatsService {
   async getFacturacionContadoCredito(
     desde: string,
     hasta: string,
+    modoFecha: 'agendamiento' | 'solicitud' = 'agendamiento',
   ): Promise<{
     data: {
       total: number;
@@ -902,6 +911,7 @@ export class DashboardStatsService {
     success: boolean;
   }> {
     try {
+      const columnaFecha = modoFecha === 'solicitud' ? 'sc.fecha' : 'sc.age_frecepcion';
       const rows = await this.econtDb.executeQuery<{
         total: string;
         total_contado: string;
@@ -909,7 +919,7 @@ export class DashboardStatsService {
         cantidad: string;
         cantidad_contado: string;
         cantidad_credito: string;
-      }>(FACTURACION_CONTADO_CREDITO_QUERY, [desde, hasta]);
+      }>(buildFacturacionContadoCreditoQuery(columnaFecha), [desde, hasta]);
 
       const total = Number(rows?.[0]?.total || 0);
       const totalContado = Number(rows?.[0]?.total_contado || 0);

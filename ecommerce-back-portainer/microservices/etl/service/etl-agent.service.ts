@@ -5,7 +5,7 @@ import { execFile } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ImageStorageService } from '@shared/common/services/image-storage.service';
-import { ClaudeClientService } from './claude-client.service';
+import { ClaudeClientService } from '@shared/common/services/claude-client.service';
 import { EtlConfigStoreService } from './etl-config-store.service';
 import { ProviderRunnerService } from './provider-runner.service';
 import { extractDocumentText } from '../utils/document-text.util';
@@ -38,7 +38,7 @@ partir de su documentación. Reglas estrictas:
   base de datos, nada de credenciales hardcodeadas (usá process.env.<NOMBRE> para secretos).
 - "extractor.ts" exporta: export async function extraerLote(cursor: string | null): Promise<{ items: any[]; nextCursor: string | null }>
   Debe paginar por lote según lo que la documentación describa (page/offset/cursor), usando fetch.
-- "mapper.ts" exporta: export function mapearProducto(raw: any): { payload: { codigo_proveedor_interno?: string; codigo_de_barra?: string; nombre_articulo: string; descripcion?: string; precioventa: number; precio_sugerido?: number | null; stock_actual: number; codigo_marca?: string | null; codigo_categoria?: string | null; codigo_subcategoria?: string | null }; imagenUrl: string | null } | null
+- "mapper.ts" exporta: export function mapearProducto(raw: any): { payload: { codigo_proveedor_interno?: string; codigo_de_barra?: string; nombre_articulo: string; descripcion?: string; costo: number; stock_actual: number; codigo_marca?: string | null; codigo_categoria?: string | null; codigo_subcategoria?: string | null }; imagenUrl: string | null } | null
   Debe devolver null si la fila no tiene los datos mínimos (nombre y precio). NUNCA inventes
   campos que no estén en el "raw": si un dato no viene, dejalo undefined.
 - Cada producto debe traer codigo_proveedor_interno o codigo_de_barra (al menos uno), si no

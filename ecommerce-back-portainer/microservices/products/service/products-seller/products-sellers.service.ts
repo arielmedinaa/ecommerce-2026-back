@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';
@@ -20,6 +20,11 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { ProductsSellersUtils } from '../../utils/utils-products-sellers';
 import { SellerImageValidatorUtil } from '../../utils/seller-image-validator.util';
 import { ImageStorageService } from '@shared/common/services/image-storage.service';
+import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
+import { hashPassword, verifyPassword } from '@shared/common/utils/password.util';
+import { ProductsSellerAiApprovalService } from './products-seller-ai-approval.service';
+import { ProductsSellerMongoService } from './products-seller-mongo.service';
+import { similitudNombres } from '../../utils/similitud-nombres';
 
 const DOCUMENTOS_CONTENT_TYPES_PERMITIDOS = [
   'application/pdf',
@@ -31,6 +36,14 @@ const DOCUMENTOS_CONTENT_TYPES_PERMITIDOS = [
 ];
 
 const IMPORT_BATCH_SIZE = 500;
+
+// Password inicial fija para todo proveedor nuevo; se le pide cambiarla desde
+// Configuración una vez que ingresa (ver ChangePasswordCard en el frontend).
+const DEFAULT_PROVIDER_PASSWORD = 'proveedor123';
+
+// Qué tan parecidos tienen que ser dos nombres para tratarlos como el mismo
+// producto cuando el proveedor no repitió su código interno ni el de barra.
+const UMBRAL_SIMILITUD_NOMBRE = 0.85;
 
 type RowResult = {
   fila: number;
@@ -69,6 +82,10 @@ export class ProductsSellersService {
     private readonly imageStorage: ImageStorageService,
     private readonly sellerImageValidator: SellerImageValidatorUtil,
     private readonly jwtService: JwtService,
+    private readonly cache: CachePersistenteService,
+    @Inject(forwardRef(() => ProductsSellerAiApprovalService))
+    private readonly aiApproval: ProductsSellerAiApprovalService,
+    private readonly sellerMongoService: ProductsSellerMongoService,
   ) {}
 
   private excelHistorialKey(idProveedor: number, nombreArchivo: string): string {
@@ -102,6 +119,7 @@ export class ProductsSellersService {
         nombre: payload.nombre,
         email: payload.email,
         activo: true,
+        password_hash: hashPassword(DEFAULT_PROVIDER_PASSWORD),
       }),
     );
     return { data: proveedor, success: true, message: 'Proveedor creado exitosamente' };
@@ -133,6 +151,50 @@ export class ProductsSellersService {
     });
     const data = await this.proveedorWriteRepository.findOne({ where: { id: idProveedor } });
     return { data, success: true, message: 'Datos actualizados' };
+  }
+
+  async verifyProveedorPassword(
+    email: string,
+    password: string,
+  ): Promise<{ data: { idProveedor: number; nombre: string; email: string } | null; success: boolean; message: string }> {
+    if (!email || !password) {
+      return { data: null, success: false, message: 'Email y contraseña son requeridos' };
+    }
+    const proveedor = await this.proveedorRepository
+      .createQueryBuilder('p')
+      .where('LOWER(TRIM(p.email)) = LOWER(TRIM(:email))', { email })
+      .getOne();
+
+    // Mensaje genérico deliberado: no revelar si el email existe o no.
+    if (!proveedor || !proveedor.activo || !verifyPassword(password, proveedor.password_hash)) {
+      return { data: null, success: false, message: 'Credenciales inválidas' };
+    }
+
+    return {
+      data: { idProveedor: proveedor.id, nombre: proveedor.nombre, email: proveedor.email },
+      success: true,
+      message: 'OK',
+    };
+  }
+
+  async changeProveedorPassword(
+    idProveedor: number,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ success: boolean; message: string }> {
+    if (!newPassword || newPassword.length < 8) {
+      return { success: false, message: 'La nueva contraseña debe tener al menos 8 caracteres' };
+    }
+    const proveedor = await this.proveedorWriteRepository.findOne({ where: { id: idProveedor } });
+    if (!proveedor) {
+      return { success: false, message: 'Proveedor no encontrado' };
+    }
+    if (proveedor.password_hash && !verifyPassword(currentPassword, proveedor.password_hash)) {
+      return { success: false, message: 'La contraseña actual es incorrecta' };
+    }
+
+    await this.proveedorWriteRepository.update(idProveedor, { password_hash: hashPassword(newPassword) });
+    return { success: true, message: 'Contraseña actualizada correctamente' };
   }
 
   async listProveedorDocumentos(
@@ -223,8 +285,7 @@ export class ProductsSellersService {
       codigo_de_barra?: string;
       nombre_articulo: string;
       descripcion?: string;
-      precioventa: number;
-      precio_sugerido?: number | null;
+      costo: number;
       stock_actual: number;
       imagen_1: string;
       imagen_2?: string;
@@ -258,22 +319,33 @@ export class ProductsSellersService {
     }
     const existente = await this.sellerRepository.findOne({ where });
 
+    // Mismo criterio que el import de excel: el proveedor declara su costo y
+    // el precio publicado lo ponemos nosotros con el recargo del ERP.
+    const recargoEtl = await this.sellersUtils.getRecargo(
+      payload.codigo_categoria || null,
+      payload.codigo_subcategoria || null,
+    );
+    const precioventaEtl = Math.round(payload.costo * (1 + recargoEtl / 100) * 100) / 100;
+
     if (existente) {
       await this.sellerRepository.update(existente.id, {
         nombre_articulo: payload.nombre_articulo,
         descripcion: payload.descripcion,
-        precioventa: payload.precioventa,
-        precio_sugerido: payload.precio_sugerido ?? existente.precio_sugerido,
+        costo: payload.costo,
+        precioventa: precioventaEtl,
         stock_actual: payload.stock_actual,
         imagen_1: payload.imagen_1,
         imagen_2: payload.imagen_2,
         imagen_3: payload.imagen_3,
         imagen_4: payload.imagen_4,
         imagen_5: payload.imagen_5,
+        estado: 'pendiente',
         updated_by: creadoPor,
       });
       const data = await this.sellerRepository.findOne({ where: { id: existente.id } });
-      return { data, created: false, success: true, message: 'Producto actualizado (ya existía)' };
+      if (data) await this.aiApproval.evaluarYAplicar(data, 'ai-agent');
+      const dataFinal = await this.sellerRepository.findOne({ where: { id: existente.id } });
+      return { data: dataFinal, created: false, success: true, message: 'Producto actualizado (ya existía)' };
     }
 
     const marcaMatch = await this.sellersUtils.matchMarca(payload.codigo_marca || '');
@@ -285,8 +357,8 @@ export class ProductsSellersService {
         codigo_de_barra: payload.codigo_de_barra,
         nombre_articulo: payload.nombre_articulo,
         descripcion: payload.descripcion,
-        precioventa: payload.precioventa,
-        precio_sugerido: payload.precio_sugerido ?? null,
+        costo: payload.costo,
+        precioventa: precioventaEtl,
         stock_actual: payload.stock_actual,
         imagen_1: payload.imagen_1,
         imagen_2: payload.imagen_2,
@@ -304,10 +376,29 @@ export class ProductsSellersService {
         created_by: creadoPor,
       }),
     );
-    return { data: nuevo, created: true, success: true, message: 'Producto creado' };
+    await this.aiApproval.evaluarYAplicar(nuevo, 'ai-agent');
+    const dataFinal = await this.sellerRepository.findOne({ where: { id: nuevo.id } });
+    return { data: dataFinal, created: true, success: true, message: 'Producto creado' };
   }
 
+  private readonly TEMPLATE_CACHE_KEY = 'products:sellers:template:v1';
+  private readonly TEMPLATE_CACHE_TTL = 6 * 60 * 60 * 1000; // 6h: balance entre no regenerar siempre y no servir catálogo viejo por mucho tiempo
+
   async generateTemplate(): Promise<Buffer> {
+    const cached = await this.cache.get<{ base64: string }>(this.TEMPLATE_CACHE_KEY);
+    if (cached?.base64) {
+      return Buffer.from(cached.base64, 'base64');
+    }
+    const buffer = await this.buildTemplateBuffer();
+    await this.cache.set(
+      this.TEMPLATE_CACHE_KEY,
+      { base64: buffer.toString('base64') },
+      this.TEMPLATE_CACHE_TTL,
+    );
+    return buffer;
+  }
+
+  private async buildTemplateBuffer(): Promise<Buffer> {
     const familias: Array<{ codigo: string; nombre: string }> = await this.erpReadRepository.query(
       `SELECT codigo, nombre FROM familia WHERE activo = 1 ORDER BY nombre ASC`,
     );
@@ -317,7 +408,7 @@ export class ProductsSellersService {
 
     const columns = [
       'codigo_proveedor_interno', 'nombre_articulo', 'descripcion', 'marca',
-      'categoria', 'subcategoria', 'precioventa', 'precio_sugerido', 'codigo_de_barra',
+      'categoria', 'subcategoria', 'costo', 'codigo_de_barra',
       'stock_actual', 'imagen_1', 'imagen_2', 'imagen_3', 'imagen_4', 'imagen_5',
     ];
 
@@ -444,35 +535,129 @@ export class ProductsSellersService {
 
   private readonly CAMPOS_FILA_CATALOGO = [
     'codigo_proveedor_interno', 'nombre_articulo', 'descripcion', 'marca', 'categoria', 'subcategoria',
-    'precioventa', 'precio_sugerido', 'codigo_de_barra', 'stock_actual',
+    'costo', 'codigo_de_barra', 'stock_actual',
     'imagen_1', 'imagen_2', 'imagen_3', 'imagen_4', 'imagen_5',
   ] as const;
+
+  /**
+   * Un producto se considera "el mismo" si el proveedor repite su código
+   * interno, repite el código de barra, o si el nombre se parece en al menos
+   * un UMBRAL_SIMILITUD_NOMBRE. Los dos primeros son identidad dura; el tercero
+   * cubre al proveedor que reenvía su catálogo sin códigos o cambiándolos.
+   */
+  private async buscarProductoExistente(
+    idProveedor: number,
+    codigoInterno: string,
+    codigoDeBarra: string,
+    nombre: string,
+    catalogoExistente?: ProductsSeller[],
+  ): Promise<ProductsSeller | null> {
+    if (codigoInterno) {
+      const porCodigo = await this.sellerRepository.findOne({
+        where: { id_proveedor: idProveedor, codigo_proveedor_interno: codigoInterno },
+      });
+      if (porCodigo) return porCodigo;
+    }
+
+    if (codigoDeBarra) {
+      const porBarra = await this.sellerRepository.findOne({
+        where: { id_proveedor: idProveedor, codigo_de_barra: codigoDeBarra },
+      });
+      if (porBarra) return porBarra;
+    }
+
+    if (!nombre) return null;
+
+    // El catálogo se pasa precargado desde el import para no releer la tabla
+    // entera una vez por fila del excel.
+    const candidatos =
+      catalogoExistente ?? (await this.sellerRepository.find({ where: { id_proveedor: idProveedor } }));
+
+    let mejor: ProductsSeller | null = null;
+    let mejorPuntaje = 0;
+    for (const candidato of candidatos) {
+      const puntaje = similitudNombres(nombre, candidato.nombre_articulo);
+      if (puntaje > mejorPuntaje) {
+        mejorPuntaje = puntaje;
+        mejor = candidato;
+      }
+    }
+
+    return mejorPuntaje >= UMBRAL_SIMILITUD_NOMBRE ? mejor : null;
+  }
 
   private async validarFilaCatalogo(
     idProveedor: number,
     creadoPor: string,
     datos: Record<string, string>,
     embeddedBuffers: Partial<Record<string, Buffer>>,
-  ): Promise<{ ok: boolean; entidad?: Partial<ProductsSeller>; codigoArticulo?: string; codigo?: number }> {
+    catalogoExistente?: ProductsSeller[],
+  ): Promise<{
+    ok: boolean;
+    entidad?: Partial<ProductsSeller>;
+    codigoArticulo?: string;
+    codigo?: number;
+    categoriaNombre?: string | null;
+    subcategoriaNombre?: string | null;
+    /** Presente solo cuando la fila corresponde a un producto ya cargado. */
+    existente?: ProductsSeller;
+    /** Lo único que se toca de un producto ya cargado: stock y precio. */
+    actualizacion?: { stock_actual: number; costo: number; precioventa: number };
+  }> {
     const nombre = (datos.nombre_articulo || '').trim();
     const marcaTexto = (datos.marca || '').trim();
     const categoriaTexto = (datos.categoria || '').trim();
     const subcategoriaTexto = (datos.subcategoria || '').trim();
-    const precioventaStr = (datos.precioventa || '').trim();
-    const precioSugeridoStr = (datos.precio_sugerido || '').trim();
+    // `precioventa` es el nombre viejo de esta columna: seguimos aceptándolo
+    // para que un proveedor con la plantilla anterior no vea todo rechazado.
+    const costoStr = (datos.costo || datos.precioventa || '').trim();
     const stockStr = (datos.stock_actual || '').trim();
     const imagen1Texto = (datos.imagen_1 || '').trim();
 
-    const precioventa = Number(precioventaStr);
+    const costo = Number(costoStr);
     const stock = Number(stockStr || '0');
 
     if (!nombre) return { ok: false, codigo: 103 };
     if (!marcaTexto) return { ok: false, codigo: 104 };
     if (!categoriaTexto) return { ok: false, codigo: 105 };
-    if (!Number.isFinite(precioventa) || precioventa < 9000) return { ok: false, codigo: 106 };
+    if (!Number.isFinite(costo) || costo < 9000) return { ok: false, codigo: 106 };
     if (!Number.isFinite(stock) || stock < 0) return { ok: false, codigo: 107 };
-    const precioSugerido = precioSugeridoStr ? Number(precioSugeridoStr) : null;
-    if (precioSugeridoStr && !Number.isFinite(precioSugerido)) return { ok: false, codigo: 110 };
+
+    // Resolvemos marca / categoría / recargo ANTES de tocar imágenes: son solo
+    // lecturas al ERP y necesitamos el precio de venta ya calculado para poder
+    // actualizar un producto existente sin subir de nuevo sus fotos.
+    const marcaMatch = await this.sellersUtils.matchMarca(marcaTexto);
+    const categoriaMatch = await this.sellersUtils.matchCategoriaExacta(categoriaTexto);
+    const subcategoriaMatch = subcategoriaTexto
+      ? await this.sellersUtils.matchSubcategoriaExacta(subcategoriaTexto, categoriaMatch.codigo)
+      : { codigo: null };
+
+    const requiereRevisionCategoria = !categoriaMatch.codigo || (!!subcategoriaTexto && !subcategoriaMatch.codigo);
+
+    const recargo = await this.sellersUtils.getRecargo(categoriaMatch.codigo, subcategoriaMatch.codigo);
+    const precioventa = Math.round(costo * (1 + recargo / 100) * 100) / 100;
+
+    // ¿Este producto ya está cargado? Si sí, esto es una actualización de stock
+    // y costo, no un alta: cortamos acá y ni siquiera procesamos las imágenes,
+    // que es lo más caro de toda la validación.
+    const existente = await this.buscarProductoExistente(
+      idProveedor,
+      (datos.codigo_proveedor_interno || '').trim(),
+      (datos.codigo_de_barra || '').trim(),
+      nombre,
+      catalogoExistente,
+    );
+
+    if (existente) {
+      return {
+        ok: true,
+        codigoArticulo: existente.codigo_articulo,
+        existente,
+        actualizacion: { stock_actual: stock, costo, precioventa },
+        categoriaNombre: categoriaMatch.codigo ? categoriaTexto : null,
+        subcategoriaNombre: subcategoriaMatch.codigo ? subcategoriaTexto : null,
+      };
+    }
 
     const codigoArticuloTentativo = `SEL-${uuidv4().slice(0, 8)}`;
 
@@ -506,17 +691,11 @@ export class ProductsSellersService {
       imagenesAdicionales[campo] = urlFinal;
     }
 
-    const marcaMatch = await this.sellersUtils.matchMarca(marcaTexto);
-    const categoriaMatch = await this.sellersUtils.matchCategoriaExacta(categoriaTexto);
-    const subcategoriaMatch = subcategoriaTexto
-      ? await this.sellersUtils.matchSubcategoriaExacta(subcategoriaTexto, categoriaMatch.codigo)
-      : { codigo: null };
-
-    const requiereRevisionCategoria = !categoriaMatch.codigo || (!!subcategoriaTexto && !subcategoriaMatch.codigo);
-
     return {
       ok: true,
       codigoArticulo: codigoArticuloTentativo,
+      categoriaNombre: categoriaMatch.codigo ? categoriaTexto : null,
+      subcategoriaNombre: subcategoriaMatch.codigo ? subcategoriaTexto : null,
       entidad: {
         codigo_articulo: codigoArticuloTentativo,
         codigo_proveedor_interno: (datos.codigo_proveedor_interno || '').trim() || undefined,
@@ -529,8 +708,8 @@ export class ProductsSellersService {
         codigo_categoria: categoriaMatch.codigo,
         codigo_subcategoria: subcategoriaMatch.codigo,
         requiere_revision_categoria: requiereRevisionCategoria,
+        costo,
         precioventa,
-        precio_sugerido: precioSugerido,
         codigo_de_barra: (datos.codigo_de_barra || '').trim() || undefined,
         stock_actual: stock,
         imagen_1: imagen1Final,
@@ -569,6 +748,7 @@ export class ProductsSellersService {
     const creadoPor = historial.created_by;
 
     try {
+      const proveedor = await this.proveedorRepository.findOne({ where: { id: idProveedor } });
       const { buffer } = await this.imageStorage.getObjectBuffer(historial.storage_key);
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(buffer as any);
@@ -604,18 +784,46 @@ export class ProductsSellersService {
       const embeddedImages = this.buildEmbeddedImageMap(workbook, sheet);
 
       let entidadesBatch: ProductsSeller[] = [];
+      let metaBatch: { categoriaNombre: string | null; subcategoriaNombre: string | null }[] = [];
       let detalleBatch: Partial<ProductsExcelHistorialDetalle>[] = [];
       let totalFilas = 0;
       let aceptados = 0;
       let rechazados = 0;
+      let actualizados = 0;
       const codigosAceptados: string[] = [];
+
+      // Catálogo actual del proveedor, leído una sola vez: lo usa la detección
+      // por similitud de nombre de cada fila. Se le van sumando los productos
+      // nuevos del propio excel, para que un archivo que trae el mismo producto
+      // repetido en dos filas no lo inserte dos veces.
+      const catalogoExistente = await this.sellerRepository.find({ where: { id_proveedor: idProveedor } });
 
       const flushBatch = async () => {
         if (entidadesBatch.length > 0) {
           const saved = await this.sellerRepository.save(entidadesBatch);
+          catalogoExistente.push(...saved);
           const ids = saved.map((s) => s.id);
           if (ids.length > 0) await this.sellerRepository.update(ids, { id_historial_excel: idHistorial });
+          // Evaluación de IA: cada producto recién guardado ('pendiente') se
+          // resuelve acá mismo a aprobado/rechazado — nunca queda pendiente
+          // esperando a un admin.
+          for (const seller of saved) {
+            await this.aiApproval.evaluarYAplicar(seller, 'ai-agent');
+          }
+          if (proveedor) {
+            await Promise.allSettled(
+              saved.map((seller, idx) =>
+                this.sellerMongoService.upsertFromSellerRow(
+                  seller,
+                  proveedor,
+                  metaBatch[idx]?.categoriaNombre ?? null,
+                  metaBatch[idx]?.subcategoriaNombre ?? null,
+                ),
+              ),
+            );
+          }
           entidadesBatch = [];
+          metaBatch = [];
         }
         if (detalleBatch.length > 0) {
           await this.excelHistorialDetalleRepository.save(
@@ -641,7 +849,7 @@ export class ProductsSellersService {
           if (buffer) embeddedBuffers[campo] = buffer;
         }
 
-        const resultado = await this.validarFilaCatalogo(idProveedor, creadoPor, datosFila, embeddedBuffers);
+        const resultado = await this.validarFilaCatalogo(idProveedor, creadoPor, datosFila, embeddedBuffers, catalogoExistente);
 
         if (!resultado.ok) {
           const err = IMPORT_ERROR_CODES[resultado.codigo as number];
@@ -658,7 +866,52 @@ export class ProductsSellersService {
           continue;
         }
 
+        // Producto que ya teníamos: solo se refrescan stock y precio. No se
+        // toca el estado ni se re-evalúa con IA — un cambio de stock o de costo
+        // no cambia si el producto es admisible, y volver a evaluarlo podría dar
+        // vuelta un veredicto ya emitido.
+        if (resultado.existente && resultado.actualizacion) {
+          await this.sellerRepository.update(resultado.existente.id, {
+            stock_actual: resultado.actualizacion.stock_actual,
+            costo: resultado.actualizacion.costo,
+            precioventa: resultado.actualizacion.precioventa,
+            updated_by: creadoPor,
+          });
+
+          const refrescado = await this.sellerRepository.findOne({ where: { id: resultado.existente.id } });
+          if (refrescado) {
+            // Mantiene sincronizada la copia en memoria que usa la similitud.
+            const idx = catalogoExistente.findIndex((c) => c.id === refrescado.id);
+            if (idx >= 0) catalogoExistente[idx] = refrescado;
+            if (proveedor) {
+              await this.sellerMongoService.upsertFromSellerRow(
+                refrescado,
+                proveedor,
+                resultado.categoriaNombre ?? null,
+                resultado.subcategoriaNombre ?? null,
+              );
+            }
+          }
+
+          actualizados++;
+          aceptados++;
+          codigosAceptados.push(resultado.codigoArticulo as string);
+          detalleBatch.push({
+            id_historial_excel: idHistorial,
+            fila: i,
+            aceptado: true,
+            codigo_articulo: resultado.codigoArticulo,
+          });
+
+          if (detalleBatch.length >= IMPORT_BATCH_SIZE) await flushBatch();
+          continue;
+        }
+
         entidadesBatch.push(this.sellerRepository.create(resultado.entidad as Partial<ProductsSeller>));
+        metaBatch.push({
+          categoriaNombre: resultado.categoriaNombre ?? null,
+          subcategoriaNombre: resultado.subcategoriaNombre ?? null,
+        });
         aceptados++;
         codigosAceptados.push(resultado.codigoArticulo as string);
         detalleBatch.push({ id_historial_excel: idHistorial, fila: i, aceptado: true, codigo_articulo: resultado.codigoArticulo });
@@ -671,26 +924,28 @@ export class ProductsSellersService {
       await flushBatch();
       await this.excelHistorialRepository.update(idHistorial, { estado: 'completado' });
 
-      if (aceptados > 0) {
+      const altas = aceptados - actualizados;
+
+      if (altas > 0) {
         await this.notificationsService.create({
+          // El tipo se mantiene ('catalogo_pendiente') porque es la clave con la
+          // que el header decide mostrar el panel del lote; lo que cambió es que
+          // ya no hay nada pendiente de decidir, la IA resolvió todo.
           tipo: 'catalogo_pendiente',
           destinatarioTipo: 'admin',
-          titulo: 'Nuevo catálogo pendiente de aprobación',
-          mensaje: `Un proveedor subió ${aceptados} producto(s) para revisar y aprobar.`,
-          payload: { idProveedor, aceptados, codigosArticulo: codigosAceptados },
+          titulo: 'Catálogo revisado por el agente de IA',
+          mensaje: `Un proveedor subió ${altas} producto(s); el agente ya emitió su veredicto.`,
+          payload: { idProveedor, aceptados: altas, actualizados, codigosArticulo: codigosAceptados },
         });
       }
 
-      // Avisa al proveedor apenas termina de procesarse su excel, haya
-      // tenido rechazos o no — a diferencia del aviso al admin, este dispara
-      // siempre que el job llega a "completado".
       await this.notificationsService.create({
         tipo: 'catalogo_procesado',
         destinatarioTipo: 'provider',
         idProveedor,
         titulo: 'Tu catálogo fue procesado',
-        mensaje: `${aceptados} producto(s) aceptado(s), ${rechazados} rechazado(s).`,
-        payload: { idHistorial, aceptados, rechazados },
+        mensaje: `${altas} producto(s) nuevo(s), ${actualizados} actualizado(s), ${rechazados} rechazado(s).`,
+        payload: { idHistorial, aceptados, altas, actualizados, rechazados },
       });
     } catch (error: any) {
       this.logger.error(`Error procesando excel de proveedor (historial ${idHistorial}): ${error.message}`);
@@ -722,13 +977,13 @@ export class ProductsSellersService {
     await this.excelHistorialRepository.update(idHistorial, { estado: 'error', total_filas: 0, rechazados: 1 });
   }
 
-  async listPendientes(idProveedor?: number): Promise<{ data: ProductsSeller[]; message: string; success: boolean }> {
+  async listPendientes(idProveedor?: number, estado: string = 'pendiente'): Promise<{ data: ProductsSeller[]; message: string; success: boolean }> {
     try {
-      const where: any = { estado: 'pendiente' };
+      const where: any = { estado };
       if (idProveedor) where.id_proveedor = idProveedor;
       const data = await this.sellerRepository.find({ where, order: { created_at: 'DESC' } });
       return { data, message: 'Ok', success: true };
-    } catch (error) {
+    } catch (error: any) {
       return { data: [], message: `Error: ${error.message}`, success: false };
     }
   }
@@ -740,7 +995,7 @@ export class ProductsSellersService {
         order: { created_at: 'DESC' },
       });
       return { data, message: 'Ok', success: true };
-    } catch (error) {
+    } catch (error: any) {
       return { data: [], message: `Error: ${error.message}`, success: false };
     }
   }
@@ -752,7 +1007,6 @@ export class ProductsSellersService {
       codigo_marca?: string;
       codigo_categoria?: string;
       codigo_subcategoria?: string;
-      aceptar_precio_sugerido?: boolean;
     },
   ): Promise<{ data: ProductsSeller | null; message: string; success: boolean }> {
     try {
@@ -767,8 +1021,6 @@ export class ProductsSellersService {
         return { data: null, message: 'No se puede aprobar sin marca y categoría resueltas', success: false };
       }
 
-      const aceptarPrecioSugerido = !!correccion?.aceptar_precio_sugerido && seller.precio_sugerido != null;
-
       await this.sellerRepository.update(id, {
         codigo_marca: codigoMarca,
         codigo_categoria: codigoCategoria,
@@ -777,7 +1029,6 @@ export class ProductsSellersService {
         requiere_revision_categoria: false,
         estado: 'aprobado',
         updated_by: modificadoPor,
-        ...(aceptarPrecioSugerido ? { precioventa: seller.precio_sugerido } : {}),
       });
       const data = await this.sellerRepository.findOne({ where: { id } });
 
@@ -791,7 +1042,7 @@ export class ProductsSellersService {
       });
 
       return { data, message: 'Producto aprobado', success: true };
-    } catch (error) {
+    } catch (error: any) {
       return { data: null, message: `Error: ${error.message}`, success: false };
     }
   }
@@ -874,8 +1125,51 @@ export class ProductsSellersService {
         return { data: null, message: err.motivo, success: false };
       }
 
+      // Igual que en el import: si al corregir la fila resulta que el producto
+      // ya existía, esto es una actualización de stock y precio, no un alta.
+      if (resultado.existente && resultado.actualizacion) {
+        await this.sellerRepository.update(resultado.existente.id, {
+          stock_actual: resultado.actualizacion.stock_actual,
+          costo: resultado.actualizacion.costo,
+          precioventa: resultado.actualizacion.precioventa,
+          updated_by: modificadoPor,
+        });
+
+        const actualizado = await this.sellerRepository.findOne({ where: { id: resultado.existente.id } });
+        const proveedorExistente = await this.proveedorRepository.findOne({ where: { id: idProveedor } });
+        if (actualizado && proveedorExistente) {
+          await this.sellerMongoService.upsertFromSellerRow(
+            actualizado,
+            proveedorExistente,
+            resultado.categoriaNombre ?? null,
+            resultado.subcategoriaNombre ?? null,
+          );
+        }
+
+        await this.excelHistorialDetalleRepository.update(idDetalle, {
+          aceptado: true,
+          codigo_articulo: resultado.codigoArticulo,
+          codigo_error: null,
+          motivo: null,
+          solucion: null,
+          datos_fila: JSON.stringify(datosFinales),
+        });
+
+        return { data: actualizado, message: 'El producto ya existía: se actualizaron stock y precio', success: true };
+      }
+
       const seller = await this.sellerRepository.save(this.sellerRepository.create(resultado.entidad as Partial<ProductsSeller>));
       await this.sellerRepository.update((seller as ProductsSeller).id, { id_historial_excel: historial.id });
+
+      const proveedor = await this.proveedorRepository.findOne({ where: { id: idProveedor } });
+      if (proveedor) {
+        await this.sellerMongoService.upsertFromSellerRow(
+          seller as ProductsSeller,
+          proveedor,
+          resultado.categoriaNombre ?? null,
+          resultado.subcategoriaNombre ?? null,
+        );
+      }
 
       await this.excelHistorialDetalleRepository.update(idDetalle, {
         aceptado: true,
@@ -889,6 +1183,8 @@ export class ProductsSellersService {
         aceptados: historial.aceptados + 1,
         rechazados: Math.max(historial.rechazados - 1, 0),
       });
+
+      await this.aiApproval.evaluarYAplicar(seller as ProductsSeller, 'ai-agent');
 
       const data = await this.sellerRepository.findOne({ where: { id: (seller as ProductsSeller).id } });
       return { data, message: 'Fila corregida y aceptada', success: true };
@@ -1002,7 +1298,7 @@ export class ProductsSellersService {
 
       const data = await this.sellerRepository.findOne({ where: { id } });
       return { data, message: 'Producto rechazado', success: true };
-    } catch (error) {
+    } catch (error: any) {
       return { data: null, message: `Error: ${error.message}`, success: false };
     }
   }
@@ -1042,6 +1338,16 @@ export class ProductsSellersService {
         requiereRevisionMarca = false;
       }
 
+      // El proveedor corrige su costo; el precio de venta se recalcula acá con
+      // el recargo vigente, nunca se toma tal cual de la corrección.
+      const costoCorregido = Number(correccion.costo ?? seller.costo ?? 0) || null;
+      const categoriaCorregida = correccion.codigo_categoria ?? seller.codigo_categoria;
+      const subcategoriaCorregida = correccion.codigo_subcategoria ?? seller.codigo_subcategoria;
+      const recargoCorregido = await this.sellersUtils.getRecargo(categoriaCorregida, subcategoriaCorregida);
+      const precioventaCorregido = costoCorregido
+        ? Math.round(costoCorregido * (1 + recargoCorregido / 100) * 100) / 100
+        : seller.precioventa;
+
       await this.sellerRepository.update(id, {
         codigo_proveedor_interno: merged.codigo_proveedor_interno,
         nombre_articulo: merged.nombre_articulo,
@@ -1052,8 +1358,8 @@ export class ProductsSellersService {
         requiere_revision_marca: requiereRevisionMarca,
         codigo_categoria: correccion.codigo_categoria ?? seller.codigo_categoria,
         codigo_subcategoria: correccion.codigo_subcategoria ?? seller.codigo_subcategoria,
-        precioventa: correccion.precioventa ?? seller.precioventa,
-        precio_sugerido: correccion.precio_sugerido !== undefined ? correccion.precio_sugerido : seller.precio_sugerido,
+        costo: costoCorregido,
+        precioventa: precioventaCorregido,
         codigo_de_barra: correccion.codigo_de_barra ?? seller.codigo_de_barra,
         stock_actual: correccion.stock_actual ?? seller.stock_actual,
         imagen_1: correccion.imagen_1 ?? seller.imagen_1,
@@ -1065,6 +1371,9 @@ export class ProductsSellersService {
         codigo_rechazo: null,
         motivo_rechazo: null,
       });
+
+      const actualizado = await this.sellerRepository.findOne({ where: { id } });
+      if (actualizado) await this.aiApproval.evaluarYAplicar(actualizado, 'ai-agent');
 
       actualizados++;
       detalle.push({ fila: id, aceptado: true, codigo_articulo: seller.codigo_articulo });

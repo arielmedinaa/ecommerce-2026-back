@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { JwtModule } from '@nestjs/jwt';
+import { MongooseModule } from '@nestjs/mongoose';
 import { ProductsController } from './controller/products.controller';
 import { ProductsService } from './service/products/products.service';
 import { ProductsImagesService } from './service/products/products-images.service';
@@ -10,6 +11,7 @@ import { OfertasService } from './service/ofertas/ofertas.service';
 import { CombosService } from './service/combos/combos.service';
 import { ProductsSellersService } from './service/products-seller/products-sellers.service';
 import { ProductsSellerAiApprovalService } from './service/products-seller/products-seller-ai-approval.service';
+import { ProductsSellerMongoService } from './service/products-seller/products-seller-mongo.service';
 import { SellerCatalogService } from './service/products-seller/seller-catalog.service';
 import { NotificationsService } from './service/notifications/notifications.service';
 import { PushNotificationService } from './service/notifications/push-notification.service';
@@ -25,6 +27,8 @@ import { ResilientService } from '@shared/common/decorators/resilient-client.dec
 import { ImageStorageService } from '@shared/common/services/image-storage.service';
 import { ClaudeClientService } from '@shared/common/services/claude-client.service';
 import { RedisModule } from '@shared/common/cache/redis.module';
+import { DatabaseModule } from '@shared/config/database/database.module';
+import { ProductoMongo, ProductoMongoSchema } from './schemas/products-seller/products-mongo.schema';
 
 @Module({
   imports: [
@@ -54,6 +58,8 @@ import { RedisModule } from '@shared/common/cache/redis.module';
     MariaDbModule.forCombosRead(),
     MariaDbModule.forCombosFeature(),
     MariaDbModule.forCombosFeatureRead(),
+    DatabaseModule.forRoot(),
+    MongooseModule.forFeature([{ name: ProductoMongo.name, schema: ProductoMongoSchema }]),
   ],
   controllers: [ProductsController],
   providers: [
@@ -64,6 +70,7 @@ import { RedisModule } from '@shared/common/cache/redis.module';
     CombosService,
     ProductsSellersService,
     ProductsSellerAiApprovalService,
+    ProductsSellerMongoService,
     ClaudeClientService,
     SellerCatalogService,
     NotificationsService,

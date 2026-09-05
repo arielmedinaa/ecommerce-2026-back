@@ -109,9 +109,13 @@ export class ContentController {
   async getDashboardHistorialContadoCredito(
     @Query('desde') desde: string,
     @Query('hasta') hasta: string,
+    @Query('modoFecha') modoFecha?: 'agendamiento' | 'solicitud',
   ) {
     return await firstValueFrom(
-      this.contentClient.send({ cmd: 'get_dashboard_historial_contado_credito' }, { desde, hasta }),
+      this.contentClient.send(
+        { cmd: 'get_dashboard_historial_contado_credito' },
+        { desde, hasta, modoFecha },
+      ),
     );
   }
 
@@ -266,8 +270,11 @@ export class ContentController {
   @SneakyThrows()
   async getHomeContent(@Body() body: { limit: number; offset: number }) {
     try {
+      // content-service ya tiene su propio timeout+fallback por cada
+      // sub-llamada (ver ResilientService); este es un techo defensivo para
+      // no depender únicamente de eso y terminar en el 504 de nginx a los 60s.
       const content = await firstValueFrom(
-        this.contentClient.send({ cmd: 'get_home_content' }, body),
+        this.contentClient.send({ cmd: 'get_home_content' }, body).pipe(timeout(25000)),
       );
       return content;
     } catch (error) {

@@ -19,6 +19,7 @@ import {
 import { ProductsImagesService } from './products-images.service';
 import { ProductsUtils } from '@products/utils/utils-products';
 import { PromoPricingUtil } from '@products/utils/promo-pricing.util';
+import { parseNota } from '@products/utils/parse-nota.util';
 import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
 import { CircuitBreaker } from '@shared/common/decorators/circuit-breaker.decorator';
 
@@ -59,6 +60,7 @@ export class ProductsService {
 
   private readonly CACHE_TTL = 5 * 60 * 1000;
   private readonly PRODUCT_CACHE_TTL = 10 * 60 * 1000;
+  private readonly inFlightListQueries = new Map<string, Promise<{ data: any[]; total: number }>>();
   private readonly WEB_BASE_WHERE = `a.baja = 0 AND (a.websc = 1 OR a.web = 1)`;
   private readonly STOCK_EXISTS = `EXISTS (
     SELECT 1 FROM tbl_stock_actual sa
@@ -106,6 +108,19 @@ export class ProductsService {
     );
   }
 
+  private readonly MAX_RPC_RESPONSE_BYTES = 900 * 1024; // 900KB, con margen bajo el default de NATS (1MB)
+  private assertResponseWithinNatsLimit(payload: unknown, context: string): void {
+    const size = Buffer.byteLength(JSON.stringify(payload) ?? '');
+    if (size > this.MAX_RPC_RESPONSE_BYTES) {
+      this.logger.error(
+        `Respuesta de ${context} excede el límite seguro de NATS (${size} bytes > ${this.MAX_RPC_RESPONSE_BYTES}) — se corta antes de responder para no crashear el proceso.`,
+      );
+      throw new Error(
+        `La respuesta de ${context} es demasiado grande. Reducí la cantidad de productos/códigos solicitados.`,
+      );
+    }
+  }
+
   private getCacheKey(filters: any): string {
     return JSON.stringify({
       limit: filters.limit,
@@ -136,7 +151,12 @@ export class ProductsService {
     );
     if (cached) return cached;
 
-    const limit = Number(filters.limit) || 50;
+    const MAX_LIMIT = 100;
+    const rawLimit = Number(filters.limit);
+    const limit =
+      Number.isFinite(rawLimit) && rawLimit > 0
+        ? Math.min(rawLimit, MAX_LIMIT)
+        : 50;
     const offset = Number(filters.offset) || 0;
     const f = this.productsUtils.buildProcFilters(filters);
     const staleKey = `products:v2:stale:${this.getCacheKey(filters)}`;
@@ -169,7 +189,9 @@ export class ProductsService {
           this.WEB_BASE_WHERE,
           this.STOCK_EXISTS,
         );
-        return { data: dataConCuotas as any[], total };
+        const response = { data: dataConCuotas as any[], total };
+        this.assertResponseWithinNatsLimit(response, 'get_catalogo_v2');
+        return response;
       },
     );
 
@@ -188,7 +210,30 @@ export class ProductsService {
       return { data: cached.data, total: cached.total };
     }
 
-    const limit = Number(filters.limit) || 0;
+    const inFlight = this.inFlightListQueries.get(cacheKey);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const fetchPromise = this.fetchAndCachePrismaProductos(filters, cacheKey);
+    this.inFlightListQueries.set(cacheKey, fetchPromise);
+    try {
+      return await fetchPromise;
+    } finally {
+      this.inFlightListQueries.delete(cacheKey);
+    }
+  }
+
+  private async fetchAndCachePrismaProductos(
+    filters: any,
+    cacheKey: string,
+  ): Promise<{ data: any[]; total: number }> {
+    const MAX_LIMIT = 100;
+    const rawLimit = Number(filters.limit);
+    const limit =
+      Number.isFinite(rawLimit) && rawLimit > 0
+        ? Math.min(rawLimit, MAX_LIMIT)
+        : 50;
     const offset = Number(filters.offset) || 0;
     const f = this.productsUtils.buildProcFilters(filters);
     const result = await this.productReadRepository.query(
@@ -956,9 +1001,12 @@ export class ProductsService {
     if (!Array.isArray(codigos) || codigos.length === 0) {
       return { data: [], total: 0 };
     }
+    // Tope bajado de 200 a 50: con cuotas/imágenes por producto, 200 códigos
+    // podían generar una respuesta NATS de varios MB (ver MAX_RPC_RESPONSE_BYTES).
+    const MAX_CODIGOS = 50;
     const lista = [
       ...new Set(codigos.map((c) => String(c).trim()).filter(Boolean)),
-    ].slice(0, 200);
+    ].slice(0, MAX_CODIGOS);
     if (lista.length === 0) return { data: [], total: 0 };
 
     const staleKey = `products:byCodigos:stale:${lista.slice().sort().join(',')}`;
@@ -995,10 +1043,13 @@ export class ProductsService {
 
         const enriquecidos = productos.map((p: any) => {
           const cod = String(p.codigo_articulo).trim();
+          const { descripcion, caracteristicas } = parseNota(p.nota);
           return {
             ...p,
             codigo_articulo: cod,
             nombre_articulo: String(p.nombre ?? '').trim(),
+            descripcion,
+            caracteristicas,
             imagenes: imagenesMap.get(cod) || [],
             sello: selloMap.get(cod) || null,
           };
@@ -1014,7 +1065,12 @@ export class ProductsService {
     );
 
     const lim = Number(limit) || dataConCuotas.length;
-    return { data: dataConCuotas.slice(0, lim), total: dataConCuotas.length };
+    const result = {
+      data: dataConCuotas.slice(0, lim),
+      total: dataConCuotas.length,
+    };
+    this.assertResponseWithinNatsLimit(result, 'get_products_by_codigos');
+    return result;
   }
 
   async findManyByPromos(filters: any = {}) {
@@ -1040,7 +1096,11 @@ export class ProductsService {
     if (cached) {
       return { data: cached.data, total: cached.total };
     }
-    const limit = Number(filters.limit) || 0;
+    const jotaRawLimit = Number(filters.limit);
+    const limit =
+      Number.isFinite(jotaRawLimit) && jotaRawLimit > 0
+        ? Math.min(jotaRawLimit, 100)
+        : 50;
     const offset = Number(filters.offset) || 0;
     const staleKey = `products:jota:stale:${this.getCacheKey({ ...filters, type: 'jota' })}`;
 
@@ -1078,18 +1138,22 @@ export class ProductsService {
           codigosProductos,
         );
 
-      const dataWithTrimmedNames = productos.map((item: any) => ({
-        ...item,
-        codigo_articulo: item.codigo_articulo.trim(),
-        nombre_articulo: item.nombre_articulo.trim(),
-        nombre_subcategoria: item.nombre_subcategoria.trim(),
-        nombre_marca: item.nombre_marca.trim(),
-        nombre_proveedor: item.nombre_proveedor.trim(),
-        codigo_de_barra: item.codigo_de_barra.trim(),
-        descripcion: item.nota.trim(),
-        imagenes: imagenesMap.get(item.codigo_articulo.trim()) || [],
-        sello: selloMap.get(item.codigo_articulo.trim()) || null,
-      }));
+      const dataWithTrimmedNames = productos.map((item: any) => {
+        const { descripcion, caracteristicas } = parseNota(item.nota);
+        return {
+          ...item,
+          codigo_articulo: item.codigo_articulo.trim(),
+          nombre_articulo: item.nombre_articulo.trim(),
+          nombre_subcategoria: item.nombre_subcategoria.trim(),
+          nombre_marca: item.nombre_marca.trim(),
+          nombre_proveedor: item.nombre_proveedor.trim(),
+          codigo_de_barra: item.codigo_de_barra.trim(),
+          descripcion,
+          caracteristicas,
+          imagenes: imagenesMap.get(item.codigo_articulo.trim()) || [],
+          sello: selloMap.get(item.codigo_articulo.trim()) || null,
+        };
+      });
 
       const data = dataWithTrimmedNames || [];
       const conCredito = await this.productsUtils.calculoCreditoProductos(data);
@@ -1120,18 +1184,29 @@ export class ProductsService {
     const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
     const desde = filtros?.desde || inicioMes.toISOString().slice(0, 10);
     const hasta = filtros?.hasta || ahora.toISOString().slice(0, 10);
+    const staleKey = `promotions:econt:stale:${desde}:${hasta}`;
+    const ERP_QUERY_TIMEOUT_MS = 10000;
 
-    const rows = await this.productReadRepository.query(
-      `SELECT id_promo, nombre, fecha_inicio, fecha_fin, canal, tipo_promocion, estado
-         FROM tbl_promos_cabeceras
-        WHERE canal IN ('ambos', 'ecommerce')
-          AND estado IN (1, 2)
-          AND fecha_inicio <= ?
-          AND fecha_fin >= ?
-        ORDER BY fecha_inicio DESC`,
-      [hasta, desde],
-    );
-    return rows;
+    return this.withDbResilience('listEcontPromotions', staleKey, async () => {
+      return Promise.race([
+        this.productReadRepository.query(
+          `SELECT id_promo, nombre, fecha_inicio, fecha_fin, canal, tipo_promocion, estado
+             FROM tbl_promos_cabeceras
+            WHERE canal IN ('ambos', 'ecommerce')
+              AND estado IN (1, 2)
+              AND fecha_inicio <= ?
+              AND fecha_fin >= ?
+            ORDER BY fecha_inicio DESC`,
+          [hasta, desde],
+        ),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error(`Timeout consultando promociones ECONT (${ERP_QUERY_TIMEOUT_MS}ms)`)),
+            ERP_QUERY_TIMEOUT_MS,
+          ),
+        ),
+      ]);
+    });
   }
 
   async getRendimientoPromocion(

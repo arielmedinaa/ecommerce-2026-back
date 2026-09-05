@@ -181,6 +181,16 @@ export class ProductsController {
     return this.productsSellersService.updateProveedorProfile(data.idProveedor, data.payload || {});
   }
 
+  @MessagePattern({ cmd: 'verify_proveedor_password' })
+  verifyProveedorPassword(@Payload() data: { email: string; password: string }) {
+    return this.productsSellersService.verifyProveedorPassword(data.email, data.password);
+  }
+
+  @MessagePattern({ cmd: 'change_proveedor_password' })
+  changeProveedorPassword(@Payload() data: { idProveedor: number; currentPassword: string; newPassword: string }) {
+    return this.productsSellersService.changeProveedorPassword(data.idProveedor, data.currentPassword, data.newPassword);
+  }
+
   @MessagePattern({ cmd: 'list_proveedor_documentos' })
   listProveedorDocumentos(@Payload() data: { idProveedor: number }) {
     return this.productsSellersService.listProveedorDocumentos(data.idProveedor);

@@ -66,9 +66,10 @@ export class UserService {
     if (filters.perfil) dbFilter.perfil = filters.perfil;
     if (filters.estaActivo !== undefined) dbFilter.estaActivo = filters.estaActivo;
     dbFilter.perfil = 'cliente';
-    
+
     const [data, total] = await this.userRepository.findAndCount({
       where: dbFilter,
+      take: 200,
     });
 
     if (!data) {
@@ -97,6 +98,7 @@ export class UserService {
   }> {
     const [data, total] = await this.userRepository.findAndCount({
       where: filters,
+      take: 200,
     });
     if (!data) {
       return {
@@ -189,7 +191,7 @@ export class UserService {
   async listClienteIds(params: any = {}): Promise<{ data: number[]; total: number; success: boolean; message: string }> {
     const qb = this.construirQueryClientes(params);
     if (!qb) return { data: [], total: 0, success: true, message: 'SIN COINCIDENCIAS' };
-    const rows = await qb.select('u.id', 'id').getRawMany();
+    const rows = await qb.select('u.id', 'id').limit(5000).getRawMany();
     const ids = (rows || []).map((r: any) => Number(r.id)).filter((x: number) => Number.isFinite(x));
     return { data: ids, total: ids.length, success: true, message: 'IDS DE CLIENTES' };
   }

@@ -84,41 +84,97 @@ export class UtilsCart {
     }
   }
 
-  private async abrirConexionErp(): Promise<mysql.Connection> {
+  /**
+   * Resuelve el estado ERP de varios carritos en una sola query (evita el N+1
+   * de abrir una conexión nueva por carrito). Devuelve un Map codigo->mensaje.
+   */
+  async getEstadosSolicitudEcontBatch(
+    codigosCarrito: number[],
+  ): Promise<Map<number, string>> {
+    const resultado = new Map<number, string>();
+    if (!codigosCarrito || codigosCarrito.length === 0) return resultado;
+
+    try {
+      const estados = await this.consultarEstadosEcontDBBatch(codigosCarrito);
+      for (const codigo of codigosCarrito) {
+        const estadoSoli = estados.get(codigo) ?? '00';
+        resultado.set(
+          codigo,
+          ESTADO_SOLICITUD_MAP[estadoSoli] || 'Estado no identificado',
+        );
+      }
+    } catch (error) {
+      console.error('Error consultando estados de carritos (batch):', error);
+      for (const codigo of codigosCarrito) {
+        resultado.set(codigo, 'No se pudo consultar el estado');
+      }
+    }
+    return resultado;
+  }
+
+  private erpPool: mysql.Pool | null = null;
+
+  private getErpPool(): mysql.Pool {
+    if (this.erpPool) return this.erpPool;
+
     const dbName = process.env.ECONT_DB_DATABASE;
     if (!dbName) {
       this.logger.error('ECONT_DB_DATABASE environment variable is not set');
       throw new Error('ECONT_DB_DATABASE environment variable is not set');
     }
-    return mysql.createConnection({
+    this.erpPool = mysql.createPool({
       host: process.env.ECONT_DB_HOST,
       port: parseInt(process.env.ECONT_DB_PORT || '3306'),
       user: process.env.ECONT_DB_USER,
       password: process.env.ECONT_DB_PASSWORD,
       database: dbName,
+      connectionLimit: Number(process.env.ECONT_DB_POOL_SIZE || 5),
+      connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
     });
+    return this.erpPool;
   }
 
   async consultarEstadoEcontDB(secuencia: number): Promise<string> {
-    let connection: mysql.Connection | null = null;
     try {
-      connection = await this.abrirConexionErp();
-
-      const [rows] = await connection.query(
+      const pool = this.getErpPool();
+      const [rows] = await pool.query(
         'Select estado_soli from solicitudcab sb inner join cs_solicitud_ecommerce_cabecera csec on csec.solicitudcab_secuencia = sb.secuencia where csec.mongo_id = ?',
         [secuencia],
       );
 
       const result = rows as any[];
-      await connection.end();
       return result.length > 0 ? result[0].estado_soli : '00';
     } catch (error) {
-      if (connection) {
-        await connection.end().catch(() => {});
-      }
       console.error('Error consultando base de datos Econt:', error);
       return '00';
     }
+  }
+
+  async consultarEstadosEcontDBBatch(
+    secuencias: number[],
+  ): Promise<Map<number, string>> {
+    const resultado = new Map<number, string>();
+    if (!secuencias || secuencias.length === 0) return resultado;
+
+    const pool = this.getErpPool();
+    const ERP_QUERY_TIMEOUT_MS = 8000;
+    const [rows] = await Promise.race([
+      pool.query(
+        'Select csec.mongo_id as mongo_id, estado_soli from solicitudcab sb inner join cs_solicitud_ecommerce_cabecera csec on csec.solicitudcab_secuencia = sb.secuencia where csec.mongo_id IN (?)',
+        [secuencias],
+      ),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Timeout consultando estados ERP (${ERP_QUERY_TIMEOUT_MS}ms)`)),
+          ERP_QUERY_TIMEOUT_MS,
+        ),
+      ),
+    ]);
+
+    for (const row of rows as any[]) {
+      resultado.set(Number(row.mongo_id), row.estado_soli);
+    }
+    return resultado;
   }
 
   async resolverEstadoPedido(secuencia: number): Promise<{
@@ -131,11 +187,10 @@ export class UtilsCart {
     fechaEstimada?: string | null;
     historial?: { estado: string; fecha: string }[];
   }> {
-    let connection: mysql.Connection | null = null;
     try {
-      connection = await this.abrirConexionErp();
+      const pool = this.getErpPool();
 
-      const [dispatchRows] = await connection.query(
+      const [dispatchRows] = await pool.query(
         `SELECT cdo.estado, cdo.ruta_id, cdo.tipo_despacho, cdo.fecha_estimada, edo.nombre
            FROM cs_dispatchtrack_orden cdo
            JOIN cs_estados_dispatchtrack_orden edo ON edo.id = cdo.estado
@@ -145,7 +200,7 @@ export class UtilsCart {
       const dispatch = (dispatchRows as any[])[0];
 
       if (dispatch) {
-        const [historialRows] = await connection.query(
+        const [historialRows] = await pool.query(
           `SELECT edo.nombre AS estado, cdho.update_at AS fecha
              FROM cs_historial_dispatchtrack_orden cdho
              JOIN cs_estados_dispatchtrack_orden edo ON edo.id = cdho.estado
@@ -153,7 +208,6 @@ export class UtilsCart {
             ORDER BY cdho.id ASC`,
           [String(secuencia)],
         );
-        await connection.end();
         return {
           fase: 'dispatch',
           estadoDispatch: dispatch.nombre,
@@ -164,11 +218,10 @@ export class UtilsCart {
         };
       }
 
-      const [solicitudRows] = await connection.query(
+      const [solicitudRows] = await pool.query(
         'SELECT estado_soli FROM solicitudcab WHERE secuencia = ?',
         [secuencia],
       );
-      await connection.end();
       const result = solicitudRows as any[];
       if (result.length === 0) {
         return { fase: 'no_encontrado' };
@@ -180,9 +233,6 @@ export class UtilsCart {
         mensaje: ESTADO_SOLICITUD_MAP[estadoSoli] || 'Estado no identificado',
       };
     } catch (error) {
-      if (connection) {
-        await connection.end().catch(() => {});
-      }
       console.error('Error resolviendo estado de pedido en ERP:', error);
       return { fase: 'error' };
     }

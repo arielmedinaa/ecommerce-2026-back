@@ -131,4 +131,22 @@ export class ProductsSellersUtils {
     );
     return { codigo: Array.isArray(rows) && rows.length > 0 ? String(rows[0].codigo) : null };
   }
+
+  async getRecargo(codigoCategoria: string | null, codigoSubcategoria: string | null): Promise<number> {
+    if (codigoSubcategoria) {
+      const rows = await this.erpReadRepository.query(
+        `SELECT recargo FROM subfamilia WHERE codigo = ? LIMIT 1`,
+        [codigoSubcategoria],
+      );
+      if (Array.isArray(rows) && rows.length > 0) return Number(rows[0].recargo) || 0;
+    }
+    if (codigoCategoria) {
+      const rows = await this.erpReadRepository.query(
+        `SELECT recargo FROM familia WHERE codigo = ? LIMIT 1`,
+        [codigoCategoria],
+      );
+      if (Array.isArray(rows) && rows.length > 0) return Number(rows[0].recargo) || 0;
+    }
+    return 0;
+  }
 }

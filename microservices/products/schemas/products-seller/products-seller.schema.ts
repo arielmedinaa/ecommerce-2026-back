@@ -50,6 +50,15 @@ export class ProductsSeller {
   @Column({ name: 'requiere_revision_categoria', default: false })
   requiere_revision_categoria: boolean;
 
+  /** Costo que declara el proveedor en su excel. Es el dato de entrada. */
+  @Column({ name: 'costo', type: 'decimal', precision: 15, scale: 2, nullable: true })
+  costo: number | null;
+
+  /**
+   * Precio al que se publica en el ecommerce. Lo calculamos nosotros:
+   * costo * (1 + recargo/100), con el recargo del ERP según subfamilia/familia.
+   * El proveedor no lo elige — en su panel es de solo lectura.
+   */
   @Column({ name: 'precioventa', type: 'decimal', precision: 15, scale: 2 })
   precioventa: number;
 

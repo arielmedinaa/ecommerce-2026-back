@@ -11,6 +11,26 @@ export class ProductsUtils {
   private cuotasCache: any[] | null = null;
   private cuotasCacheTimestamp: number = 0;
   private readonly CUOTAS_CACHE_TTL = 10 * 60 * 1000;
+  private readonly TICKET_CUOTAS_RANGOS = [
+    { montoDesde: 0, montoHasta: 500000, cuotaMin: 3, cuotaMax: 6 },
+    { montoDesde: 500001, montoHasta: 1500000, cuotaMin: 6, cuotaMax: 9 },
+    { montoDesde: 1500001, montoHasta: 2000000, cuotaMin: 6, cuotaMax: 12 },
+    { montoDesde: 2000001, montoHasta: 2500000, cuotaMin: 6, cuotaMax: 15 },
+    { montoDesde: 2500001, montoHasta: 3000000, cuotaMin: 6, cuotaMax: 15 },
+    { montoDesde: 3000001, montoHasta: 3500000, cuotaMin: 6, cuotaMax: 18 },
+    { montoDesde: 3500001, montoHasta: null, cuotaMin: 6, cuotaMax: 18 },
+  ];
+
+  private filtrarCuotasPorTicket(cuotas: any[], monto: number) {
+    const rango = this.TICKET_CUOTAS_RANGOS.find(
+      (r) => monto >= r.montoDesde && (r.montoHasta === null || monto <= r.montoHasta),
+    );
+    if (!rango) return cuotas;
+    return cuotas.filter(
+      (c: any) =>
+        c.cuota === 0 || (c.cuota >= rango.cuotaMin && c.cuota <= rango.cuotaMax),
+    );
+  }
 
   private readonly SEARCH_SYNONYMS = {
     televisores: [
@@ -374,7 +394,7 @@ export class ProductsUtils {
         // debe coincidir con Crédito (precioventaRedondeado), no con el crudo del ERP.
         precioventa: precioVentaRedondeado,
         precioventaRedondeado: precioVentaRedondeado,
-        cuotas: cuotasCalculadas,
+        cuotas: this.filtrarCuotasPorTicket(cuotasCalculadas, precioVentaRedondeado),
       };
     });
   }
@@ -426,7 +446,7 @@ export class ProductsUtils {
         ...producto,
         precioContado: precioContadoRedondeado,
         precioContadoRedondeado: precioContadoRedondeado,
-        cuotas: cuotasCalculadas,
+        cuotas: this.filtrarCuotasPorTicket(cuotasCalculadas, precioContadoRedondeado),
       };
     });
   }

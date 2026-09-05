@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post, Put, Delete, Query, Inject, Req, Un
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { Request } from 'express';
+import { SneakyThrows } from '@decorators/sneaky-throws-new.decorator';
 
 @Controller('users')
 export class UserController {
@@ -97,16 +98,11 @@ export class UserController {
   }
 
   @Post('listar')
+  @SneakyThrows('UserService', 'getAllUsers')
   async getAllUsers(@Body() filters: any) {
-    try {
-      const result = await firstValueFrom(
-        this.authClient.send({ cmd: 'get_all_users' }, { filters })
-      );
-      return result;
-    } catch (error) {
-      console.error('Error in getAllUsers:', error);
-      throw new Error('Error al obtener usuarios: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'get_all_users' }, { filters })
+    );
   }
 
   @Get('clientes')
@@ -194,16 +190,11 @@ export class UserController {
   }
 
   @Post('search')
+  @SneakyThrows('UserService', 'searchUsers')
   async searchUsers(@Body() data: { filters: any }) {
-    try {
-      const result = await firstValueFrom(
-        this.authClient.send({ cmd: 'search_users' }, data)
-      );
-      return result;
-    } catch (error) {
-      console.error('Error in searchUsers:', error);
-      throw new Error('Error al buscar usuarios: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'search_users' }, data)
+    );
   }
 
   @Get('me/perfil')
@@ -294,15 +285,10 @@ export class UserController {
   }
 
   @Put()
+  @SneakyThrows('UserService', 'updateUsers')
   async updateUsers(@Body() data: { filters: any; updates: any }) {
-    try {
-      const result = await firstValueFrom(
-        this.authClient.send({ cmd: 'update_users' }, data)
-      );
-      return result;
-    } catch (error) {
-      console.error('Error in updateUsers:', error);
-      throw new Error('Error al actualizar usuarios: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.authClient.send({ cmd: 'update_users' }, data)
+    );
   }
 }

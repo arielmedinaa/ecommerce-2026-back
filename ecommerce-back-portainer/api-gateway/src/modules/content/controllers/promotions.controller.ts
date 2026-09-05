@@ -17,6 +17,7 @@ import {
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import { timeout } from 'rxjs/operators';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -183,7 +184,9 @@ export class PromotionsController {
     @Query('hasta') hasta?: string,
   ) {
     return await firstValueFrom(
-      this.productsClient.send({ cmd: 'list_econt_promotions' }, { desde, hasta }),
+      this.productsClient
+        .send({ cmd: 'list_econt_promotions' }, { desde, hasta })
+        .pipe(timeout(15000)),
     );
   }
 
@@ -191,7 +194,9 @@ export class PromotionsController {
   @SneakyThrows('PromotionsController', 'getEcontPromotionProducts')
   async getEcontPromotionProducts(@Param('id', ParseIntPipe) id: number) {
     return await firstValueFrom(
-      this.productsClient.send({ cmd: 'get_econt_promotion_products' }, { idPromo: id }),
+      this.productsClient
+        .send({ cmd: 'get_econt_promotion_products' }, { idPromo: id })
+        .pipe(timeout(15000)),
     );
   }
 
@@ -204,10 +209,12 @@ export class PromotionsController {
     @Query('hasta') hasta: string,
   ) {
     return await firstValueFrom(
-      this.productsClient.send(
-        { cmd: 'get_promocion_rendimiento' },
-        { idPromo: id, desde, hasta },
-      ),
+      this.productsClient
+        .send(
+          { cmd: 'get_promocion_rendimiento' },
+          { idPromo: id, desde, hasta },
+        )
+        .pipe(timeout(15000)),
     );
   }
 
@@ -216,7 +223,9 @@ export class PromotionsController {
   @SneakyThrows('PromotionsController', 'buscarDocumentoPorSecuencia')
   async buscarDocumentoPorSecuencia(@Param('secuencia', ParseIntPipe) secuencia: number) {
     return await firstValueFrom(
-      this.productsClient.send({ cmd: 'buscar_documento_por_secuencia' }, { secuencia }),
+      this.productsClient
+        .send({ cmd: 'buscar_documento_por_secuencia' }, { secuencia })
+        .pipe(timeout(15000)),
     );
   }
 

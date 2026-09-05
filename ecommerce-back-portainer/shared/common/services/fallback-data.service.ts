@@ -40,7 +40,11 @@ export class FallbackDataService {
     if (!existsSync(this.fallbackDataPath)) {
       const defaultFallbackData: FallbackHomeData = {
         productos: this.getDefaultProducts(),
-        jota: this.getDefaultProducts(),
+        // JOTA nunca debe caer a productos genéricos del catálogo — si no hay
+        // datos reales todavía (pod recién reiniciado, sin respuesta exitosa
+        // guardada aún), mejor un array vacío: el frontend (JotaSection.tsx)
+        // ya tiene su propio fallback estático con productos/branding JOTA.
+        jota: [],
         categorias: ['Electrónica', 'Ropa', 'Hogar', 'Deportes'],
         banners: this.getDefaultBanners(),
       };
@@ -136,7 +140,7 @@ export class FallbackDataService {
       productos: this.getDefaultProducts(),
       categorias: ['Electrónica', 'Ropa', 'Hogar', 'Deportes'],
       banners: this.getDefaultBanners(),
-      jota: this.getDefaultProducts(),
+      jota: [],
     };
   }
 

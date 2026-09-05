@@ -1,13 +1,16 @@
 import { Body, Controller, Post, Inject, Get, UseGuards, UseInterceptors, UploadedFile, UploadedFiles, Param, Delete, Patch, BadRequestException, Res, Query, Req } from '@nestjs/common';
-import { ClientProxy, Payload } from '@nestjs/microservices';
+import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { timeout, catchError } from 'rxjs/operators';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '@gateway/common/guards/jwt-auth.guard';
 import { ProviderAuthGuard } from '@gateway/common/guards/provider-auth.guard';
 import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
+import { GetProductsByCodigosDto } from '@products/schemas/dto/get-products-by-codigos.dto';
 import { Response } from 'express';
 import { assertSafeExternalUrl, UnsafeUrlError } from '@gateway/modules/products/utils/ssrf-guard';
+import { SneakyThrows } from '@decorators/sneaky-throws-new.decorator';
+import { BaseHttpException } from '@gateway/common/errors/base-http-exception';
 
 interface MulterFile {
   fieldname: string;
@@ -57,9 +60,6 @@ export const SellerExcelFileInterceptor = () =>
     })
   );
 
-// Para el flujo de corrección de imágenes de proveedores: acepta cualquier
-// imagen común (no exige .webp, la conversión ocurre en el backend), archivo
-// opcional (el proveedor puede en cambio mandar una URL en el body).
 export const SellerImageValidationInterceptor = () =>
   UseInterceptors(
     FileInterceptor('file', {
@@ -75,8 +75,6 @@ export const SellerImageValidationInterceptor = () =>
     })
   );
 
-// Documentación del proveedor (para iniciar su integración de dropshipping):
-// PDF, TXT, JSON, CSV o Excel.
 export const ProveedorDocumentoFileInterceptor = () =>
   UseInterceptors(
     FileInterceptor('file', {
@@ -132,7 +130,9 @@ export class ProductsController {
   @Get('sellers/template')
   async getProductsSellersTemplate(@Res() res: Response) {
     const result = await firstValueFrom(
-      this.productsClient.send({ cmd: 'get_products_sellers_template' }, {}),
+      this.productsClient
+        .send({ cmd: 'get_products_sellers_template' }, {})
+        .pipe(timeout(40000)),
     );
     const buf = Buffer.isBuffer(result?.data) ? result.data : Buffer.from(result?.data?.data || result?.data);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -257,11 +257,14 @@ export class ProductsController {
 
   @UseGuards(JwtAuthGuard)
   @Get('sellers/pendientes')
-  async listProductsSellersPendientes(@Query('idProveedor') idProveedor?: string) {
+  async listProductsSellersPendientes(
+    @Query('idProveedor') idProveedor?: string,
+    @Query('estado') estado?: string,
+  ) {
     return await firstValueFrom(
       this.productsClient.send(
         { cmd: 'list_products_sellers_pendientes' },
-        { idProveedor: idProveedor ? Number(idProveedor) : undefined },
+        { idProveedor: idProveedor ? Number(idProveedor) : undefined, estado },
       ),
     );
   }
@@ -274,7 +277,6 @@ export class ProductsController {
       codigo_marca?: string;
       codigo_categoria?: string;
       codigo_subcategoria?: string;
-      aceptar_precio_sugerido?: boolean;
     },
     @Req() request: any,
   ) {
@@ -325,6 +327,22 @@ export class ProductsController {
       this.productsClient.send(
         { cmd: 'update_proveedor_profile' },
         { idProveedor, payload: body || {} },
+      ),
+    );
+  }
+
+  @UseGuards(ProviderAuthGuard)
+  @Patch('proveedores/password')
+  async changeProveedorPassword(
+    @Query('email') email: string,
+    @Body() body: { currentPassword?: string; newPassword?: string },
+  ) {
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) return { message: 'Proveedor no encontrado', success: false };
+    return await firstValueFrom(
+      this.productsClient.send(
+        { cmd: 'change_proveedor_password' },
+        { idProveedor, currentPassword: body?.currentPassword, newPassword: body?.newPassword },
       ),
     );
   }
@@ -587,77 +605,41 @@ export class ProductsController {
   }
 
   @Post()
+  @SneakyThrows('ProductsService', 'getProducts')
   async getProducts(
     @Body() filters: { limit: 4; offset: 0; categorias?: string },
   ) {
-    try {
-      const products = await firstValueFrom(
-        this.productsClient.send({ cmd: 'get_products' }, filters).pipe(
-          timeout(40000),
-          catchError((error) => {
-            console.error('Error in productsClient.send:', {
-              message: error.message,
-              name: error.name,
-              stack: error.stack,
-              code: error.code,
-            });
-            throw error;
-          }),
-        ),
-      );
-      return products;
-    } catch (error) {
-      console.error('Error in getProducts:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
-        code: error.code,
-      });
-      throw new Error('Error al obtener los productos: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_products' }, filters).pipe(timeout(40000)),
+    );
   }
 
   @Post('/v2')
+  @SneakyThrows('ProductsService', 'getCatalogoV2')
   async getCatalogoV2(@Body() filters: any = {}) {
-    try {
-      return await firstValueFrom(
-        this.productsClient.send({ cmd: 'get_catalogo_v2' }, filters).pipe(
-          timeout(40000),
-          catchError((error) => {
-            console.error('Error in get_catalogo_v2:', error?.message);
-            throw error;
-          }),
-        ),
-      );
-    } catch (error) {
-      throw new Error('Error al obtener el catálogo completo: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_catalogo_v2' }, filters).pipe(timeout(40000)),
+    );
   }
 
   @Get('/suggestions')
+  @SneakyThrows('ProductsService', 'getProductSuggestions')
   async getProductSuggestions(@Query('q') q: string, @Query('limit') limit?: string) {
-    try {
-      return await firstValueFrom(
-        this.productsClient
-          .send({ cmd: 'get_product_suggestions' }, { q, limit: limit ? Number(limit) : undefined })
-          .pipe(timeout(40000)),
-      );
-    } catch (error) {
-      throw new Error('Error al obtener sugerencias: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.productsClient
+        .send({ cmd: 'get_product_suggestions' }, { q, limit: limit ? Number(limit) : undefined })
+        .pipe(timeout(40000)),
+    );
   }
 
   @Post('/complementos')
+  @SneakyThrows('ProductsService', 'getComplementosProducto')
   async getComplementosProducto(@Body() body: { codigo: string }) {
-    try {
-      return await firstValueFrom(
-        this.productsClient
-          .send({ cmd: 'get_complementos_producto' }, { codigo: body?.codigo })
-          .pipe(timeout(40000)),
-      );
-    } catch (error) {
-      throw new Error('Error al obtener complementos: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.productsClient
+        .send({ cmd: 'get_complementos_producto' }, { codigo: body?.codigo })
+        .pipe(timeout(40000)),
+    );
   }
 
   @Post('/search-log')
@@ -672,155 +654,89 @@ export class ProductsController {
   }
 
   @Get('/mas-buscado')
+  @SneakyThrows('ProductsService', 'getMasBuscado')
   async getMasBuscado(@Query('limit') limit?: string) {
-    try {
-      return await firstValueFrom(
-        this.productsClient.send({ cmd: 'get_mas_buscado' }, { limit: limit ? Number(limit) : undefined }).pipe(timeout(15000)),
-      );
-    } catch (error) {
-      throw new Error('Error al obtener más buscado: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_mas_buscado' }, { limit: limit ? Number(limit) : undefined }).pipe(timeout(15000)),
+    );
   }
 
   @Get('/horarios-agendamiento')
+  @SneakyThrows('ProductsService', 'getHorariosAgendamiento')
   async getHorariosAgendamiento() {
-    try {
-      return await firstValueFrom(
-        this.productsClient.send({ cmd: 'get_horarios_agendamiento' }, {}).pipe(timeout(40000)),
-      );
-    } catch (error) {
-      throw new Error('Error al obtener horarios: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_horarios_agendamiento' }, {}).pipe(timeout(40000)),
+    );
   }
 
   @Post('/stock')
+  @SneakyThrows('ProductsService', 'getProductsStock')
   async getProductsStock(@Body() body: { codigos: string[] }) {
-    try {
-      return await firstValueFrom(
-        this.productsClient.send({ cmd: 'get_products_stock' }, body || { codigos: [] }).pipe(timeout(40000)),
-      );
-    } catch (error) {
-      throw new Error('Error al obtener stock: ' + error.message);
+    if (body?.codigos !== undefined && !Array.isArray(body.codigos)) {
+      throw new BadRequestException('El campo "codigos" debe ser un array');
     }
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_products_stock' }, body || { codigos: [] }).pipe(timeout(40000)),
+    );
   }
 
   @Post('/agendamiento/slots')
+  @SneakyThrows('ProductsService', 'getAgendamientoSlots')
   async getAgendamientoSlots(@Body() body: { codigos: string[]; ciudadId?: number; retirar?: boolean }) {
-    try {
-      return await firstValueFrom(
-        this.productsClient.send({ cmd: 'get_agendamiento_slots' }, body || { codigos: [] }).pipe(timeout(40000)),
-      );
-    } catch (error) {
-      throw new Error('Error al calcular agendamiento: ' + error.message);
+    if (body?.codigos !== undefined && !Array.isArray(body.codigos)) {
+      throw new BadRequestException('El campo "codigos" debe ser un array');
     }
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_agendamiento_slots' }, body || { codigos: [] }).pipe(timeout(40000)),
+    );
   }
 
   @Get('/facets')
+  @SneakyThrows('ProductsService', 'getProductsFacets')
   async getProductsFacets() {
-    try {
-      return await firstValueFrom(
-        this.productsClient
-          .send({ cmd: 'get_products_facets' }, {})
-          .pipe(timeout(40000)),
-      );
-    } catch (error) {
-      throw new Error('Error al obtener las facetas: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.productsClient
+        .send({ cmd: 'get_products_facets' }, {})
+        .pipe(timeout(40000)),
+    );
   }
 
   @Get('/stats')
+  @SneakyThrows('ProductsService', 'getProductsStats')
   async getProductsStats() {
-    try {
-      return await firstValueFrom(
-        this.productsClient
-          .send({ cmd: 'get_products_stats' }, {})
-          .pipe(timeout(40000)),
-      );
-    } catch (error) {
-      throw new Error('Error al obtener las stats: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.productsClient
+        .send({ cmd: 'get_products_stats' }, {})
+        .pipe(timeout(40000)),
+    );
   }
 
   @Post('/getProductsPrefetch')
+  @SneakyThrows('ProductsService', 'getProductsPrefetch')
   async getProductsPrefetch(@Body() body: {
     codigo: number
   }) {
-    try {
-      const products = await firstValueFrom(
-        this.productsClient.send({ cmd: 'get_products_prefetch' }, body).pipe(
-          timeout(10000),
-          catchError((error) => {
-            console.error('Error in productsClient.send:', {
-              message: error.message,
-              name: error.name,
-              stack: error.stack,
-              code: error.code,
-            });
-            throw error;
-          }),
-        ),
-      );
-      return products;
-    } catch (error) {
-      console.error('Error in getProductsPrefetch:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
-        code: error.code,
-      });
-      throw new Error('Error al obtener los productos: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_products_prefetch' }, body).pipe(timeout(10000)),
+    );
   }
 
   @Post('/getJota')
+  @SneakyThrows('ProductsService', 'getJotaProducts')
   async getJotaProducts(@Body() filters: { limit: 4; offset: 0; categorias?: string }){
-    try {
-      const products = await firstValueFrom(
-        this.productsClient.send({ cmd: 'get_products_jota' }, filters).pipe(
-          timeout(10000),
-          catchError((error) => {
-            console.error('Error in productsClient.send:', {
-              message: error.message,
-              name: error.name,
-              stack: error.stack,
-              code: error.code,
-            });
-            throw error;
-          }),
-        ),
-      );
-      return products;
-    } catch (error) {
-      console.error('Error in getJotaProducts:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
-        code: error.code,
-      });
-      throw new Error('Error al obtener los productos: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_products_jota' }, filters).pipe(timeout(20000)),
+    );
   }
 
   @Post('/listar/promos')
+  @SneakyThrows('ProductsService', 'getProductosByPromos')
   async getProductosByPromos(
     @Body() filters: { limit: 10; offset: 0; promoDesc?: string },
   ) {
-    try {
-      const productosPromos = await firstValueFrom(
-        this.productsClient.send({ cmd: 'get_products_by_promos' }, filters),
-      );
-      return productosPromos;
-    } catch (error) {
-      console.error('Error in getProductosByPromos:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
-        code: error.code,
-      });
-      throw new Error(
-        'Error al obtener los productos con promos: ' + error.message,
-      );
-    }
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_products_by_promos' }, filters),
+    );
   }
 
   @UseGuards(JwtAuthGuard)
@@ -892,7 +808,7 @@ export class ProductsController {
       if (error.code === 'LIMIT_FILE_SIZE') {
         throw new BadRequestException('El archivo excede el tamaño máximo de 1MB');
       }
-      throw new Error('Error al subir la imagen del combo: ' + error.message);
+      BaseHttpException.handle(error, 'ProductsService', 'uploadEcontComboImage');
     }
   }
 
@@ -967,16 +883,17 @@ export class ProductsController {
       if (error.code === 'LIMIT_FILE_SIZE') {
         throw new BadRequestException('El archivo excede el tamaño máximo de 1MB');
       }
-      throw new Error('Error al subir la imagen del combo: ' + error.message);
+      BaseHttpException.handle(error, 'ProductsService', 'uploadComboImage');
     }
   }
 
   @Post('/by-codigos')
-  async getProductsByCodigos(
-    @Body() body: { codigos: string[]; limit?: number },
-  ) {
+  @SneakyThrows('ProductsService', 'getProductsByCodigos')
+  async getProductsByCodigos(@Body() body: GetProductsByCodigosDto) {
     return await firstValueFrom(
-      this.productsClient.send({ cmd: 'get_products_by_codigos' }, body),
+      this.productsClient
+        .send({ cmd: 'get_products_by_codigos' }, body)
+        .pipe(timeout(40000)),
     );
   }
   
@@ -1030,150 +947,78 @@ export class ProductsController {
       if (error.message.includes('El archivo debe ser de tipo image/webp')) {
         throw new BadRequestException('El archivo debe ser de tipo image/webp');
       }
-      
-      throw new Error('Error al subir la imagen: ' + error.message);
+
+      BaseHttpException.handle(error, 'ProductsService', 'uploadProductImage');
     }
   }
 
   @Get('/:productoCodigo/images')
+  @SneakyThrows('ProductsService', 'getProductImages')
   async getProductImages(@Param('productoCodigo') productoCodigo: string) {
-    try {
-      const images = await firstValueFrom(
-        this.productsClient.send({ cmd: 'get_product_images' }, productoCodigo).pipe(
-          timeout(10000),
-          catchError((error) => {
-            console.error('Error in get_product_images:', error);
-            throw error;
-          })
-        )
-      );
-
-      return images;
-    } catch (error) {
-      console.error('Error en getProductImages:', error);
-      throw new Error('Error al obtener las imágenes: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_product_images' }, productoCodigo).pipe(timeout(10000)),
+    );
   }
 
   @Get('/:productoCodigo/images/main')
+  @SneakyThrows('ProductsService', 'getMainProductImage')
   async getMainProductImage(@Param('productoCodigo') productoCodigo: string) {
-    try {
-      const image = await firstValueFrom(
-        this.productsClient.send({ cmd: 'get_main_product_image' }, productoCodigo).pipe(
-          timeout(10000),
-          catchError((error) => {
-            console.error('Error in get_main_product_image:', error);
-            throw error;
-          })
-        )
-      );
-
-      return image;
-    } catch (error) {
-      console.error('Error en getMainProductImage:', error);
-      throw new Error('Error al obtener la imagen principal: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_main_product_image' }, productoCodigo).pipe(timeout(10000)),
+    );
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch('/images/:imageId')
+  @SneakyThrows('ProductsService', 'updateProductImage')
   async updateProductImage(
     @Param('imageId') imageId: number,
     @Body() updates: any
   ) {
-    try {
-      const payload = {
-        id: imageId,
-        updates,
-        userId: 'current_user'
-      };
+    const payload = {
+      id: imageId,
+      updates,
+      userId: 'current_user'
+    };
 
-      const result = await firstValueFrom(
-        this.productsClient.send({ cmd: 'update_product_image' }, payload).pipe(
-          timeout(10000),
-          catchError((error) => {
-            console.error('Error in update_product_image:', error);
-            throw error;
-          })
-        )
-      );
-
-      return result;
-    } catch (error) {
-      console.error('Error en updateProductImage:', error);
-      throw new Error('Error al actualizar la imagen: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'update_product_image' }, payload).pipe(timeout(10000)),
+    );
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete('/images/:imageId')
+  @SneakyThrows('ProductsService', 'deleteProductImage')
   async deleteProductImage(@Param('imageId') imageId: number) {
-    try {
-      const result = await firstValueFrom(
-        this.productsClient.send({ cmd: 'delete_product_image' }, imageId).pipe(
-          timeout(10000),
-          catchError((error) => {
-            console.error('Error in delete_product_image:', error);
-            throw error;
-          })
-        )
-      );
-
-      return result;
-    } catch (error) {
-      console.error('Error en deleteProductImage:', error);
-      throw new Error('Error al eliminar la imagen: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'delete_product_image' }, imageId).pipe(timeout(10000)),
+    );
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete('/:productoCodigo/images')
+  @SneakyThrows('ProductsService', 'deleteAllProductImages')
   async deleteAllProductImages(@Param('productoCodigo') productoCodigo: string) {
-    try {
-      const result = await firstValueFrom(
-        this.productsClient.send({ cmd: 'delete_all_product_images' }, productoCodigo).pipe(
-          timeout(10000),
-          catchError((error) => {
-            console.error('Error in delete_all_product_images:', error);
-            throw error;
-          })
-        )
-      );
-
-      return result;
-    } catch (error) {
-      console.error('Error en deleteAllProductImages:', error);
-      throw new Error('Error al eliminar todas las imágenes: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'delete_all_product_images' }, productoCodigo).pipe(timeout(10000)),
+    );
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch('/:productoCodigo/images/reorder')
+  @SneakyThrows('ProductsService', 'reorderProductImages')
   async reorderProductImages(
     @Param('productoCodigo') productoCodigo: string,
     @Body() body: { imageOrders: { id: number; orden: number }[] }
   ) {
-    try {
-      const payload = {
-        productoCodigo,
-        imageOrders: body.imageOrders
-      };
+    const payload = {
+      productoCodigo,
+      imageOrders: body.imageOrders
+    };
 
-      const result = await firstValueFrom(
-        this.productsClient.send({ cmd: 'reorder_product_images' }, payload).pipe(
-          timeout(10000),
-          catchError((error) => {
-            console.error('Error in reorder_product_images:', error);
-            throw error;
-          })
-        )
-      );
-
-      return result;
-    } catch (error) {
-      console.error('Error en reorderProductImages:', error);
-      throw new Error('Error al reordenar las imágenes: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'reorder_product_images' }, payload).pipe(timeout(10000)),
+    );
   }
 
   @UseGuards(JwtAuthGuard)
@@ -1215,23 +1060,17 @@ export class ProductsController {
         throw new BadRequestException('El archivo debe ser de tipo image/webp');
       }
 
-      throw new Error('Error al subir el sello: ' + error.message);
+      BaseHttpException.handle(error, 'ProductsService', 'uploadProductSello');
     }
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete('/:productoCodigo/sello')
+  @SneakyThrows('ProductsService', 'deleteProductSello')
   async deleteProductSello(@Param('productoCodigo') productoCodigo: string) {
-    try {
-      return await firstValueFrom(
-        this.productsClient.send({ cmd: 'delete_product_sello' }, productoCodigo).pipe(
-          timeout(10000),
-        ),
-      );
-    } catch (error) {
-      console.error('Error en deleteProductSello:', error);
-      throw new Error('Error al eliminar el sello: ' + error.message);
-    }
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'delete_product_sello' }, productoCodigo).pipe(timeout(10000)),
+    );
   }
 
   @UseGuards(JwtAuthGuard)

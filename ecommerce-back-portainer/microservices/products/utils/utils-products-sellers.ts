@@ -51,15 +51,10 @@ export class ProductsSellersUtils {
       obligatorio: false,
       ejemplo: '(seleccionar de la lista)',
     },
-    precioventa: {
-      descripcion: 'Precio de venta al contado, en guaraníes, solo números (sin puntos ni comas). Mínimo Gs. 9.000.',
+    costo: {
+      descripcion: 'Costo del producto, en guaraníes, solo números (sin puntos ni comas). Mínimo Gs. 9.000.',
       obligatorio: true,
       ejemplo: '350000',
-    },
-    precio_sugerido: {
-      descripcion: 'Opcional. Precio de venta que te gustaría que aparezca en el ecommerce, en guaraníes, solo números (sin puntos ni comas). Es orientativo: no reemplaza el precioventa a menos que el administrador lo acepte al aprobar el producto.',
-      obligatorio: false,
-      ejemplo: '399000',
     },
     codigo_de_barra: {
       descripcion: 'Código de barra (EAN/UPC) del producto, si tiene.',
@@ -135,5 +130,23 @@ export class ProductsSellersUtils {
       params,
     );
     return { codigo: Array.isArray(rows) && rows.length > 0 ? String(rows[0].codigo) : null };
+  }
+
+  async getRecargo(codigoCategoria: string | null, codigoSubcategoria: string | null): Promise<number> {
+    if (codigoSubcategoria) {
+      const rows = await this.erpReadRepository.query(
+        `SELECT recargo FROM subfamilia WHERE codigo = ? LIMIT 1`,
+        [codigoSubcategoria],
+      );
+      if (Array.isArray(rows) && rows.length > 0) return Number(rows[0].recargo) || 0;
+    }
+    if (codigoCategoria) {
+      const rows = await this.erpReadRepository.query(
+        `SELECT recargo FROM familia WHERE codigo = ? LIMIT 1`,
+        [codigoCategoria],
+      );
+      if (Array.isArray(rows) && rows.length > 0) return Number(rows[0].recargo) || 0;
+    }
+    return 0;
   }
 }

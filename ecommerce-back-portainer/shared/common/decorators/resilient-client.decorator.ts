@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, Observable, throwError, timer } from 'rxjs';
-import { retryWhen, delay, take, mergeMap } from 'rxjs/operators';
+import { retryWhen, delay, take, mergeMap, timeout as rxTimeout } from 'rxjs/operators';
 import { CircuitBreaker } from './circuit-breaker.decorator';
 
 export interface ResilientOptions {
@@ -12,6 +12,7 @@ export interface ResilientOptions {
     failureThreshold?: number;
     resetTimeout?: number;
   };
+  timeoutMs?: number;
 }
 
 @Injectable()
@@ -32,6 +33,7 @@ export class ResilientService {
       delay: retryDelay = 1000,
       fallback,
       circuitBreaker: cbOptions = {},
+      timeoutMs = 10000,
     } = options;
 
     const serviceKey = pattern.cmd || JSON.stringify(pattern);
@@ -50,7 +52,7 @@ export class ResilientService {
 
     return circuitBreaker.execute(
       async () => {
-        return this.executeWithRetry(client, pattern, data, retries, retryDelay);
+        return this.executeWithRetry(client, pattern, data, retries, retryDelay, timeoutMs);
       },
       fallback,
     );
@@ -62,42 +64,20 @@ export class ResilientService {
     data: any,
     retries: number,
     delay: number,
+    timeoutMs: number,
   ): Promise<T> {
     try {
-      const response = client.send(pattern, data);
+      const response = client.send(pattern, data).pipe(rxTimeout(timeoutMs));
       const result = await firstValueFrom(response);
       return result;
     } catch (error) {
       this.logger.error(
-        `Failed to execute command ${pattern.cmd} after ${retries} retries:`,
+        `Failed to execute command ${pattern.cmd} (timeout ${timeoutMs}ms):`,
         error.message,
       );
       this.logger.error(`Full error details:`, error.stack || error);
       throw error;
     }
-  }
-
-  private createRetryObservable<T>(
-    observable: Observable<T>,
-    retries: number,
-    retryDelay: number,
-  ): Observable<T> {
-    if (retries <= 0) return observable;
-
-    return observable.pipe(
-      retryWhen((errors) =>
-        errors.pipe(
-          delay(retryDelay),
-          take(retries),
-          mergeMap((error: any, index: number) => {
-            this.logger.warn(
-              `Retry attempt ${index + 1}/${retries} for error: ${error.message}`,
-            );
-            return throwError(() => error);
-          }),
-        ),
-      ),
-    );
   }
 
   getCircuitBreakerStates() {

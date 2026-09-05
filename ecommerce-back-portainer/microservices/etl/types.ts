@@ -38,8 +38,8 @@ export interface ProductsSellerEtlPayload {
   codigo_de_barra?: string;
   nombre_articulo: string;
   descripcion?: string;
-  precioventa: number;
-  precio_sugerido?: number | null;
+  /** Costo del proveedor. El precio de venta lo calcula products aplicando el recargo. */
+  costo: number;
   stock_actual: number;
   imagen_1: string;
   imagen_2?: string;

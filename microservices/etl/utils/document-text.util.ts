@@ -1,12 +1,8 @@
 import * as ExcelJS from 'exceljs';
 
-// Extrae texto plano de cada documento subido por el proveedor, según su
-// content_type, para pasárselo a Claude como contexto de la integración.
 export async function extractDocumentText(buffer: Buffer, contentType: string, nombreArchivo: string): Promise<string> {
   try {
     if (contentType === 'application/pdf') {
-      // Import perezoso: pdf-parse ejecuta código al importarse que espera
-      // encontrar un PDF de prueba en disco si se importa a nivel de módulo.
       const pdfParse = require('pdf-parse');
       const result = await pdfParse(buffer);
       return result.text || '';

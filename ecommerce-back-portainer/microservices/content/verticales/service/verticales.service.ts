@@ -105,7 +105,16 @@ export class VerticalesService {
     }
 
     try {
-      const result = await this.verticalRepositoryRead.find(filters);
+      const allowedKeys = ['id', 'nombre', 'url', 'activo', 'logo_url'];
+      const whereFilters: Record<string, any> = {};
+      for (const key of allowedKeys) {
+        if (filters?.[key] !== undefined) whereFilters[key] = filters[key];
+      }
+      const safeTake = Number(filters?.limit) > 0 ? Math.min(Number(filters.limit), 200) : 100;
+      const result = await this.verticalRepositoryRead.find({
+        where: whereFilters,
+        take: safeTake,
+      });
       if (!result || result.length === 0) {
         return {
           data: [],
@@ -274,13 +283,15 @@ export class VerticalesService {
     if (this.imageStorage.isS3()) {
       const keyPrefix = (process.env.IMAGE_S3_VERTICALES_KEY_PREFIX || 'verticales').replace(/^\/+|\/+$/g, '');
       const key = `${keyPrefix}/${nombreSanitizado}/${fileName}`;
-      const result = await this.imageStorage.putObject({
+      await this.imageStorage.putObject({
         key,
         body: webpBuffer,
         contentType: 'image/webp',
         cacheControl: 'public, max-age=86400',
       });
-      url = result.url;
+      // No usar result.url (apunta directo al bucket, que es privado y da 403).
+      // Servir siempre vía el proxy del gateway, igual que banners/productos.
+      url = `${this.baseUrl}/content/vertical/logo/${nombreSanitizado}/${fileName}`;
     } else {
       const dir = path.join(this.imagesPath, nombreSanitizado);
       if (!fs.existsSync(dir)) {
@@ -310,6 +321,18 @@ export class VerticalesService {
       fileName.includes('\\')
     ) {
       throw new NotFoundException('Archivo no encontrado');
+    }
+
+    if (this.imageStorage.isS3()) {
+      const keyPrefix = (process.env.IMAGE_S3_VERTICALES_KEY_PREFIX || 'verticales').replace(/^\/+|\/+$/g, '');
+      const key = `${keyPrefix}/${nombreSanitizado}/${fileName}`;
+      try {
+        const { buffer, contentType } = await this.imageStorage.getObjectBuffer(key);
+        return { buffer, contentType: contentType || 'image/webp' };
+      } catch (err: any) {
+        this.logger.warn(`No se pudo leer logo de vertical desde S3 (key="${key}"): ${err?.message || err}`);
+        throw new NotFoundException('Logo no encontrado');
+      }
     }
 
     const filePath = path.join(this.imagesPath, nombreSanitizado, fileName);

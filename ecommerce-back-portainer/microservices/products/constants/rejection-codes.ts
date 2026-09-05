@@ -37,8 +37,11 @@ export const REJECTION_CODES: Record<number, RejectionCodeInfo> = {
   307: {
     codigo: 307,
     motivo: 'Precio por debajo del mínimo permitido',
-    solucion: 'El precio de venta debe ser igual o mayor a Gs. 9.000.',
-    campo: 'precioventa',
+    solucion: 'El costo debe ser igual o mayor a Gs. 9.000.',
+    // "campo" referencia el nombre del campo en la entidad ProductsSeller (usado
+    // por BulkCorrectionModal/bulkResubmit). El proveedor corrige su costo; el
+    // precio de venta se recalcula solo con el recargo.
+    campo: 'costo',
   },
   308: {
     codigo: 308,

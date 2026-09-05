@@ -1,6 +1,7 @@
 import { Module, DynamicModule } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '@auth/schemas/user.schemas';
+import { Rol } from '@auth/schemas/rol.schema';
 
 @Module({})
 export class MariaDbModule {
@@ -13,8 +14,12 @@ export class MariaDbModule {
         port: Number(process.env.AUTH_DB_PORT || process.env.DATABASE_PORT_REPLIC),
         username: process.env.AUTH_DB_USER || process.env.DATABASE_USER_REPLIC,
         password: process.env.AUTH_DB_PASSWORD || process.env.DATABASE_PASSWORD_REPLIC,
-        database: process.env.AUTH_DB_NAME || 'auth_db',
-        entities: [User],
+        database:
+          process.env.AUTH_DB_NAME ||
+          process.env.DATABASE_NAME_REPLIC ||
+          process.env.DATABASE_NAME ||
+          'auth_db',
+        entities: [User, Rol],
         synchronize: false,
         logging: process.env.SYNCRONICE === 'true',
         keepConnectionAlive: true,
@@ -28,6 +33,6 @@ export class MariaDbModule {
   }
 
   static forFeatureAuthRead(): DynamicModule {
-    return TypeOrmModule.forFeature([User], 'AUTH_READ_CONNECTION');
+    return TypeOrmModule.forFeature([User, Rol], 'AUTH_READ_CONNECTION');
   }
 }

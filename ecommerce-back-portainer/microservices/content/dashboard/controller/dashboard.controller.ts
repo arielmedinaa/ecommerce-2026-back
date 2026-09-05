@@ -27,8 +27,14 @@ export class DashboardController {
   }
 
   @MessagePattern({ cmd: 'get_dashboard_historial_contado_credito' })
-  getDashboardHistorialContadoCredito(@Payload() data: { desde: string; hasta: string }) {
-    return this.dashboardStatsService.getFacturacionContadoCredito(data.desde, data.hasta);
+  getDashboardHistorialContadoCredito(
+    @Payload() data: { desde: string; hasta: string; modoFecha?: 'agendamiento' | 'solicitud' },
+  ) {
+    return this.dashboardStatsService.getFacturacionContadoCredito(
+      data.desde,
+      data.hasta,
+      data.modoFecha,
+    );
   }
 
   @MessagePattern({ cmd: 'get_dashboard_facturacion_en_vivo' })
