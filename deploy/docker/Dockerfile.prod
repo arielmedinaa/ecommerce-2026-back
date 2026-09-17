@@ -14,13 +14,14 @@ COPY tsconfig.json ./
 COPY tsconfig.prod.json ./
 COPY tsconfig.paths.json ./
 
-# yarn.lock pins resolved URLs against registry.yarnpkg.com regardless of the
-# configured registry, and that host hits the same transient build-sandbox DNS
-# error as dl-cdn above — retry instead of failing.
-RUN --mount=type=cache,target=/root/.yarn \
-    yarn config set network-timeout 600000 && \
-    yarn config set registry https://registry.npmjs.org/ && \
-    for i in 1 2 3 4 5; do yarn install --network-timeout 600000 --ignore-engines && break || sleep 3; done
+# yarn.lock pins resolved URLs against registry.yarnpkg.com, which is
+# IPv6-only (no A record) — unreachable from this IPv4-only rootless podman
+# build sandbox, and permanently so (not transient, retries don't help).
+# npm's registry.npmjs.org has IPv4 records, so use npm here instead.
+RUN --mount=type=cache,target=/root/.npm \
+    npm config set fetch-timeout 600000 && \
+    npm config set registry https://registry.npmjs.org/ && \
+    for i in 1 2 3 4 5; do npm ci --ignore-scripts && break || sleep 3; done
 
 FROM deps AS build
 WORKDIR /usr/src/app
