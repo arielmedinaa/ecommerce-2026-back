@@ -58,18 +58,24 @@ echo "📦 Phase 1: Sync code to control-plane..."
 
 SSH_CMD="ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -o ConnectTimeout=10"
 SCP_CMD="scp -o PreferredAuthentications=password -o PubkeyAuthentication=no -o ConnectTimeout=10"
+RSYNC_CMD="rsync -az -e \"ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -o ConnectTimeout=10\""
 
-# Quick sync only changed files to avoid SSH timeouts
-for svc in "${SERVICES_TO_DEPLOY[@]}"; do
-  if [[ "$svc" == "gateway" ]]; then
-    DIR="api-gateway"
-  else
-    DIR="microservices/$svc"
-  fi
-
-  SSHPASS="$SSH_PASS" sshpass -e $SSH_CMD $SSH_USER@$CONTROL_PLANE \
-    "cd $REMOTE_ROOT && git pull origin main --quiet" > /dev/null 2>&1 || true
+# REMOTE_ROOT is a plain rsync'd tree on the control-plane, not a git checkout
+# (no .git there) — sync source files directly instead of `git pull`, which
+# silently no-op'd (fatal: not a git repository) and left stale Dockerfiles.
+SYNC_RET=0
+for entry in package.json package-lock.json yarn.lock nest-cli.json tsconfig.json tsconfig.prod.json tsconfig.paths.json .swcrc .swcrc.prod api-gateway microservices shared deploy; do
+  SSHPASS="$SSH_PASS" sshpass -e rsync -az \
+    -e "ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -o ConnectTimeout=10" \
+    --exclude 'node_modules' --exclude 'dist' --exclude '.git' \
+    "./$entry" "$SSH_USER@$CONTROL_PLANE:$REMOTE_ROOT/" || SYNC_RET=1
 done
+
+if [ $SYNC_RET -ne 0 ]; then
+  echo "❌ rsync to control-plane failed. Aborting."
+  exit 1
+fi
+echo "   Synced local working tree -> $CONTROL_PLANE:$REMOTE_ROOT"
 
 echo "✅ Code synced"
 echo ""

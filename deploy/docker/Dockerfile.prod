@@ -5,7 +5,7 @@ WORKDIR /usr/src/app
 
 # dl-cdn.alpinelinux.org uses geo-balanced DNS that intermittently returns a
 # transient DNS error inside this build sandbox — retry instead of failing.
-RUN for i in 1 2 3 4 5; do apk add --no-cache vips-dev python3 make g++ libc6-compat && break || sleep 3; done
+RUN n=0; until apk add --no-cache vips-dev python3 make g++ libc6-compat; do n=$((n+1)); [ "$n" -ge 5 ] && exit 1; sleep 3; done
 
 COPY package*.json ./
 COPY yarn.lock ./
@@ -21,7 +21,7 @@ COPY tsconfig.paths.json ./
 RUN --mount=type=cache,target=/root/.npm \
     npm config set fetch-timeout 600000 && \
     npm config set registry https://registry.npmjs.org/ && \
-    for i in 1 2 3 4 5; do npm ci --ignore-scripts && break || sleep 3; done
+    n=0; until npm ci --ignore-scripts; do n=$((n+1)); [ "$n" -ge 5 ] && exit 1; sleep 3; done
 
 FROM deps AS build
 WORKDIR /usr/src/app
