@@ -3,7 +3,9 @@
 FROM node:20-alpine AS deps
 WORKDIR /usr/src/app
 
-RUN apk add --no-cache vips-dev python3 make g++ libc6-compat
+# dl-cdn.alpinelinux.org uses geo-balanced DNS that intermittently returns a
+# transient DNS error inside this build sandbox — retry instead of failing.
+RUN for i in 1 2 3 4 5; do apk add --no-cache vips-dev python3 make g++ libc6-compat && break || sleep 3; done
 
 COPY package*.json ./
 COPY yarn.lock ./
