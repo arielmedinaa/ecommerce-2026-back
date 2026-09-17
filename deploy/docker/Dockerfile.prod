@@ -26,9 +26,9 @@ COPY microservices/ ./microservices/
 COPY shared/ ./shared/
 
 RUN --mount=type=cache,target=/root/.swc \
-    npx swc ./api-gateway/src -d dist --config-file .swcrc.prod && \
-    npx swc ./microservices -d dist --config-file .swcrc.prod && \
-    npx swc ./shared -d dist --config-file .swcrc.prod && \
+    npx swc ./api-gateway/src -d dist && \
+    npx swc ./microservices -d dist && \
+    npx swc ./shared -d dist && \
     npx tsc-alias -p tsconfig.prod.json
 
 FROM node:20-alpine AS runtime
