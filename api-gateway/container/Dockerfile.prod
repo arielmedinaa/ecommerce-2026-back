@@ -1,0 +1,50 @@
+# ============================================================================
+# Dockerfile de producción — api-gateway
+#
+# api-gateway NO tiene su propio package.json (a diferencia de los demás
+# microservicios), así que usa las dependencias del root del monorepo. Lo que
+# SÍ se limita es el código que se compila: solo api-gateway/src/, el entry
+# point (microservices/main.ts) y shared/, más un par de DTOs de products que
+# el gateway reutiliza directamente (@products/schemas/dto/*). No se compila
+# el resto de los microservicios.
+# ============================================================================
+
+FROM node:20-alpine AS deps
+WORKDIR /usr/src/app
+RUN apk add --no-cache vips-dev python3 make g++ libc6-compat
+COPY package.json yarn.lock ./
+RUN yarn config set network-timeout 600000 && \
+    yarn config set registry https://registry.npmjs.org/ && \
+    yarn install --network-timeout 600000 --ignore-engines || \
+    npm install --registry https://registry.npmjs.org/ --timeout=600000
+
+FROM deps AS build
+WORKDIR /usr/src/app
+COPY tsconfig.paths.json ./tsconfig.paths.json
+COPY api-gateway/container/tsconfig.docker.json ./tsconfig.gateway.json
+COPY shared/ ./shared/
+COPY microservices/products/schemas/dto/ ./microservices/products/schemas/dto/
+COPY microservices/cart/schemas/ ./microservices/cart/schemas/
+COPY microservices/main.ts ./microservices/main.ts
+COPY api-gateway/src/ ./api-gateway/src/
+RUN npx tsc -p tsconfig.gateway.json && npx --yes tsc-alias@1.8.10 -p tsconfig.gateway.json
+
+FROM node:20-alpine AS deps-prod
+WORKDIR /usr/src/app
+RUN apk add --no-cache vips-dev python3 make g++ libc6-compat
+COPY package.json yarn.lock ./
+RUN yarn config set network-timeout 600000 && \
+    yarn config set registry https://registry.npmjs.org/ && \
+    yarn install --production --network-timeout 600000 --ignore-engines || \
+    npm install --omit=dev --registry https://registry.npmjs.org/ --timeout=600000
+
+FROM node:20-alpine AS runtime
+RUN apk add --no-cache vips libc6-compat curl
+WORKDIR /usr/src/app
+COPY --from=deps-prod /usr/src/app/node_modules ./node_modules
+COPY --from=build /usr/src/app/dist ./dist
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup && chown -R appuser:appgroup /usr/src/app
+USER appuser
+ENV NODE_ENV=production
+EXPOSE 3100
+CMD ["node", "dist/microservices/main.js"]

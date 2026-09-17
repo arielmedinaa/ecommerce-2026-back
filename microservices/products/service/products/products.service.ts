@@ -15,13 +15,14 @@ import {
   complementosPara,
   complementosNiveles,
   type ComplementoNiveles,
-} from '../../utils/complementos';
+} from '../../utils/products/complementos';
 import { ProductsImagesService } from './products-images.service';
-import { ProductsUtils } from '@products/utils/utils-products';
-import { PromoPricingUtil } from '@products/utils/promo-pricing.util';
-import { parseNota } from '@products/utils/parse-nota.util';
+import { ProductsUtils } from '@products/utils/products/utils-products';
+import { PromoPricingUtil } from '@products/utils/products/promo-pricing.util';
+import { parseNota } from '@products/utils/products/parse-nota.util';
 import { CachePersistenteService } from '@shared/common/services/cache-persistente.service';
-import { CircuitBreaker } from '@shared/common/decorators/circuit-breaker.decorator';
+import { ProductsResilienceUtil } from '@products/utils/products/products-resilience.util';
+import { ProductsCatalogUtil } from '@products/utils/products/products-catalog.util';
 
 interface CartResponse {
   data: any[];
@@ -56,11 +57,12 @@ export class ProductsService {
     private readonly searchTermWrite: Repository<SearchTerm>,
     @InjectRepository(SearchTerm, 'READ_ECOMMERCE_PRODUCTS_CONNECTION')
     private readonly searchTermRead: Repository<SearchTerm>,
+    private readonly productsResilience: ProductsResilienceUtil,
+    private readonly productsCatalogUtil: ProductsCatalogUtil,
   ) {}
 
   private readonly CACHE_TTL = 5 * 60 * 1000;
   private readonly PRODUCT_CACHE_TTL = 10 * 60 * 1000;
-  private readonly inFlightListQueries = new Map<string, Promise<{ data: any[]; total: number }>>();
   private readonly WEB_BASE_WHERE = `a.baja = 0 AND (a.websc = 1 OR a.web = 1)`;
   private readonly STOCK_EXISTS = `EXISTS (
     SELECT 1 FROM tbl_stock_actual sa
@@ -69,74 +71,6 @@ export class ProductsService {
        AND d.habilitado_reserva = 1 AND d.codigo NOT IN (19,20,26,27,28,33) AND d.codigo_proveedor = 0
        AND sa.cantidad_actual > 0)`;
   private readonly STALE_TTL = 24 * 60 * 60 * 1000;
-  private readonly dbBreakers = new Map<string, CircuitBreaker>();
-
-  private getDbBreaker(key: string): CircuitBreaker {
-    if (!this.dbBreakers.has(key)) {
-      this.dbBreakers.set(
-        key,
-        new CircuitBreaker({ failureThreshold: 2, resetTimeout: 20000 }),
-      );
-    }
-    return this.dbBreakers.get(key)!;
-  }
-
-  private async withDbResilience<T>(
-    breakerKey: string,
-    staleCacheKey: string,
-    run: () => Promise<T>,
-  ): Promise<T> {
-    const breaker = this.getDbBreaker(breakerKey);
-    return breaker.execute(
-      async () => {
-        const result = await run();
-        await this.cache.set(staleCacheKey, result, this.STALE_TTL);
-        return result;
-      },
-      async () => {
-        const stale = await this.cache.get<T>(staleCacheKey);
-        if (stale) {
-          this.logger.warn(
-            `Conexión caída (${breakerKey}): sirviendo respuesta desde stale-cache`,
-          );
-          return stale;
-        }
-        throw new Error(
-          `Servicio de productos no disponible: conexión caída y sin cache de respaldo (${breakerKey})`,
-        );
-      },
-    );
-  }
-
-  private readonly MAX_RPC_RESPONSE_BYTES = 900 * 1024; // 900KB, con margen bajo el default de NATS (1MB)
-  private assertResponseWithinNatsLimit(payload: unknown, context: string): void {
-    const size = Buffer.byteLength(JSON.stringify(payload) ?? '');
-    if (size > this.MAX_RPC_RESPONSE_BYTES) {
-      this.logger.error(
-        `Respuesta de ${context} excede el límite seguro de NATS (${size} bytes > ${this.MAX_RPC_RESPONSE_BYTES}) — se corta antes de responder para no crashear el proceso.`,
-      );
-      throw new Error(
-        `La respuesta de ${context} es demasiado grande. Reducí la cantidad de productos/códigos solicitados.`,
-      );
-    }
-  }
-
-  private getCacheKey(filters: any): string {
-    return JSON.stringify({
-      limit: filters.limit,
-      offset: filters.offset,
-      categoria: filters.categoria,
-      subcategoria: filters.subcategoria,
-      proveedor: filters.proveedor,
-      precioMin: filters.precioMin,
-      precioMax: filters.precioMax,
-      soloConStock: filters.soloConStock,
-      search: filters.search,
-      busqueda: filters.busqueda,
-      nombre: filters.nombre,
-      marca: filters.marca,
-    });
-  }
 
   invalidateCache(): void {
     void this.cache.delByPrefix('products:');
@@ -145,7 +79,7 @@ export class ProductsService {
   async getCatalogoV2(
     filters: any = {},
   ): Promise<{ data: any[]; total: number }> {
-    const cacheKey = `products:v2:${this.getCacheKey(filters)}`;
+    const cacheKey = `products:v2:${this.productsCatalogUtil.getCacheKey(filters)}`;
     const cached = await this.cache.get<{ data: any[]; total: number }>(
       cacheKey,
     );
@@ -159,9 +93,9 @@ export class ProductsService {
         : 50;
     const offset = Number(filters.offset) || 0;
     const f = this.productsUtils.buildProcFilters(filters);
-    const staleKey = `products:v2:stale:${this.getCacheKey(filters)}`;
+    const staleKey = `products:v2:stale:${this.productsCatalogUtil.getCacheKey(filters)}`;
 
-    const payload = await this.withDbResilience(
+    const payload = await this.productsResilience.withDbResilience(
       'catalogoV2',
       staleKey,
       async () => {
@@ -187,10 +121,10 @@ export class ProductsService {
         const total = await this.productsUtils.contarProductosV2(
           filters,
           this.WEB_BASE_WHERE,
-          this.STOCK_EXISTS,
+          await this.productsResilience.getStockDepositoIds(),
         );
         const response = { data: dataConCuotas as any[], total };
-        this.assertResponseWithinNatsLimit(response, 'get_catalogo_v2');
+        this.productsResilience.assertResponseWithinNatsLimit(response, 'get_catalogo_v2');
         return response;
       },
     );
@@ -199,134 +133,36 @@ export class ProductsService {
     return payload;
   }
 
-  private async getCachedPrismaProductos(
-    filters: any = {},
-  ): Promise<{ data: any[]; total: number }> {
-    const cacheKey = `products:list:${this.getCacheKey(filters)}`;
-    const cached = await this.cache.get<{ data: any[]; total: number }>(
-      cacheKey,
-    );
-    if (cached) {
-      return { data: cached.data, total: cached.total };
-    }
-
-    const inFlight = this.inFlightListQueries.get(cacheKey);
-    if (inFlight) {
-      return inFlight;
-    }
-
-    const fetchPromise = this.fetchAndCachePrismaProductos(filters, cacheKey);
-    this.inFlightListQueries.set(cacheKey, fetchPromise);
-    try {
-      return await fetchPromise;
-    } finally {
-      this.inFlightListQueries.delete(cacheKey);
-    }
-  }
-
-  private async fetchAndCachePrismaProductos(
-    filters: any,
-    cacheKey: string,
-  ): Promise<{ data: any[]; total: number }> {
-    const MAX_LIMIT = 100;
-    const rawLimit = Number(filters.limit);
-    const limit =
-      Number.isFinite(rawLimit) && rawLimit > 0
-        ? Math.min(rawLimit, MAX_LIMIT)
-        : 50;
-    const offset = Number(filters.offset) || 0;
-    const f = this.productsUtils.buildProcFilters(filters);
-    const result = await this.productReadRepository.query(
-      'CALL proc_obtener_articulos_ecommerce_web(?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [
-        limit,
-        offset,
-        f.marca,
-        f.categoria,
-        f.proveedor,
-        f.precioMin,
-        f.precioMax,
-        f.soloStock,
-        f.busqueda,
-      ],
-    );
-
-    const productos = result[0] || [];
-    const dataConCuotas = await this.productsUtils.enrichProductRows(
-      productos,
-      this.productsImagesReadRepository,
-    );
-    const total = await this.contarProductos(filters);
-
-    await this.cache.set(
-      cacheKey,
-      { data: dataConCuotas as any[], total },
-      this.CACHE_TTL,
-    );
-
-    return { data: dataConCuotas as any[], total };
-  }
-
-  private async contarProductos(filters: any = {}): Promise<number> {
-    const f = this.productsUtils.buildProcFilters(filters);
-
-    const rows = await this.productReadRepository.query(
-      `SELECT COUNT(*) AS total
-         FROM articulo a
-        WHERE ${this.WEB_BASE_WHERE}
-          AND (? IS NULL OR a.marca = CAST(? AS UNSIGNED))
-          AND (? IS NULL OR a.familia = CAST(? AS UNSIGNED))
-          AND (? IS NULL OR a.proveedor = CAST(? AS UNSIGNED))
-          AND (? IS NULL OR a.precioventa >= ?)
-          AND (? IS NULL OR a.precioventa <= ?)
-          AND (? IS NULL
-               OR TRIM(a.codigo) = ?
-               OR a.codigodebarra = ?
-               OR a.nombre LIKE CONCAT('%', REPLACE(?, ' ', '%'), '%'))
-          AND ${this.STOCK_EXISTS}`,
-      [
-        f.marca,
-        f.marca,
-        f.categoria,
-        f.categoria,
-        f.proveedor,
-        f.proveedor,
-        f.precioMin,
-        f.precioMin,
-        f.precioMax,
-        f.precioMax,
-        f.busqueda,
-        f.busqueda,
-        f.busqueda,
-        f.busqueda,
-      ],
-    );
-    return Number(rows?.[0]?.total || 0);
-  }
-
   async getFacets(): Promise<any> {
     const cached = await this.cache.get('products:facets');
     if (cached) return cached;
-    const baseWhere = `${this.WEB_BASE_WHERE} AND ${this.STOCK_EXISTS}`;
+    const depositoIds = await this.productsResilience.getStockDepositoIds();
+    const stockJoin = this.productsResilience.stockJoinSql(depositoIds);
+    const baseWhere = this.WEB_BASE_WHERE;
     const [categorias, marcas, proveedores, precio] = await Promise.all([
       this.productReadRepository.query(
         `SELECT a.familia AS codigo, f.nombre AS nombre, COUNT(*) AS total
            FROM articulo a JOIN familia f ON f.codigo = a.familia
+           ${stockJoin}
           WHERE ${baseWhere} GROUP BY a.familia, f.nombre ORDER BY f.nombre`,
       ),
       this.productReadRepository.query(
         `SELECT a.marca AS codigo, m.nombre AS nombre, COUNT(*) AS total
            FROM articulo a JOIN marca m ON m.codigo = a.marca
+           ${stockJoin}
           WHERE ${baseWhere} GROUP BY a.marca, m.nombre ORDER BY total DESC`,
       ),
       this.productReadRepository.query(
         `SELECT a.proveedor AS codigo, pv.nombre AS nombre, COUNT(*) AS total
            FROM articulo a JOIN proveedor pv ON pv.codigo = a.proveedor
+           ${stockJoin}
           WHERE ${baseWhere} GROUP BY a.proveedor, pv.nombre ORDER BY pv.nombre`,
       ),
       this.productReadRepository.query(
         `SELECT MIN(NULLIF(a.precioventa, 0)) AS min, MAX(a.precioventa) AS max
-           FROM articulo a WHERE ${baseWhere} AND a.precioventa > 0`,
+           FROM articulo a
+           ${stockJoin}
+          WHERE ${baseWhere} AND a.precioventa > 0`,
       ),
     ]);
     const norm = (arr: any[]) =>
@@ -389,12 +225,16 @@ export class ProductsService {
   }
 
   async findAll(filters: any = {}): Promise<{ data: any[]; total: number }> {
-    const res = await this.getCachedPrismaProductos(filters);
+    const filtersConImagenes = { ...filters, soloConImagenes: true };
+    const res = await this.productsCatalogUtil.getCachedPrismaProductos(
+      filtersConImagenes,
+      this.WEB_BASE_WHERE,
+    );
     return this.productsUtils.aplicarPrioridadJota(
       res,
-      filters,
+      filtersConImagenes,
       this,
-      this.getCachedPrismaProductos.bind(this),
+      (f: any) => this.productsCatalogUtil.getCachedPrismaProductos(f, this.WEB_BASE_WHERE),
     );
   }
 
@@ -415,12 +255,15 @@ export class ProductsService {
       };
     }
 
-    const { data } = await this.getCachedPrismaProductos({
-      search: termino,
-      limit: 15,
-      offset: 0,
-      soloConStock: true,
-    });
+    const { data } = await this.productsCatalogUtil.getCachedPrismaProductos(
+      {
+        search: termino,
+        limit: 15,
+        offset: 0,
+        soloConStock: true,
+      },
+      this.WEB_BASE_WHERE,
+    );
     const rows = Array.isArray(data) ? data : [];
 
     const productos = rows.slice(0, limit).map((p: any) => ({
@@ -482,11 +325,10 @@ export class ProductsService {
         message: 'SIN CODIGO',
       };
     try {
-      const { data } = await this.getCachedPrismaProductos({
-        search: cod,
-        limit: 1,
-        offset: 0,
-      });
+      const { data } = await this.productsCatalogUtil.getCachedPrismaProductos(
+        { search: cod, limit: 1, offset: 0 },
+        this.WEB_BASE_WHERE,
+      );
       const p: any = Array.isArray(data) ? data[0] : null;
       if (!p)
         return {
@@ -1001,8 +843,6 @@ export class ProductsService {
     if (!Array.isArray(codigos) || codigos.length === 0) {
       return { data: [], total: 0 };
     }
-    // Tope bajado de 200 a 50: con cuotas/imágenes por producto, 200 códigos
-    // podían generar una respuesta NATS de varios MB (ver MAX_RPC_RESPONSE_BYTES).
     const MAX_CODIGOS = 50;
     const lista = [
       ...new Set(codigos.map((c) => String(c).trim()).filter(Boolean)),
@@ -1010,7 +850,7 @@ export class ProductsService {
     if (lista.length === 0) return { data: [], total: 0 };
 
     const staleKey = `products:byCodigos:stale:${lista.slice().sort().join(',')}`;
-    const dataConCuotas = await this.withDbResilience(
+    const dataConCuotas = await this.productsResilience.withDbResilience(
       'byCodigos',
       staleKey,
       async () => {
@@ -1069,7 +909,7 @@ export class ProductsService {
       data: dataConCuotas.slice(0, lim),
       total: dataConCuotas.length,
     };
-    this.assertResponseWithinNatsLimit(result, 'get_products_by_codigos');
+    this.productsResilience.assertResponseWithinNatsLimit(result, 'get_products_by_codigos');
     return result;
   }
 
@@ -1089,7 +929,8 @@ export class ProductsService {
   async getProductsJota(
     filters: any = {},
   ): Promise<{ data: any[]; total: number }> {
-    const cacheKey = `products:jota:${this.getCacheKey({ ...filters, type: 'jota' })}`;
+    const jotaFilters = { ...filters, marca: 257 };
+    const cacheKey = `products:jota:${this.productsCatalogUtil.getCacheKey({ ...jotaFilters, type: 'jota' })}`;
     const cached = await this.cache.get<{ data: any[]; total: number }>(
       cacheKey,
     );
@@ -1102,15 +943,30 @@ export class ProductsService {
         ? Math.min(jotaRawLimit, 100)
         : 50;
     const offset = Number(filters.offset) || 0;
-    const staleKey = `products:jota:stale:${this.getCacheKey({ ...filters, type: 'jota' })}`;
+    const f = this.productsUtils.buildProcFilters(jotaFilters);
+    const staleKey = `products:jota:stale:${this.productsCatalogUtil.getCacheKey({ ...jotaFilters, type: 'jota' })}`;
 
-    const payload = await this.withDbResilience('jota', staleKey, async () => {
-      const result = await this.productReadRepository.query(
-        'CALL proc_obtener_listado_articulos_ecommerce(?, ?, 257, NULL)',
-        [limit, offset],
-      );
+    const payload = await this.productsResilience.withDbResilience('jota', staleKey, async () => {
+      const [productos, total] = await Promise.all([
+        this.productReadRepository
+          .query(
+            'CALL proc_obtener_articulos_ecommerce_web(?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+              limit,
+              offset,
+              f.marca,
+              f.categoria,
+              f.proveedor,
+              f.precioMin,
+              f.precioMax,
+              f.soloStock,
+              f.busqueda,
+            ],
+          )
+          .then((r) => r[0] || []),
+        this.productsCatalogUtil.contarProductos(jotaFilters, this.WEB_BASE_WHERE),
+      ]);
 
-      const productos = result[0] || [];
       const codigosProductos = productos.map((item: any) =>
         item.codigo_articulo.trim(),
       );
@@ -1159,7 +1015,6 @@ export class ProductsService {
       const conCredito = await this.productsUtils.calculoCreditoProductos(data);
       const dataConCuotas =
         await this.productsUtils.aplicarPreciosPromo(conCredito);
-      const total = result[1]?.[0]?.total_registros || dataConCuotas.length;
       return { data: dataConCuotas as any[], total };
     });
 
@@ -1187,7 +1042,7 @@ export class ProductsService {
     const staleKey = `promotions:econt:stale:${desde}:${hasta}`;
     const ERP_QUERY_TIMEOUT_MS = 10000;
 
-    return this.withDbResilience('listEcontPromotions', staleKey, async () => {
+    return this.productsResilience.withDbResilience('listEcontPromotions', staleKey, async () => {
       return Promise.race([
         this.productReadRepository.query(
           `SELECT id_promo, nombre, fecha_inicio, fecha_fin, canal, tipo_promocion, estado
@@ -1231,17 +1086,15 @@ export class ProductsService {
     try {
       const [agregado, detalle] = await Promise.all([
         this.productReadRepository.query(
-          `SELECT COALESCE(SUM(sc.gravada10), 0) AS totalFacturado, COUNT(*) AS cantidadDocumentos,
-                  COALESCE(SUM(CASE WHEN sc.cuota = 1 THEN sc.gravada10 ELSE 0 END), 0) AS totalContado,
+          `SELECT COALESCE(SUM(sd.gravada10), 0) AS totalFacturado,
+                  COUNT(DISTINCT CONCAT(sc.comprobante, '-', sc.numero)) AS cantidadDocumentos,
+                  COALESCE(SUM(CASE WHEN sc.cuota = 1 THEN sd.gravada10 ELSE 0 END), 0) AS totalContado,
                   COUNT(CASE WHEN sc.cuota = 1 THEN 1 END) AS cantidadContado,
-                  COALESCE(SUM(CASE WHEN sc.cuota = 2 THEN sc.gravada10 ELSE 0 END), 0) AS totalCredito,
+                  COALESCE(SUM(CASE WHEN sc.cuota = 2 THEN sd.gravada10 ELSE 0 END), 0) AS totalCredito,
                   COUNT(CASE WHEN sc.cuota = 2 THEN 1 END) AS cantidadCredito
              FROM solicitudcab sc
-            WHERE EXISTS (
-                SELECT 1 FROM solicituddet sd
-                WHERE sd.comprobante = sc.comprobante AND sd.numero = sc.numero AND sd.id_promo = ?
-              )
-              AND sc.age_frecepcion BETWEEN ? AND ?
+             INNER JOIN solicituddet sd ON sd.comprobante = sc.comprobante AND sd.numero = sc.numero AND sd.id_promo = ?
+            WHERE sc.age_frecepcion BETWEEN ? AND ?
               AND sc.comprobante IN (SELECT vd2.codigo FROM vendedor vd2 WHERE vd2.coordinador = 52)
               AND sc.estado_soli NOT IN ('31', '25', '37')
               AND sc.estado_soli IN ('19', '16')`,
@@ -1249,7 +1102,7 @@ export class ProductsService {
         ),
         this.productReadRepository.query(
           `SELECT sc.comprobante, sc.numero, vd.nombre, sc.fecha, sc.age_frecepcion,
-                  sd.codigo, sd.descrip, sc.gravada10, sc.estado_soli, tes.estado,
+                  sd.codigo, sd.descrip, sd.gravada10, sc.estado_soli, tes.estado,
                   CASE WHEN sc.cuota = 1 THEN 'CONTADO' WHEN sc.cuota = 2 THEN 'CREDITO' ELSE NULL END AS forma_pago
              FROM solicitudcab sc
              INNER JOIN solicituddet sd ON sd.comprobante = sc.comprobante AND sd.numero = sc.numero
@@ -1379,5 +1232,53 @@ export class ProductsService {
 
   async deleteProductSello(productoCodigo: string) {
     return this.productsImagesService.deleteProductSello(productoCodigo);
+  }
+
+  async getFilteredProductsCount(filters: any = {}): Promise<number> {
+    return this.productsCatalogUtil.contarProductos(filters, this.WEB_BASE_WHERE);
+  }
+
+  // Códigos de artículo que matchean un filtro, con el mismo criterio (WEB_BASE_WHERE,
+  // precio mínimo publicable, stock) que usa el listado de productos. Usado por
+  // SellosReglasService para saber a qué productos aplicar/retirar un sello por filtro.
+  async getCodigosMatchingFilters(
+    filters: any = {},
+    limitCap = 20000,
+  ): Promise<string[]> {
+    const f = this.productsUtils.buildProcFilters(filters);
+    const busquedaCond = this.productsUtils.buildBusquedaSql(f.busqueda);
+    const depositoIds = await this.productsResilience.getStockDepositoIds();
+
+    const rows = await this.productReadRepository.query(
+      `SELECT a.codigo_articulo AS codigo_articulo
+         FROM articulo a
+         ${this.productsResilience.stockJoinSql(depositoIds)}
+        WHERE ${this.WEB_BASE_WHERE}
+          AND a.precioventa >= 9000
+          AND (? IS NULL OR a.marca = CAST(? AS UNSIGNED))
+          AND (? IS NULL OR a.familia = CAST(? AS UNSIGNED))
+          AND (? IS NULL OR a.proveedor = CAST(? AS UNSIGNED))
+          AND (? IS NULL OR a.precioventa >= ?)
+          AND (? IS NULL OR a.precioventa <= ?)
+          AND ${busquedaCond.sql}
+        LIMIT ?`,
+      [
+        f.marca,
+        f.marca,
+        f.categoria,
+        f.categoria,
+        f.proveedor,
+        f.proveedor,
+        f.precioMin,
+        f.precioMin,
+        f.precioMax,
+        f.precioMax,
+        ...busquedaCond.params,
+        limitCap,
+      ],
+    );
+    return (rows || [])
+      .map((r: any) => (r.codigo_articulo == null ? '' : String(r.codigo_articulo).trim()))
+      .filter(Boolean);
   }
 }

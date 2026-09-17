@@ -1,5 +1,6 @@
-import { DynamicModule, Module } from '@nestjs/common';
-import { ClientsModule, Transport } from '@nestjs/microservices';
+import { DynamicModule, Module, Provider } from '@nestjs/common';
+import { Transport } from '@nestjs/microservices';
+import { createResilientClient } from '@shared/common/microservices/resilient-client.factory';
 
 export const SERVICE_PORTS = {
   AUTH_SERVICE: 3101,
@@ -22,37 +23,35 @@ export const getMicroserviceConfig = (_serviceName: string) => ({
   options: { servers: getNatsServers() },
 });
 
+function buildClientProvider(serviceName: string): Provider {
+  return {
+    provide: serviceName,
+    useFactory: () =>
+      createResilientClient(
+        {
+          transport: Transport.NATS,
+          options: { servers: getNatsServers() },
+        },
+        serviceName,
+      ),
+  };
+}
+
 @Module({})
 export class MicroserviceModule {
   static register(serviceName: string): DynamicModule {
     return {
       module: MicroserviceModule,
-      imports: [
-        ClientsModule.register([
-          {
-            name: serviceName,
-            transport: Transport.NATS,
-            options: { servers: getNatsServers() },
-          },
-        ]),
-      ],
-      exports: [ClientsModule],
+      providers: [buildClientProvider(serviceName)],
+      exports: [serviceName],
     };
   }
 
   static forRoot(services: string[]): DynamicModule {
-    const clientModules = services.map((serviceName) => ({
-      name: serviceName,
-      transport: Transport.NATS,
-      options: { servers: getNatsServers() },
-    }));
-
     return {
       module: MicroserviceModule,
-      imports: [
-        ClientsModule.register(clientModules as any), 
-      ],
-      exports: [ClientsModule],
+      providers: services.map(buildClientProvider),
+      exports: services,
     };
   }
 }

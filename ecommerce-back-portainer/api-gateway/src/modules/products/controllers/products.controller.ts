@@ -305,6 +305,14 @@ export class ProductsController {
     );
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get('proveedores')
+  async listProveedoresAdmin() {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'list_proveedores_con_estado' }, {}),
+    );
+  }
+
   @UseGuards(ProviderAuthGuard)
   @Get('proveedores/perfil')
   async getProveedorProfile(@Query('email') email: string) {

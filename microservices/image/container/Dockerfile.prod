@@ -1,0 +1,36 @@
+FROM node:20-alpine AS deps
+WORKDIR /usr/src/app
+RUN apk add --no-cache vips-dev python3 make g++ libc6-compat
+COPY microservices/image/package.json ./package.json
+RUN yarn config set network-timeout 600000 && \
+    yarn config set registry https://registry.npmjs.org/ && \
+    yarn install --network-timeout 600000 --ignore-engines || \
+    npm install --registry https://registry.npmjs.org/ --timeout=600000
+
+FROM deps AS build
+WORKDIR /usr/src/app
+COPY tsconfig.paths.json ./tsconfig.paths.json
+COPY shared/ ./shared/
+COPY microservices/image/ ./microservices/image/
+WORKDIR /usr/src/app/microservices/image
+RUN npx tsc -p tsconfig.json && npx --yes tsc-alias@1.8.10 -p tsconfig.json
+
+FROM node:20-alpine AS deps-prod
+WORKDIR /usr/src/app
+RUN apk add --no-cache vips-dev python3 make g++ libc6-compat
+COPY microservices/image/package.json ./package.json
+RUN yarn config set network-timeout 600000 && \
+    yarn config set registry https://registry.npmjs.org/ && \
+    yarn install --production --network-timeout 600000 --ignore-engines || \
+    npm install --omit=dev --registry https://registry.npmjs.org/ --timeout=600000
+
+FROM node:20-alpine AS runtime
+RUN apk add --no-cache vips libc6-compat curl
+WORKDIR /usr/src/app
+COPY --from=deps-prod /usr/src/app/node_modules ./node_modules
+COPY --from=build /usr/src/app/microservices/image/dist ./dist
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup && chown -R appuser:appgroup /usr/src/app
+USER appuser
+ENV NODE_ENV=production
+EXPOSE 3107
+CMD ["node", "dist/microservices/image/main.js"]

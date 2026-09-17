@@ -70,6 +70,29 @@ export class ProductsService {
        AND sa.cantidad_actual > 0)`;
   private readonly STALE_TTL = 24 * 60 * 60 * 1000;
   private readonly dbBreakers = new Map<string, CircuitBreaker>();
+  private stockDepositoIdsCache: { ids: number[]; expiresAt: number } | null = null;
+  private readonly STOCK_DEPOSITO_IDS_TTL = 60 * 60 * 1000;
+
+  private async getStockDepositoIds(): Promise<number[]> {
+    const now = Date.now();
+    if (this.stockDepositoIdsCache && this.stockDepositoIdsCache.expiresAt > now) {
+      return this.stockDepositoIdsCache.ids;
+    }
+    const rows = await this.productReadRepository.query(
+      `SELECT codigo FROM deposito
+        WHERE habilitado_reserva = 1 AND codigo NOT IN (19,20,26,27,28,33) AND codigo_proveedor = 0`,
+    );
+    const ids = (rows || [])
+      .map((r: any) => Number(r.codigo))
+      .filter((n: number) => Number.isInteger(n));
+    this.stockDepositoIdsCache = { ids, expiresAt: now + this.STOCK_DEPOSITO_IDS_TTL };
+    return ids;
+  }
+
+  private stockJoinSql(depositoIds: number[]): string {
+    const list = depositoIds.length ? depositoIds.join(',') : '-1';
+    return `JOIN (SELECT DISTINCT codigo_articulo FROM tbl_stock_actual WHERE deposito IN (${list}) AND cantidad_actual > 0) stk ON stk.codigo_articulo = a.codigo_articulo`;
+  }
 
   private getDbBreaker(key: string): CircuitBreaker {
     if (!this.dbBreakers.has(key)) {
@@ -81,15 +104,37 @@ export class ProductsService {
     return this.dbBreakers.get(key)!;
   }
 
+  private withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error(`Timeout de ${ms}ms esperando al ERP (${label})`)),
+        ms,
+      );
+      promise.then(
+        (value) => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+        (error) => {
+          clearTimeout(timer);
+          reject(error);
+        },
+      );
+    });
+  }
+
   private async withDbResilience<T>(
     breakerKey: string,
     staleCacheKey: string,
     run: () => Promise<T>,
+    timeoutMs?: number,
   ): Promise<T> {
     const breaker = this.getDbBreaker(breakerKey);
     return breaker.execute(
       async () => {
-        const result = await run();
+        const result = timeoutMs
+          ? await this.withTimeout(run(), timeoutMs, breakerKey)
+          : await run();
         await this.cache.set(staleCacheKey, result, this.STALE_TTL);
         return result;
       },
@@ -187,7 +232,7 @@ export class ProductsService {
         const total = await this.productsUtils.contarProductosV2(
           filters,
           this.WEB_BASE_WHERE,
-          this.STOCK_EXISTS,
+          await this.getStockDepositoIds(),
         );
         const response = { data: dataConCuotas as any[], total };
         this.assertResponseWithinNatsLimit(response, 'get_catalogo_v2');
@@ -224,6 +269,37 @@ export class ProductsService {
     }
   }
 
+  private async runProcParaTerminos(
+    baseParams: {
+      limit: number;
+      offset: number;
+      marca: any;
+      categoria: any;
+      proveedor: any;
+      precioMin: any;
+      precioMax: any;
+      soloStock: any;
+    },
+    terminos: string[],
+  ): Promise<any[]> {
+    const busqueda = terminos.slice(0, 4).join('||');
+    const result = await this.productReadRepository.query(
+      'CALL proc_obtener_articulos_ecommerce_web(?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        baseParams.limit,
+        baseParams.offset,
+        baseParams.marca,
+        baseParams.categoria,
+        baseParams.proveedor,
+        baseParams.precioMin,
+        baseParams.precioMax,
+        baseParams.soloStock,
+        busqueda,
+      ],
+    );
+    return (result[0] || []).slice(0, baseParams.limit);
+  }
+
   private async fetchAndCachePrismaProductos(
     filters: any,
     cacheKey: string,
@@ -236,27 +312,74 @@ export class ProductsService {
         : 50;
     const offset = Number(filters.offset) || 0;
     const f = this.productsUtils.buildProcFilters(filters);
-    const result = await this.productReadRepository.query(
-      'CALL proc_obtener_articulos_ecommerce_web(?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [
-        limit,
-        offset,
-        f.marca,
-        f.categoria,
-        f.proveedor,
-        f.precioMin,
-        f.precioMax,
-        f.soloStock,
-        f.busqueda,
-      ],
-    );
+    const { terms } = f.busqueda
+      ? this.productsUtils.expandBusquedaTerms(f.busqueda)
+      : { terms: [] as string[] };
 
-    const productos = result[0] || [];
-    const dataConCuotas = await this.productsUtils.enrichProductRows(
-      productos,
-      this.productsImagesReadRepository,
-    );
-    const total = await this.contarProductos(filters);
+    const baseParams = {
+      limit,
+      offset,
+      marca: f.marca,
+      categoria: f.categoria,
+      proveedor: f.proveedor,
+      precioMin: f.precioMin,
+      precioMax: f.precioMax,
+      soloStock: f.soloStock,
+    };
+
+    const staleKey = `products:list:stale:${cacheKey}`;
+
+    let dataConCuotas: any[];
+    let total: number;
+    try {
+      const result = await this.withTimeout(
+        (async () => {
+          const [productos, totalRows] = await Promise.all([
+            terms.length > 1
+              ? this.runProcParaTerminos(baseParams, terms)
+              : this.productReadRepository
+                  .query(
+                    'CALL proc_obtener_articulos_ecommerce_web(?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                    [
+                      limit,
+                      offset,
+                      f.marca,
+                      f.categoria,
+                      f.proveedor,
+                      f.precioMin,
+                      f.precioMax,
+                      f.soloStock,
+                      f.busqueda,
+                    ],
+                  )
+                  .then((r) => r[0] || []),
+            this.contarProductos(filters),
+          ]);
+
+          const rows = await this.productsUtils.enrichProductRows(
+            productos,
+            this.productsImagesReadRepository,
+          );
+          return { data: rows as any[], total: totalRows };
+        })(),
+        15000,
+        'productsList',
+      );
+      dataConCuotas = result.data;
+      total = result.total;
+      await this.cache.set(staleKey, result, this.STALE_TTL);
+    } catch (e) {
+      const stale = await this.cache.get<{ data: any[]; total: number }>(
+        staleKey,
+      );
+      if (stale) {
+        this.logger.warn(
+          `fetchAndCachePrismaProductos: fallo (${(e as Error)?.message}), sirviendo stale-cache para esta búsqueda`,
+        );
+        return stale;
+      }
+      throw e;
+    }
 
     await this.cache.set(
       cacheKey,
@@ -269,21 +392,20 @@ export class ProductsService {
 
   private async contarProductos(filters: any = {}): Promise<number> {
     const f = this.productsUtils.buildProcFilters(filters);
+    const busquedaCond = this.productsUtils.buildBusquedaSql(f.busqueda);
+    const depositoIds = await this.getStockDepositoIds();
 
     const rows = await this.productReadRepository.query(
       `SELECT COUNT(*) AS total
          FROM articulo a
+         ${this.stockJoinSql(depositoIds)}
         WHERE ${this.WEB_BASE_WHERE}
           AND (? IS NULL OR a.marca = CAST(? AS UNSIGNED))
           AND (? IS NULL OR a.familia = CAST(? AS UNSIGNED))
           AND (? IS NULL OR a.proveedor = CAST(? AS UNSIGNED))
           AND (? IS NULL OR a.precioventa >= ?)
           AND (? IS NULL OR a.precioventa <= ?)
-          AND (? IS NULL
-               OR TRIM(a.codigo) = ?
-               OR a.codigodebarra = ?
-               OR a.nombre LIKE CONCAT('%', REPLACE(?, ' ', '%'), '%'))
-          AND ${this.STOCK_EXISTS}`,
+          AND ${busquedaCond.sql}`,
       [
         f.marca,
         f.marca,
@@ -295,10 +417,7 @@ export class ProductsService {
         f.precioMin,
         f.precioMax,
         f.precioMax,
-        f.busqueda,
-        f.busqueda,
-        f.busqueda,
-        f.busqueda,
+        ...busquedaCond.params,
       ],
     );
     return Number(rows?.[0]?.total || 0);
@@ -307,26 +426,33 @@ export class ProductsService {
   async getFacets(): Promise<any> {
     const cached = await this.cache.get('products:facets');
     if (cached) return cached;
-    const baseWhere = `${this.WEB_BASE_WHERE} AND ${this.STOCK_EXISTS}`;
+    const depositoIds = await this.getStockDepositoIds();
+    const stockJoin = this.stockJoinSql(depositoIds);
+    const baseWhere = this.WEB_BASE_WHERE;
     const [categorias, marcas, proveedores, precio] = await Promise.all([
       this.productReadRepository.query(
         `SELECT a.familia AS codigo, f.nombre AS nombre, COUNT(*) AS total
            FROM articulo a JOIN familia f ON f.codigo = a.familia
+           ${stockJoin}
           WHERE ${baseWhere} GROUP BY a.familia, f.nombre ORDER BY f.nombre`,
       ),
       this.productReadRepository.query(
         `SELECT a.marca AS codigo, m.nombre AS nombre, COUNT(*) AS total
            FROM articulo a JOIN marca m ON m.codigo = a.marca
+           ${stockJoin}
           WHERE ${baseWhere} GROUP BY a.marca, m.nombre ORDER BY total DESC`,
       ),
       this.productReadRepository.query(
         `SELECT a.proveedor AS codigo, pv.nombre AS nombre, COUNT(*) AS total
            FROM articulo a JOIN proveedor pv ON pv.codigo = a.proveedor
+           ${stockJoin}
           WHERE ${baseWhere} GROUP BY a.proveedor, pv.nombre ORDER BY pv.nombre`,
       ),
       this.productReadRepository.query(
         `SELECT MIN(NULLIF(a.precioventa, 0)) AS min, MAX(a.precioventa) AS max
-           FROM articulo a WHERE ${baseWhere} AND a.precioventa > 0`,
+           FROM articulo a
+           ${stockJoin}
+          WHERE ${baseWhere} AND a.precioventa > 0`,
       ),
     ]);
     const norm = (arr: any[]) =>
@@ -1001,8 +1127,6 @@ export class ProductsService {
     if (!Array.isArray(codigos) || codigos.length === 0) {
       return { data: [], total: 0 };
     }
-    // Tope bajado de 200 a 50: con cuotas/imágenes por producto, 200 códigos
-    // podían generar una respuesta NATS de varios MB (ver MAX_RPC_RESPONSE_BYTES).
     const MAX_CODIGOS = 50;
     const lista = [
       ...new Set(codigos.map((c) => String(c).trim()).filter(Boolean)),
@@ -1089,7 +1213,8 @@ export class ProductsService {
   async getProductsJota(
     filters: any = {},
   ): Promise<{ data: any[]; total: number }> {
-    const cacheKey = `products:jota:${this.getCacheKey({ ...filters, type: 'jota' })}`;
+    const jotaFilters = { ...filters, marca: 257 };
+    const cacheKey = `products:jota:${this.getCacheKey({ ...jotaFilters, type: 'jota' })}`;
     const cached = await this.cache.get<{ data: any[]; total: number }>(
       cacheKey,
     );
@@ -1102,15 +1227,30 @@ export class ProductsService {
         ? Math.min(jotaRawLimit, 100)
         : 50;
     const offset = Number(filters.offset) || 0;
-    const staleKey = `products:jota:stale:${this.getCacheKey({ ...filters, type: 'jota' })}`;
+    const f = this.productsUtils.buildProcFilters(jotaFilters);
+    const staleKey = `products:jota:stale:${this.getCacheKey({ ...jotaFilters, type: 'jota' })}`;
 
     const payload = await this.withDbResilience('jota', staleKey, async () => {
-      const result = await this.productReadRepository.query(
-        'CALL proc_obtener_listado_articulos_ecommerce(?, ?, 257, NULL)',
-        [limit, offset],
-      );
+      const [productos, total] = await Promise.all([
+        this.productReadRepository
+          .query(
+            'CALL proc_obtener_articulos_ecommerce_web(?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+              limit,
+              offset,
+              f.marca,
+              f.categoria,
+              f.proveedor,
+              f.precioMin,
+              f.precioMax,
+              f.soloStock,
+              f.busqueda,
+            ],
+          )
+          .then((r) => r[0] || []),
+        this.contarProductos(jotaFilters),
+      ]);
 
-      const productos = result[0] || [];
       const codigosProductos = productos.map((item: any) =>
         item.codigo_articulo.trim(),
       );
@@ -1159,7 +1299,6 @@ export class ProductsService {
       const conCredito = await this.productsUtils.calculoCreditoProductos(data);
       const dataConCuotas =
         await this.productsUtils.aplicarPreciosPromo(conCredito);
-      const total = result[1]?.[0]?.total_registros || dataConCuotas.length;
       return { data: dataConCuotas as any[], total };
     });
 
@@ -1231,17 +1370,15 @@ export class ProductsService {
     try {
       const [agregado, detalle] = await Promise.all([
         this.productReadRepository.query(
-          `SELECT COALESCE(SUM(sc.gravada10), 0) AS totalFacturado, COUNT(*) AS cantidadDocumentos,
-                  COALESCE(SUM(CASE WHEN sc.cuota = 1 THEN sc.gravada10 ELSE 0 END), 0) AS totalContado,
+          `SELECT COALESCE(SUM(sd.gravada10), 0) AS totalFacturado,
+                  COUNT(DISTINCT CONCAT(sc.comprobante, '-', sc.numero)) AS cantidadDocumentos,
+                  COALESCE(SUM(CASE WHEN sc.cuota = 1 THEN sd.gravada10 ELSE 0 END), 0) AS totalContado,
                   COUNT(CASE WHEN sc.cuota = 1 THEN 1 END) AS cantidadContado,
-                  COALESCE(SUM(CASE WHEN sc.cuota = 2 THEN sc.gravada10 ELSE 0 END), 0) AS totalCredito,
+                  COALESCE(SUM(CASE WHEN sc.cuota = 2 THEN sd.gravada10 ELSE 0 END), 0) AS totalCredito,
                   COUNT(CASE WHEN sc.cuota = 2 THEN 1 END) AS cantidadCredito
              FROM solicitudcab sc
-            WHERE EXISTS (
-                SELECT 1 FROM solicituddet sd
-                WHERE sd.comprobante = sc.comprobante AND sd.numero = sc.numero AND sd.id_promo = ?
-              )
-              AND sc.age_frecepcion BETWEEN ? AND ?
+             INNER JOIN solicituddet sd ON sd.comprobante = sc.comprobante AND sd.numero = sc.numero AND sd.id_promo = ?
+            WHERE sc.age_frecepcion BETWEEN ? AND ?
               AND sc.comprobante IN (SELECT vd2.codigo FROM vendedor vd2 WHERE vd2.coordinador = 52)
               AND sc.estado_soli NOT IN ('31', '25', '37')
               AND sc.estado_soli IN ('19', '16')`,
@@ -1249,7 +1386,7 @@ export class ProductsService {
         ),
         this.productReadRepository.query(
           `SELECT sc.comprobante, sc.numero, vd.nombre, sc.fecha, sc.age_frecepcion,
-                  sd.codigo, sd.descrip, sc.gravada10, sc.estado_soli, tes.estado,
+                  sd.codigo, sd.descrip, sd.gravada10, sc.estado_soli, tes.estado,
                   CASE WHEN sc.cuota = 1 THEN 'CONTADO' WHEN sc.cuota = 2 THEN 'CREDITO' ELSE NULL END AS forma_pago
              FROM solicitudcab sc
              INNER JOIN solicituddet sd ON sd.comprobante = sc.comprobante AND sd.numero = sc.numero

@@ -120,6 +120,21 @@ export class ContentController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('dashboard/historial/desglose-promociones')
+  async getDashboardHistorialDesglosePromociones(
+    @Query('desde') desde: string,
+    @Query('hasta') hasta: string,
+    @Query('modoFecha') modoFecha?: 'agendamiento' | 'solicitud',
+  ) {
+    return await firstValueFrom(
+      this.contentClient.send(
+        { cmd: 'get_dashboard_historial_desglose_promociones' },
+        { desde, hasta, modoFecha },
+      ),
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('dashboard/comparar-fecha')
   async getDashboardCompararFecha(@Query('fecha') fecha: string) {
     return await firstValueFrom(

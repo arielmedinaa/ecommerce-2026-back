@@ -15,7 +15,7 @@ http:
 
 image:
   build:
-    dockerfile: api-gateway/container/Dockerfile
+    dockerfile: api-gateway/container/Dockerfile.prod
     context: .
   port: 3100
 

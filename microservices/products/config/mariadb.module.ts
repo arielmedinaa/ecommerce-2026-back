@@ -9,12 +9,15 @@ import { ProductoOferta } from '../schemas/ofertas/producto-oferta.schemas';
 import { ProductsImage } from '../schemas/products/products-image.schema';
 import { SearchTerm } from '../schemas/search/search-term.schema';
 import { ProductsSello } from '../schemas/products/products-sello.schema';
+import { SellosRegla } from '../schemas/products/sellos-regla.schema';
 import { ProductsSeller } from '../schemas/products-seller/products-seller.schema';
 import { ProductsExcelHistorial } from '../schemas/products/products-excel-historial.schema';
 import { ProductsExcelHistorialDetalle } from '../schemas/products/products-excel-historial-detalle.schema';
 import { Proveedor } from '../schemas/products-seller/proveedor.schema';
 import { ProveedorDocumento } from '../schemas/products-seller/proveedor-documento.schema';
 import { ProveedorApiToken } from '../schemas/products-seller/proveedor-api-token.schema';
+import { ProductsSellerColumnaActiva } from '../schemas/products-seller/products-seller-columna-activa.schema';
+import { StockMinimoConfig } from '../schemas/products-seller/stock-minimo-config.schema';
 import { CmsCombo } from '../schemas/combos/cms-combo.schemas';
 import { CmsComboDetalle } from '../schemas/combos/cms-combo-detalle.schemas';
 import { EcontComboImagen } from '../schemas/combos/econt-combo-imagen.schemas';
@@ -53,6 +56,11 @@ export class MariaDbModule {
             connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000),
             connectionLimit: Number(
               process.env[`DB_POOL_SIZE_${connectionName}`] || 10,
+            ),
+            waitForConnections: true,
+            queueLimit: Number(
+              process.env[`DB_POOL_QUEUE_LIMIT_${connectionName}`] ||
+                Number(process.env[`DB_POOL_SIZE_${connectionName}`] || 10) * 3,
             ),
           },
         });
@@ -138,7 +146,7 @@ export class MariaDbModule {
         username: configService.get<string>('DATABASE_USER'),
         password: configService.get<string>('DATABASE_PASSWORD'),
         database: configService.get<string>('DATABASE_NAME'),
-        entities: [ProductsImage, SearchTerm, ProductsSello, ProductsSeller, ProductsExcelHistorial, ProductsExcelHistorialDetalle, Proveedor, ProveedorDocumento, ProveedorApiToken, Notification, PushSubscription],
+        entities: [ProductsImage, SearchTerm, ProductsSello, SellosRegla, ProductsSeller, ProductsExcelHistorial, ProductsExcelHistorialDetalle, Proveedor, ProveedorDocumento, ProveedorApiToken, Notification, PushSubscription, ProductsSellerColumnaActiva, StockMinimoConfig],
         synchronize: process.env.SYNCRONICE === 'true',
         logging: process.env.SYNCRONICE === 'true',
         keepConnectionAlive: true,
@@ -164,7 +172,7 @@ export class MariaDbModule {
         username: configService.get<string>('DATABASE_USER'),
         password: configService.get<string>('DATABASE_PASSWORD'),
         database: configService.get<string>('DATABASE_NAME'),
-        entities: [ProductsImage, SearchTerm, ProductsSello, ProductsSeller, ProductsExcelHistorial, ProductsExcelHistorialDetalle, Proveedor, ProveedorDocumento, ProveedorApiToken, Notification, PushSubscription],
+        entities: [ProductsImage, SearchTerm, ProductsSello, SellosRegla, ProductsSeller, ProductsExcelHistorial, ProductsExcelHistorialDetalle, Proveedor, ProveedorDocumento, ProveedorApiToken, Notification, PushSubscription, ProductsSellerColumnaActiva, StockMinimoConfig],
         synchronize: process.env.SYNCRONICE === 'true',
         logging: process.env.SYNCRONICE === 'true',
         keepConnectionAlive: true,
@@ -314,11 +322,11 @@ export class MariaDbModule {
   }
 
   static forEcommerceProductsFeature(): DynamicModule {
-    return TypeOrmModule.forFeature([ProductsImage, SearchTerm, ProductsSello, ProductsSeller, ProductsExcelHistorial, ProductsExcelHistorialDetalle, Proveedor, ProveedorDocumento, ProveedorApiToken, Notification, PushSubscription], 'WRITE_ECOMMERCE_PRODUCTS_CONNECTION');
+    return TypeOrmModule.forFeature([ProductsImage, SearchTerm, ProductsSello, SellosRegla, ProductsSeller, ProductsExcelHistorial, ProductsExcelHistorialDetalle, Proveedor, ProveedorDocumento, ProveedorApiToken, Notification, PushSubscription, ProductsSellerColumnaActiva, StockMinimoConfig], 'WRITE_ECOMMERCE_PRODUCTS_CONNECTION');
   }
 
   static forEcommerceProductsFeatureRead(): DynamicModule {
-    return TypeOrmModule.forFeature([ProductsImage, SearchTerm, ProductsSello, ProductsSeller, ProductsExcelHistorial, ProductsExcelHistorialDetalle, Proveedor, ProveedorDocumento, ProveedorApiToken, Notification, PushSubscription], 'READ_ECOMMERCE_PRODUCTS_CONNECTION');
+    return TypeOrmModule.forFeature([ProductsImage, SearchTerm, ProductsSello, SellosRegla, ProductsSeller, ProductsExcelHistorial, ProductsExcelHistorialDetalle, Proveedor, ProveedorDocumento, ProveedorApiToken, Notification, PushSubscription, ProductsSellerColumnaActiva, StockMinimoConfig], 'READ_ECOMMERCE_PRODUCTS_CONNECTION');
   }
   
   static forOfertasFeature(): DynamicModule {

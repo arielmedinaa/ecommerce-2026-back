@@ -132,6 +132,43 @@ export class ProductsSellersUtils {
     return { codigo: Array.isArray(rows) && rows.length > 0 ? String(rows[0].codigo) : null };
   }
 
+  // Listado para los desplegables de "corregir producto rechazado" del panel
+  // de proveedor: familia siempre, subfamilia filtrada por familia elegida
+  // (mismo criterio de coherencia que matchSubcategoriaExacta).
+  async listFamilias(): Promise<{ codigo: string; nombre: string }[]> {
+    const rows = await this.erpReadRepository.query(
+      `SELECT codigo, nombre FROM familia ORDER BY nombre ASC`,
+    );
+    return Array.isArray(rows) ? rows.map((r) => ({ codigo: String(r.codigo), nombre: String(r.nombre) })) : [];
+  }
+
+  async listSubfamilias(codigoCategoria: string): Promise<{ codigo: string; nombre: string }[]> {
+    if (!codigoCategoria) return [];
+    const rows = await this.erpReadRepository.query(
+      `SELECT codigo, nombre FROM subfamilia WHERE categoria = ? ORDER BY nombre ASC`,
+      [codigoCategoria],
+    );
+    return Array.isArray(rows) ? rows.map((r) => ({ codigo: String(r.codigo), nombre: String(r.nombre) })) : [];
+  }
+
+  async getNombresCategoria(
+    codigoCategoria: string | null,
+    codigoSubcategoria: string | null,
+  ): Promise<{ categoriaNombre: string | null; subcategoriaNombre: string | null }> {
+    const [familiaRows, subfamiliaRows] = await Promise.all([
+      codigoCategoria
+        ? this.erpReadRepository.query(`SELECT nombre FROM familia WHERE codigo = ? LIMIT 1`, [codigoCategoria])
+        : Promise.resolve([]),
+      codigoSubcategoria
+        ? this.erpReadRepository.query(`SELECT nombre FROM subfamilia WHERE codigo = ? LIMIT 1`, [codigoSubcategoria])
+        : Promise.resolve([]),
+    ]);
+    return {
+      categoriaNombre: Array.isArray(familiaRows) && familiaRows.length > 0 ? String(familiaRows[0].nombre) : null,
+      subcategoriaNombre: Array.isArray(subfamiliaRows) && subfamiliaRows.length > 0 ? String(subfamiliaRows[0].nombre) : null,
+    };
+  }
+
   async getRecargo(codigoCategoria: string | null, codigoSubcategoria: string | null): Promise<number> {
     if (codigoSubcategoria) {
       const rows = await this.erpReadRepository.query(

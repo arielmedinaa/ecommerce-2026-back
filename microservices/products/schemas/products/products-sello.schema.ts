@@ -29,6 +29,9 @@ export class ProductsSello {
   @Column({ name: 'fecha_hasta', type: 'datetime', nullable: true })
   fecha_hasta: Date | null;
 
+  @Column({ name: 'regla_id', type: 'int', nullable: true })
+  regla_id: number | null;
+
   @Column({ name: 'created_by', nullable: true })
   created_by: string;
 

@@ -70,13 +70,13 @@ export class ProductsImagesService {
 
     const filesArray = Array.isArray(files) ? files : [files];
     const results: ProductsImage[] = [];
+    let markPrincipal = principal;
     for (const file of filesArray) {
-      if (principal) {
+      if (markPrincipal) {
         await this.productsImagesWriteRepository.update(
           { producto_codigo: productoCodigo },
           { principal: false }
         );
-        principal = false;
       }
 
       const fileExtension = path.extname(file.originalname);
@@ -123,14 +123,15 @@ export class ProductsImagesService {
         url_imagen: cdnUrl,
         nombre_archivo: fileName,
         orden,
-        principal,
+        principal: markPrincipal,
         created_by: userId,
       });
 
       const savedImage = await this.productsImagesWriteRepository.save(productImage);
       this.logger.log(`Imagen subida para producto ${productoCodigo}: ${fileName}`);
-      
+
       results.push(savedImage);
+      markPrincipal = false;
     }
 
     return { data: results, message: `${results.length} imagen(es) subida(s) exitosamente`, success: true };
@@ -226,6 +227,53 @@ export class ProductsImagesService {
     this.logger.log(`Imágenes reordenadas para producto: ${productoCodigo}`);
   }
 
+  private normalizeFileBuffer(file: MulterFile): Buffer {
+    if (Buffer.isBuffer(file.buffer)) {
+      return file.buffer;
+    }
+    if (file.buffer && typeof file.buffer === 'object' && 'data' in file.buffer) {
+      const dataProperty = (file.buffer as any).data;
+      return Buffer.isBuffer(dataProperty)
+        ? dataProperty
+        : typeof dataProperty === 'string'
+          ? Buffer.from(dataProperty, 'base64')
+          : Buffer.from(dataProperty);
+    }
+    if (typeof file.buffer === 'string') {
+      return Buffer.from(file.buffer, 'base64');
+    }
+    throw new Error(`Formato de archivo inválido: ${typeof file.buffer}`);
+  }
+
+  // Guarda un archivo de sello (S3 o disco local) y devuelve su nombre + URL pública.
+  // Compartido entre el sello manual por producto y las reglas de sello por filtro.
+  async storeSelloFile(
+    file: MulterFile,
+    fileNamePrefix: string,
+  ): Promise<{ fileName: string; cdnUrl: string }> {
+    const fileExtension = path.extname(file.originalname);
+    const fileName = `${fileNamePrefix}_${Date.now()}${fileExtension}`;
+    const filePath = path.join(this.imagesPath, fileName);
+    const bufferData = this.normalizeFileBuffer(file);
+
+    if (this.imageStorage.isS3()) {
+      await this.imageStorage.putObject({
+        key: this.productKey(fileName),
+        body: bufferData,
+        contentType: 'image/webp',
+        cacheControl: 'public, max-age=86400',
+      });
+    } else {
+      fs.writeFileSync(filePath, bufferData);
+    }
+    return { fileName, cdnUrl: `${this.baseUrl}/products/images/${fileName}` };
+  }
+
+  // Elimina del storage un archivo de sello previamente guardado con storeSelloFile.
+  async removeSelloAsset(fileName?: string): Promise<void> {
+    await this.removeStoredSelloFile(fileName);
+  }
+
   async uploadProductSello(
     productoCodigo: string,
     file: MulterFile,
@@ -241,26 +289,6 @@ export class ProductsImagesService {
       throw new NotFoundException(`Producto con código ${productoCodigo} no encontrado`);
     }
 
-    const fileExtension = path.extname(file.originalname);
-    const fileName = `sello_${productoCodigo}_${Date.now()}${fileExtension}`;
-    const filePath = path.join(this.imagesPath, fileName);
-
-    let bufferData: Buffer;
-    if (Buffer.isBuffer(file.buffer)) {
-      bufferData = file.buffer;
-    } else if (file.buffer && typeof file.buffer === 'object' && 'data' in file.buffer) {
-      const dataProperty = (file.buffer as any).data;
-      bufferData = Buffer.isBuffer(dataProperty)
-        ? dataProperty
-        : typeof dataProperty === 'string'
-          ? Buffer.from(dataProperty, 'base64')
-          : Buffer.from(dataProperty);
-    } else if (typeof file.buffer === 'string') {
-      bufferData = Buffer.from(file.buffer, 'base64');
-    } else {
-      throw new Error(`Formato de archivo inválido: ${typeof file.buffer}`);
-    }
-
     const existing = await this.productsSelloReadRepository.findOne({
       where: { producto_codigo: productoCodigo },
     });
@@ -268,20 +296,12 @@ export class ProductsImagesService {
       await this.removeStoredSelloFile(existing.nombre_archivo);
     }
 
-    if (this.imageStorage.isS3()) {
-      await this.imageStorage.putObject({
-        key: this.productKey(fileName),
-        body: bufferData,
-        contentType: 'image/webp',
-        cacheControl: 'public, max-age=86400',
-      });
-    } else {
-      fs.writeFileSync(filePath, bufferData);
-    }
-    const cdnUrl = `${this.baseUrl}/products/images/${fileName}`;
+    const { fileName, cdnUrl } = await this.storeSelloFile(file, `sello_${productoCodigo}`);
     const desde = fechaDesde ? new Date(fechaDesde) : null;
     const hasta = fechaHasta ? new Date(fechaHasta) : null;
 
+    // Un sello cargado a mano en un producto puntual siempre es un override manual,
+    // aunque el producto ya tuviera un sello aplicado por una regla de filtro.
     const saved = existing
       ? await this.productsSelloWriteRepository.save({
           ...existing,
@@ -290,6 +310,7 @@ export class ProductsImagesService {
           activo: true,
           fecha_desde: desde,
           fecha_hasta: hasta,
+          regla_id: null,
           updated_by: userId,
         })
       : await this.productsSelloWriteRepository.save(
@@ -299,6 +320,7 @@ export class ProductsImagesService {
             nombre_archivo: fileName,
             fecha_desde: desde,
             fecha_hasta: hasta,
+            regla_id: null,
             created_by: userId,
           }),
         );

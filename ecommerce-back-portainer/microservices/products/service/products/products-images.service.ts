@@ -70,13 +70,13 @@ export class ProductsImagesService {
 
     const filesArray = Array.isArray(files) ? files : [files];
     const results: ProductsImage[] = [];
+    let markPrincipal = principal;
     for (const file of filesArray) {
-      if (principal) {
+      if (markPrincipal) {
         await this.productsImagesWriteRepository.update(
           { producto_codigo: productoCodigo },
           { principal: false }
         );
-        principal = false;
       }
 
       const fileExtension = path.extname(file.originalname);
@@ -123,14 +123,15 @@ export class ProductsImagesService {
         url_imagen: cdnUrl,
         nombre_archivo: fileName,
         orden,
-        principal,
+        principal: markPrincipal,
         created_by: userId,
       });
 
       const savedImage = await this.productsImagesWriteRepository.save(productImage);
       this.logger.log(`Imagen subida para producto ${productoCodigo}: ${fileName}`);
-      
+
       results.push(savedImage);
+      markPrincipal = false;
     }
 
     return { data: results, message: `${results.length} imagen(es) subida(s) exitosamente`, success: true };

@@ -7,7 +7,7 @@ import { Oferta } from '../../schemas/ofertas/oferta.schemas';
 import { ProductoOferta } from '../../schemas/ofertas/producto-oferta.schemas';
 import { ProductsImage } from '../../schemas/products/products-image.schema';
 import { Product } from '../../schemas/products/product.schemas';
-import { ProductsUtils } from '../../utils/utils-products';
+import { ProductsUtils } from '../../utils/products/utils-products';
 
 @Injectable()
 export class OfertasService {
@@ -285,8 +285,6 @@ export class OfertasService {
         .take(filters.limit)
         .skip(filters.offset)
         .getMany();
-
-      console.log("OFERTAS OBTENIDAS", ofertas)
 
       const ofertasConCuotas = await Promise.all(ofertas.map(async (oferta) => {
         const productosConCuotas = await this.productsUtils.calculoCreditoProductosOferta(oferta.productos);

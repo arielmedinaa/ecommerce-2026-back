@@ -286,8 +286,6 @@ export class OfertasService {
         .skip(filters.offset)
         .getMany();
 
-      console.log("OFERTAS OBTENIDAS", ofertas)
-
       const ofertasConCuotas = await Promise.all(ofertas.map(async (oferta) => {
         const productosConCuotas = await this.productsUtils.calculoCreditoProductosOferta(oferta.productos);
         const productosConPromo = await this.productsUtils.aplicarPreciosPromoOferta(productosConCuotas);

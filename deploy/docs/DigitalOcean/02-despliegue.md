@@ -2,6 +2,14 @@
 
 No hay CI/CD ni registry de imágenes (Docker Hub, DO Container Registry, etc.). Todo el flujo es manual, vía SSH con contraseña. Esta guía es el checklist real que se sigue cada vez.
 
+## Credenciales:
+ecommerce-back-staging  198.211.104.197
+worker-RDS  143.198.170.193
+worker-2  67.205.169.13
+worker-1 143.244.166.116
+usuario root
+contraseña A2468b2402
+
 ## Acceso
 
 ```bash

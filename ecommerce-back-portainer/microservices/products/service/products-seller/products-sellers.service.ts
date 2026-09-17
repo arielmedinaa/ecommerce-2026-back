@@ -105,6 +105,7 @@ export class ProductsSellersService {
   async createProveedor(payload: {
     nombre: string;
     email: string;
+    password?: string;
   }): Promise<{ data: Proveedor | null; success: boolean; message: string }> {
     const existente = await this.proveedorRepository
       .createQueryBuilder('p')
@@ -119,7 +120,7 @@ export class ProductsSellersService {
         nombre: payload.nombre,
         email: payload.email,
         activo: true,
-        password_hash: hashPassword(DEFAULT_PROVIDER_PASSWORD),
+        password_hash: hashPassword(payload.password?.trim() || DEFAULT_PROVIDER_PASSWORD),
       }),
     );
     return { data: proveedor, success: true, message: 'Proveedor creado exitosamente' };
@@ -175,6 +176,58 @@ export class ProductsSellersService {
       success: true,
       message: 'OK',
     };
+  }
+
+  async registerProveedorLogin(idProveedor: number, acceptedTerms: boolean): Promise<void> {
+    const proveedor = await this.proveedorWriteRepository.findOne({ where: { id: idProveedor } });
+    if (!proveedor) return;
+
+    const now = new Date();
+    const update: Partial<Proveedor> = { ultimo_login_at: now };
+    if (!proveedor.primer_login_at) update.primer_login_at = now;
+    if (acceptedTerms && !proveedor.terminos_aceptados) {
+      update.terminos_aceptados = true;
+      update.terminos_aceptados_at = now;
+    }
+
+    await this.proveedorWriteRepository.update(idProveedor, update);
+  }
+
+  private async markPrimeraCargaProductos(idProveedor: number): Promise<void> {
+    await this.proveedorWriteRepository
+      .createQueryBuilder()
+      .update(Proveedor)
+      .set({ primera_carga_productos_at: () => 'COALESCE(primera_carga_productos_at, NOW())' })
+      .where('id = :id', { id: idProveedor })
+      .execute();
+  }
+
+  async listProveedoresConEstado(): Promise<{ data: any[]; success: boolean; message: string }> {
+    const proveedores = await this.proveedorRepository.find({ order: { nombre: 'ASC' } });
+    const counts = await this.sellerRepository
+      .createQueryBuilder('s')
+      .select('s.id_proveedor', 'idProveedor')
+      .addSelect('COUNT(*)', 'total')
+      .groupBy('s.id_proveedor')
+      .getRawMany();
+    const countMap = new Map(counts.map((c) => [Number(c.idProveedor), Number(c.total)]));
+
+    const data = proveedores.map((p) => ({
+      id: p.id,
+      nombre: p.nombre,
+      email: p.email,
+      activo: p.activo,
+      terminosAceptados: p.terminos_aceptados,
+      terminosAceptadosAt: p.terminos_aceptados_at,
+      primerLoginAt: p.primer_login_at,
+      ultimoLoginAt: p.ultimo_login_at,
+      primeraCargaProductosAt: p.primera_carga_productos_at,
+      haIngresado: !!p.primer_login_at,
+      haCargadoProductos: !!p.primera_carga_productos_at,
+      totalProductos: countMap.get(p.id) || 0,
+    }));
+
+    return { data, success: true, message: 'OK' };
   }
 
   async changeProveedorPassword(
@@ -927,6 +980,7 @@ export class ProductsSellersService {
       const altas = aceptados - actualizados;
 
       if (altas > 0) {
+        await this.markPrimeraCargaProductos(idProveedor);
         await this.notificationsService.create({
           // El tipo se mantiene ('catalogo_pendiente') porque es la clave con la
           // que el header decide mostrar el panel del lote; lo que cambió es que

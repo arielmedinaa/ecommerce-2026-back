@@ -290,6 +290,7 @@ export const ENTITY_CATALOG: EntidadCatalogo[] = [
     campos: [
       { key: 'codigo', nombre: 'Código de vendedor', columna: 'vd.codigo', tipo: 'numero' },
       { key: 'nombre', nombre: 'Nombre del vendedor', columna: 'vd.nombre', tipo: 'texto' },
+      { key: 'coordinador', nombre: 'Código de coordinador', columna: 'vd.coordinador', tipo: 'numero' },
     ],
     relacionesSugeridas: [],
   },

@@ -7,8 +7,6 @@ export interface CurlResult {
   error?: string;
 }
 
-// Ejecuta curl vía execFile (nunca `exec`/shell interpolado) para evitar
-// inyección de comandos a partir de datos provistos por el proveedor.
 export function runCurl(params: {
   method: 'GET' | 'POST';
   url: string;

@@ -1,0 +1,6 @@
+# Copiar a terraform.tfvars (NUNCA commitear ese archivo) y completar valores
+# reales. terraform.tfvars ya está en .gitignore del repo raíz? verificar.
+
+jwt_secret              = "reemplazar-con-el-jwt-secret-real"
+mongo_url               = "mongodb+srv://usuario:password@host/db"
+provider_api_jwt_secret = "" # opcional, dejar vacio si no se usa

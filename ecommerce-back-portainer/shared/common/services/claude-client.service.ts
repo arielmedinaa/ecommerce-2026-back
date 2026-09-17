@@ -16,10 +16,6 @@ export class ClaudeClientService {
     this.client = new Anthropic({ apiKey });
   }
 
-  // Llamada de texto simple: se le pasa un system prompt (rol del agente) y un
-  // prompt con todo el contexto (documentos del proveedor, etc.) y devuelve el
-  // texto de respuesta. Nunca loguea el contenido completo (puede traer
-  // credenciales del proveedor) — solo tamaños/duración.
   async ask(system: string, prompt: string, maxTokens = 8192): Promise<string> {
     const start = Date.now();
     const response = await this.client.messages.create({

@@ -37,6 +37,17 @@ export class DashboardController {
     );
   }
 
+  @MessagePattern({ cmd: 'get_dashboard_historial_desglose_promociones' })
+  getDashboardHistorialDesglosePromociones(
+    @Payload() data: { desde: string; hasta: string; modoFecha?: 'agendamiento' | 'solicitud' },
+  ) {
+    return this.dashboardStatsService.getHistorialDesglosePromociones(
+      data.desde,
+      data.hasta,
+      data.modoFecha,
+    );
+  }
+
   @MessagePattern({ cmd: 'get_dashboard_facturacion_en_vivo' })
   getDashboardFacturacionEnVivo() {
     return this.dashboardStatsService.getFacturacionEnVivo();

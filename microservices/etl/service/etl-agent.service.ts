@@ -10,6 +10,7 @@ import { EtlConfigStoreService } from './etl-config-store.service';
 import { ProviderRunnerService } from './provider-runner.service';
 import { extractDocumentText } from '../utils/document-text.util';
 import { runCurl } from '../utils/curl.util';
+import { fetchLegacyTls } from '../utils/legacy-tls-fetch.util';
 import { EtlDiscovery, EtlProviderConfig, ProveedorDocumentoMeta } from '../types';
 
 const PROVIDERS_DIR = path.join(__dirname, '..', 'providers');
@@ -38,6 +39,11 @@ partir de su documentación. Reglas estrictas:
   base de datos, nada de credenciales hardcodeadas (usá process.env.<NOMBRE> para secretos).
 - "extractor.ts" exporta: export async function extraerLote(cursor: string | null): Promise<{ items: any[]; nextCursor: string | null }>
   Debe paginar por lote según lo que la documentación describa (page/offset/cursor), usando fetch.
+- Si en "Datos de conexión ya confirmados" viene "needsLegacyTls": true, este proveedor tiene TLS
+  legacy (DH chico o certificado vencido) que el fetch global de Node rechaza. En ese caso NO uses
+  fetch global: importá { fetchLegacyTls } from '../../utils/legacy-tls-fetch.util' (ya existe,
+  no la generes) y usala exactamente igual que fetch para TODAS las llamadas HTTP del extractor.
+  Si no viene o es false, usá el fetch global normal.
 - "mapper.ts" exporta: export function mapearProducto(raw: any): { payload: { codigo_proveedor_interno?: string; codigo_de_barra?: string; nombre_articulo: string; descripcion?: string; costo: number; stock_actual: number; codigo_marca?: string | null; codigo_categoria?: string | null; codigo_subcategoria?: string | null }; imagenUrl: string | null } | null
   Debe devolver null si la fila no tiene los datos mínimos (nombre y precio). NUNCA inventes
   campos que no estén en el "raw": si un dato no viene, dejalo undefined.
@@ -109,6 +115,9 @@ export class EtlAgentService {
           `Nuestra IP pública todavía no está autorizada por "${nombreProveedor}". Detalle: ${probe.detalle} (comando: ${probe.comandoCurl})`,
         );
       }
+
+      discovery.needsLegacyTls = await this.necesitaTlsLegacy(discovery);
+      this.logger.log(`needsLegacyTls=${discovery.needsLegacyTls} para proveedor ${idProveedor}`);
 
       // 4) Generar el conector (extractor.ts + mapper.ts) con Claude.
       const codigoGenerado = await this.claude.ask(
@@ -183,24 +192,8 @@ export class EtlAgentService {
   }
 
   private async probarIpAutorizada(discovery: EtlDiscovery): Promise<{ autorizado: boolean; detalle: string; comandoCurl: string }> {
-    const headers: Record<string, string> = { ...(discovery.probeHeaders || {}) };
-    let body: string | undefined;
-
-    if (discovery.authType === 'bearer') {
-      headers['Authorization'] = `Bearer ${discovery.authValueHint || '<pendiente-de-configurar>'}`;
-    } else if (discovery.authType === 'apikey' && discovery.authHeaderName) {
-      headers[discovery.authHeaderName] = discovery.authValueHint || '<pendiente-de-configurar>';
-    } else if (discovery.authType === 'body' && discovery.probeBodyParams) {
-      const contentType = discovery.probeContentType || 'application/x-www-form-urlencoded';
-      headers['Content-Type'] = contentType;
-      body =
-        contentType === 'application/json'
-          ? JSON.stringify(discovery.probeBodyParams)
-          : new URLSearchParams(discovery.probeBodyParams).toString();
-    }
-
-    const url = discovery.probePath.startsWith('http') ? discovery.probePath : `${discovery.baseUrl.replace(/\/$/, '')}${discovery.probePath}`;
-    const resultado = await runCurl({ method: discovery.probeMethod, url, headers, body, timeoutMs: 10000 });
+    const { url, headers, body, method } = this.construirRequestProbe(discovery);
+    const resultado = await runCurl({ method: method as 'GET' | 'POST', url, headers, body, timeoutMs: 10000 });
 
     if (resultado.error) {
       return { autorizado: false, detalle: `No se pudo conectar: ${resultado.error}`, comandoCurl: resultado.comando };
@@ -226,6 +219,54 @@ export class EtlAgentService {
       return { autorizado: true, detalle: `Respondió ${resultado.statusCode}`, comandoCurl: resultado.comando };
     }
     return { autorizado: false, detalle: `Respuesta inesperada (status ${resultado.statusCode})`, comandoCurl: resultado.comando };
+  }
+
+  private construirRequestProbe(discovery: EtlDiscovery): { url: string; headers: Record<string, string>; body?: string; method: string } {
+    const headers: Record<string, string> = { ...(discovery.probeHeaders || {}) };
+    let body: string | undefined;
+
+    if (discovery.authType === 'bearer') {
+      headers['Authorization'] = `Bearer ${discovery.authValueHint || '<pendiente-de-configurar>'}`;
+    } else if (discovery.authType === 'apikey' && discovery.authHeaderName) {
+      headers[discovery.authHeaderName] = discovery.authValueHint || '<pendiente-de-configurar>';
+    } else if (discovery.authType === 'body' && discovery.probeBodyParams) {
+      const contentType = discovery.probeContentType || 'application/x-www-form-urlencoded';
+      headers['Content-Type'] = contentType;
+      body =
+        contentType === 'application/json'
+          ? JSON.stringify(discovery.probeBodyParams)
+          : new URLSearchParams(discovery.probeBodyParams).toString();
+    }
+
+    const url = discovery.probePath.startsWith('http') ? discovery.probePath : `${discovery.baseUrl.replace(/\/$/, '')}${discovery.probePath}`;
+    return { url, headers, body, method: discovery.probeMethod };
+  }
+
+  // El probe de arriba corre por `curl`, que tolera TLS legacy (DH chico,
+  // certificados vencidos) por defecto. El `fetch` global de Node es más
+  // estricto y puede rechazar exactamente la misma conexión. Si eso pasa,
+  // el extractor generado necesita usar `fetchLegacyTls` en vez de `fetch`.
+  private async necesitaTlsLegacy(discovery: EtlDiscovery): Promise<boolean> {
+    const { url, headers, body, method } = this.construirRequestProbe(discovery);
+    try {
+      await fetch(url, { method, headers, body, signal: AbortSignal.timeout(10000) });
+      return false;
+    } catch (error: any) {
+      const codigo = error?.cause?.code || error?.code;
+      const esErrorTls = typeof codigo === 'string' && /^(ERR_SSL_|ERR_TLS_|CERT_|DEPTH_ZERO_|UNABLE_TO_)/.test(codigo);
+      if (!esErrorTls) {
+        this.logger.warn(`fetch global falló para el probe por un motivo no-TLS (${codigo || error?.message}); se asume needsLegacyTls=false`);
+        return false;
+      }
+      // Confirmamos que con el dispatcher legacy sí funciona, para no marcar
+      // needsLegacyTls=true por un problema que en realidad es otro.
+      try {
+        await fetchLegacyTls(url, { method, headers, body });
+        return true;
+      } catch {
+        return false;
+      }
+    }
   }
 
   private extraerEstatusDeRespuesta(body: string): number | null {

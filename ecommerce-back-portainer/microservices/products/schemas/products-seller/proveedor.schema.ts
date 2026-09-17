@@ -32,6 +32,21 @@ export class Proveedor {
   @Column({ name: 'activo', default: true })
   activo: boolean;
 
+  @Column({ name: 'terminos_aceptados', default: false })
+  terminos_aceptados: boolean;
+
+  @Column({ name: 'terminos_aceptados_at', type: 'datetime', precision: 6, nullable: true })
+  terminos_aceptados_at: Date | null;
+
+  @Column({ name: 'primer_login_at', type: 'datetime', precision: 6, nullable: true })
+  primer_login_at: Date | null;
+
+  @Column({ name: 'ultimo_login_at', type: 'datetime', precision: 6, nullable: true })
+  ultimo_login_at: Date | null;
+
+  @Column({ name: 'primera_carga_productos_at', type: 'datetime', precision: 6, nullable: true })
+  primera_carga_productos_at: Date | null;
+
   @CreateDateColumn({ name: 'created_at' })
   created_at: Date;
 

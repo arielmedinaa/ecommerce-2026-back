@@ -152,13 +152,24 @@ export class ProductsController {
   }
 
   @MessagePattern({ cmd: 'create_proveedor' })
-  async createProveedor(@Payload() data: { nombre: string; email: string }) {
+  async createProveedor(@Payload() data: { nombre: string; email: string; password?: string }) {
     return this.productsSellersService.createProveedor(data);
   }
 
   @MessagePattern({ cmd: 'list_proveedores' })
   async listProveedores() {
     return this.productsSellersService.listProveedores();
+  }
+
+  @MessagePattern({ cmd: 'list_proveedores_con_estado' })
+  async listProveedoresConEstado() {
+    return this.productsSellersService.listProveedoresConEstado();
+  }
+
+  @MessagePattern({ cmd: 'register_proveedor_login' })
+  async registerProveedorLogin(@Payload() data: { idProveedor: number; acceptedTerms: boolean }) {
+    await this.productsSellersService.registerProveedorLogin(data.idProveedor, !!data.acceptedTerms);
+    return { success: true };
   }
 
   @MessagePattern({ cmd: 'get_provider_dashboard_stats' })

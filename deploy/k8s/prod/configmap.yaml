@@ -33,6 +33,11 @@ data:
   NATS_URL: "nats://nats:4222"
   REDIS_URL: "redis://redis:6379"
 
+  DB_POOL_SIZE_READ_CONNECTION: "25"
+
+  ECONT_DB_READ_HOST: "webservice.centralshop.com.py"
+  ECONT_DB_READ_PORT: "3306"
+
   # Reemplazar por URLs reales de RDS y Configuración
   # DB_HOST_PRODUCTOS: "productos-rds.xxxx.us-east-1.rds.amazonaws.com"
   # DB_HOST_ECOMMERCE: "ecommerce-rds.xxxx.us-east-1.rds.amazonaws.com"

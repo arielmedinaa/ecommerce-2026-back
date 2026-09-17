@@ -29,6 +29,11 @@ export interface EtlDiscovery {
   probeBodyParams?: Record<string, string>;
   probeContentType?: 'application/x-www-form-urlencoded' | 'application/json';
   notas: string;
+  // Detectado de forma determinística (no por Claude): true si el `fetch`
+  // global de Node no puede negociar TLS con este proveedor (DH chico,
+  // certificado vencido, etc.) aunque `curl` sí pueda. Cuando es true, el
+  // extractor generado debe usar `fetchLegacyTls` en vez de `fetch`.
+  needsLegacyTls?: boolean;
 }
 
 // Contrato que el código generado por Claude para cada proveedor debe producir

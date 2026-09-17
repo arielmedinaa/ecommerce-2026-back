@@ -20,11 +20,28 @@ spec:
         imagePullPolicy: Never
         ports:
         - containerPort: 3106
+        - containerPort: 4000
         envFrom:
         - configMapRef:
             name: ecommerce-config
         - secretRef:
             name: econt-db
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 4000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 4000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
 ---
 apiVersion: v1
 kind: Service

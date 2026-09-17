@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Product } from '../schemas/products/product.schemas';
+import { Product } from '../../schemas/products/product.schemas';
 import { CircuitBreaker } from '@shared/common/decorators/circuit-breaker.decorator';
 
 export interface PromoCuota {

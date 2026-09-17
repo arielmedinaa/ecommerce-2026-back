@@ -95,7 +95,8 @@ export class SellerCatalogService {
 
     const qb = this.sellerRepository
       .createQueryBuilder('s')
-      .where('s.estado = :estado', { estado: 'aprobado' });
+      .where('s.estado = :estado', { estado: 'aprobado' })
+      .andWhere("s.erp_match_status != 'match_automatico'");
 
     if (filters.search) {
       qb.andWhere('LOWER(s.nombre_articulo) LIKE :search', { search: `%${filters.search.toLowerCase()}%` });
@@ -135,7 +136,11 @@ export class SellerCatalogService {
   }
 
   async getFacets(): Promise<{ data: { marcas: Array<{ codigo: string; nombre: string }>; categorias: Array<{ codigo: string; nombre: string }> }; message: string; success: boolean }> {
-    const rows = await this.sellerRepository.find({ where: { estado: 'aprobado' } });
+    const rows = await this.sellerRepository
+      .createQueryBuilder('s')
+      .where('s.estado = :estado', { estado: 'aprobado' })
+      .andWhere("s.erp_match_status != 'match_automatico'")
+      .getMany();
     const categoriaCodigos = [...new Set(rows.map((r) => r.codigo_categoria).filter(Boolean))];
     const marcaCodigos = [...new Set(rows.map((r) => r.codigo_marca).filter(Boolean))];
 

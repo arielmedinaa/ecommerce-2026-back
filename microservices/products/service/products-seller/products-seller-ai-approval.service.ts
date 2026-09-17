@@ -73,11 +73,6 @@ export class ProductsSellerAiApprovalService {
     private readonly productsSellersService: ProductsSellersService,
   ) {}
 
-  // Evalúa un ProductsSeller recién guardado/actualizado y aplica el
-  // veredicto de inmediato (aprobado/rechazado), reusando approve()/reject()
-  // ya existentes — mismas notificaciones, mismo estado. Nunca deja el
-  // producto en 'pendiente': ante cualquier falla técnica de la IA, rechaza
-  // por seguridad con el código de fallback.
   async evaluarYAplicar(seller: ProductsSeller, modificadoPor: string): Promise<void> {
     const veredicto = await this.evaluar(seller);
 
@@ -85,8 +80,6 @@ export class ProductsSellerAiApprovalService {
       if (veredicto.aprobado) {
         const result = await this.productsSellersService.approve(seller.id, modificadoPor, {});
         if (!result.success) {
-          // No se pudo aprobar (ej. marca/categoría igual no resueltas pese
-          // a lo que dijo la IA) — se rechaza para no dejarlo colgado.
           this.logger.warn(`IA aprobó seller #${seller.id} pero approve() falló ("${result.message}"); se rechaza por seguridad.`);
           await this.productsSellersService.reject(
             seller.id,

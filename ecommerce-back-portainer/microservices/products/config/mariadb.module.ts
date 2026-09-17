@@ -54,6 +54,11 @@ export class MariaDbModule {
             connectionLimit: Number(
               process.env[`DB_POOL_SIZE_${connectionName}`] || 10,
             ),
+            waitForConnections: true,
+            queueLimit: Number(
+              process.env[`DB_POOL_QUEUE_LIMIT_${connectionName}`] ||
+                Number(process.env[`DB_POOL_SIZE_${connectionName}`] || 10) * 3,
+            ),
           },
         });
 

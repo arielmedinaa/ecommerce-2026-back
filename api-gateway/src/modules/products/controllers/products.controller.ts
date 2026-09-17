@@ -128,10 +128,11 @@ export class ProductsController {
 
   @UseGuards(ProviderAuthGuard)
   @Get('sellers/template')
-  async getProductsSellersTemplate(@Res() res: Response) {
+  async getProductsSellersTemplate(@Query('email') email: string, @Res() res: Response) {
+    const idProveedor = await this.resolveIdProveedor(email);
     const result = await firstValueFrom(
       this.productsClient
-        .send({ cmd: 'get_products_sellers_template' }, {})
+        .send({ cmd: 'get_products_sellers_template' }, { idProveedor })
         .pipe(timeout(40000)),
     );
     const buf = Buffer.isBuffer(result?.data) ? result.data : Buffer.from(result?.data?.data || result?.data);
@@ -305,6 +306,22 @@ export class ProductsController {
     );
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Post('sellers/mongo-resync')
+  async resyncSellersMongo() {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'resync_sellers_aprobados_mongo' }, {}).pipe(timeout(120000)),
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('proveedores')
+  async listProveedoresAdmin() {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'list_proveedores_con_estado' }, {}),
+    );
+  }
+
   @UseGuards(ProviderAuthGuard)
   @Get('proveedores/perfil')
   async getProveedorProfile(@Query('email') email: string) {
@@ -428,6 +445,56 @@ export class ProductsController {
     );
   }
 
+  @UseGuards(ProviderAuthGuard)
+  @Get('sellers/columnas-disponibles')
+  async getSellerColumnasDisponibles(@Query('email') email: string) {
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) return { data: null, message: 'Proveedor no encontrado', success: false };
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_seller_columnas_disponibles' }, { idProveedor }),
+    );
+  }
+
+  @UseGuards(ProviderAuthGuard)
+  @Post('sellers/columnas-activas')
+  async setSellerColumnasActivas(@Query('email') email: string, @Body() body: { columnas: string[] }) {
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) return { data: null, message: 'Proveedor no encontrado', success: false };
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'set_seller_columnas_activas' }, { idProveedor, columnas: body?.columnas || [] }),
+    );
+  }
+
+  @UseGuards(ProviderAuthGuard)
+  @Get('sellers/stock-minimo')
+  async getSellerStockMinimoConfig(@Query('email') email: string) {
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) return { data: null, message: 'Proveedor no encontrado', success: false };
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_seller_stock_minimo_config' }, { idProveedor }),
+    );
+  }
+
+  @UseGuards(ProviderAuthGuard)
+  @Post('sellers/stock-minimo')
+  async upsertSellerStockMinimoRule(@Query('email') email: string, @Body() body: any) {
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) return { data: null, message: 'Proveedor no encontrado', success: false };
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'upsert_seller_stock_minimo_rule' }, { idProveedor, regla: body }),
+    );
+  }
+
+  @UseGuards(ProviderAuthGuard)
+  @Delete('sellers/stock-minimo/:id')
+  async deleteSellerStockMinimoRule(@Query('email') email: string, @Param('id') id: string) {
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) return { data: null, message: 'Proveedor no encontrado', success: false };
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'delete_seller_stock_minimo_rule' }, { idProveedor, id: Number(id) }),
+    );
+  }
+
   @Get('sellers/catalog')
   async getSellerCatalog(
     @Query('search') search?: string,
@@ -493,6 +560,43 @@ export class ProductsController {
   @Get('sellers/import-error-codes')
   async getImportErrorCodes() {
     return await firstValueFrom(this.productsClient.send({ cmd: 'get_import_error_codes' }, {}));
+  }
+
+  @UseGuards(ProviderAuthGuard)
+  @Get('sellers/familias')
+  async listSellerFamilias() {
+    return await firstValueFrom(this.productsClient.send({ cmd: 'list_seller_familias' }, {}));
+  }
+
+  @UseGuards(ProviderAuthGuard)
+  @Get('sellers/subfamilias')
+  async listSellerSubfamilias(@Query('codigoCategoria') codigoCategoria: string) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'list_seller_subfamilias' }, { codigoCategoria }),
+    );
+  }
+
+  @Get('sellers/image-file')
+  async getSellerImageFile(@Query('key') key: string, @Res() res: Response) {
+    if (!key || !key.startsWith('products/seller-images/') || key.includes('..')) {
+      return res.status(404).json({ message: 'Imagen no encontrada' });
+    }
+    const result = await firstValueFrom(
+      this.productsClient.send({ cmd: 'get_seller_image_file' }, { key }).pipe(timeout(15000)),
+    );
+    if (result && result.success && result.data && result.data.buffer) {
+      const raw = result.data.buffer as any;
+      const buf = Buffer.isBuffer(raw)
+        ? raw
+        : raw && Array.isArray(raw.data)
+          ? Buffer.from(raw.data)
+          : Buffer.from(raw);
+      res.setHeader('Content-Type', result.data.contentType || 'image/webp');
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      return res.send(buf);
+    }
+    return res.status(404).json({ message: result?.message || 'Imagen no encontrada' });
   }
 
   @UseGuards(ProviderAuthGuard)
@@ -918,7 +1022,7 @@ export class ProductsController {
         productoCodigo,
         files,
         orden: body.orden || 0,
-        principal: body.principal || false,
+        principal: body.principal === true || (body.principal as unknown) === 'true',
         userId: 'current_user'
       };
 
@@ -1070,6 +1174,117 @@ export class ProductsController {
   async deleteProductSello(@Param('productoCodigo') productoCodigo: string) {
     return await firstValueFrom(
       this.productsClient.send({ cmd: 'delete_product_sello' }, productoCodigo).pipe(timeout(10000)),
+    );
+  }
+
+  // Sellos por filtro (proveedor/categoría/marca/precio): reglas "vivas" que aplican
+  // un sello a todos los productos que matchean el filtro, y se resincronizan solas.
+  @UseGuards(JwtAuthGuard)
+  @Get('/sello-reglas/preview')
+  @SneakyThrows('ProductsService', 'previewSelloRegla')
+  async previewSelloRegla(
+    @Query('categoria') categoria?: string,
+    @Query('marca') marca?: string,
+    @Query('proveedor') proveedor?: string,
+    @Query('precioMin') precioMin?: string,
+    @Query('precioMax') precioMax?: string,
+  ) {
+    const filtro = {
+      categoria: categoria || null,
+      marca: marca || null,
+      proveedor: proveedor || null,
+      precioMin: precioMin || null,
+      precioMax: precioMax || null,
+    };
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'preview_sello_regla' }, filtro).pipe(timeout(10000)),
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('/sello-reglas')
+  @SneakyThrows('ProductsService', 'listSelloReglas')
+  async listSelloReglas() {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'list_sello_reglas' }, {}).pipe(timeout(10000)),
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('/sello-reglas')
+  @SelloFileInterceptor()
+  async createSelloRegla(
+    @UploadedFile() file: MulterFile,
+    @Body() body: {
+      categoria?: string;
+      marca?: string;
+      proveedor?: string;
+      precioMin?: string;
+      precioMax?: string;
+      nombre?: string;
+      fechaDesde?: string;
+      fechaHasta?: string;
+    },
+  ) {
+    try {
+      const payload = {
+        filtro: {
+          categoria: body?.categoria || null,
+          marca: body?.marca || null,
+          proveedor: body?.proveedor || null,
+          precioMin: body?.precioMin || null,
+          precioMax: body?.precioMax || null,
+        },
+        nombre: body?.nombre || null,
+        file,
+        userId: 'current_user',
+        fechaDesde: body?.fechaDesde || null,
+        fechaHasta: body?.fechaHasta || null,
+      };
+
+      return await firstValueFrom(
+        this.productsClient.send({ cmd: 'create_sello_regla' }, payload).pipe(
+          timeout(20000),
+          catchError((error) => {
+            console.error('Error in create_sello_regla:', error);
+            throw error;
+          }),
+        ),
+      );
+    } catch (error) {
+      console.error('Error en createSelloRegla:', error);
+
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        throw new BadRequestException('El archivo excede el tamaño máximo de 1MB');
+      }
+      if (error.message?.includes('Solo se permiten archivos .webp')) {
+        throw new BadRequestException('Solo se permiten archivos .webp');
+      }
+      if (error.message?.includes('El archivo debe ser de tipo image/webp')) {
+        throw new BadRequestException('El archivo debe ser de tipo image/webp');
+      }
+
+      BaseHttpException.handle(error, 'ProductsService', 'createSelloRegla');
+    }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('/sello-reglas/:id/toggle')
+  @SneakyThrows('ProductsService', 'toggleSelloRegla')
+  async toggleSelloRegla(@Param('id') id: string, @Body() body: { activo: boolean }) {
+    return await firstValueFrom(
+      this.productsClient
+        .send({ cmd: 'toggle_sello_regla' }, { id: Number(id), activo: !!body?.activo, userId: 'current_user' })
+        .pipe(timeout(10000)),
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('/sello-reglas/:id')
+  @SneakyThrows('ProductsService', 'deleteSelloRegla')
+  async deleteSelloRegla(@Param('id') id: string) {
+    return await firstValueFrom(
+      this.productsClient.send({ cmd: 'delete_sello_regla' }, Number(id)).pipe(timeout(10000)),
     );
   }
 

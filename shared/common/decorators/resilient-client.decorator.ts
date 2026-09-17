@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom, Observable, throwError, timer } from 'rxjs';
-import { retryWhen, delay, take, mergeMap, timeout as rxTimeout } from 'rxjs/operators';
+import { firstValueFrom } from 'rxjs';
+import { timeout as rxTimeout } from 'rxjs/operators';
 import { CircuitBreaker } from './circuit-breaker.decorator';
 
 export interface ResilientOptions {
@@ -37,7 +37,7 @@ export class ResilientService {
     } = options;
 
     const serviceKey = pattern.cmd || JSON.stringify(pattern);
-    
+
     if (!this.circuitBreakers.has(serviceKey)) {
       this.circuitBreakers.set(
         serviceKey,
@@ -50,12 +50,16 @@ export class ResilientService {
 
     const circuitBreaker = this.circuitBreakers.get(serviceKey)!;
 
-    return circuitBreaker.execute(
-      async () => {
-        return this.executeWithRetry(client, pattern, data, retries, retryDelay, timeoutMs);
-      },
-      fallback,
-    );
+    return circuitBreaker.execute(async () => {
+      return this.executeWithRetry(
+        client,
+        pattern,
+        data,
+        retries,
+        retryDelay,
+        timeoutMs,
+      );
+    }, fallback);
   }
 
   private async executeWithRetry<T>(
@@ -63,21 +67,37 @@ export class ResilientService {
     pattern: any,
     data: any,
     retries: number,
-    delay: number,
+    retryDelayMs: number,
     timeoutMs: number,
   ): Promise<T> {
-    try {
-      const response = client.send(pattern, data).pipe(rxTimeout(timeoutMs));
-      const result = await firstValueFrom(response);
-      return result;
-    } catch (error) {
-      this.logger.error(
-        `Failed to execute command ${pattern.cmd} (timeout ${timeoutMs}ms):`,
-        error.message,
-      );
-      this.logger.error(`Full error details:`, error.stack || error);
-      throw error;
+    const maxAttempts = retries + 1;
+    let lastError: any;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const response = client.send(pattern, data).pipe(rxTimeout(timeoutMs));
+        return await firstValueFrom(response);
+      } catch (error) {
+        lastError = error;
+        this.logger.warn(
+          `Intento ${attempt}/${maxAttempts} fallido para ${pattern.cmd} (timeout ${timeoutMs}ms): ${error.message}`,
+        );
+
+        if (attempt < maxAttempts) {
+          await this.wait(retryDelayMs * attempt);
+        }
+      }
     }
+
+    this.logger.error(
+      `Todos los intentos (${maxAttempts}) fallaron para ${pattern.cmd}`,
+      lastError?.stack || lastError,
+    );
+    throw lastError;
+  }
+
+  private wait(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   getCircuitBreakerStates() {

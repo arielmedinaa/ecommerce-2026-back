@@ -3,6 +3,7 @@ import { MessagePattern, EventPattern, Payload } from '@nestjs/microservices';
 import { CreateProductDto } from '@products/schemas/dto/create-product.dto';
 import { ProductsService } from '@products/service/products/products.service';
 import { ProductsImagesService } from '@products/service/products/products-images.service';
+import { SellosReglasService } from '@products/service/products/sellos-reglas.service';
 import { Product } from '@products/schemas/products/product.schema';
 
 import { OfertasService } from '@products/service/ofertas/ofertas.service';
@@ -10,6 +11,7 @@ import { PromosService } from '@products/service/promos/promos.service';
 import { CombosService } from '@products/service/combos/combos.service';
 import { ProductsSellersService } from '@products/service/products-seller/products-sellers.service';
 import { SellerCatalogService } from '@products/service/products-seller/seller-catalog.service';
+import { ProductsSellerConfigService } from '@products/service/products-seller/products-seller-config.service';
 import { NotificationsService } from '@products/service/notifications/notifications.service';
 import { PushNotificationService } from '@products/service/notifications/push-notification.service';
 
@@ -21,9 +23,11 @@ export class ProductsController {
     private readonly ofertasService: OfertasService,
     private readonly promosService: PromosService,
     private readonly productsImagesService: ProductsImagesService,
+    private readonly sellosReglasService: SellosReglasService,
     private readonly combosService: CombosService,
     private readonly productsSellersService: ProductsSellersService,
     private readonly sellerCatalogService: SellerCatalogService,
+    private readonly sellerConfigService: ProductsSellerConfigService,
     private readonly notificationsService: NotificationsService,
     private readonly pushNotificationService: PushNotificationService,
   ) {}
@@ -87,9 +91,34 @@ export class ProductsController {
   }
 
   @MessagePattern({ cmd: 'get_products_sellers_template' })
-  async getProductsSellersTemplate() {
-    const buffer = await this.productsSellersService.generateTemplate();
+  async getProductsSellersTemplate(@Payload() data: { idProveedor?: number }) {
+    const buffer = await this.productsSellersService.generateTemplate(data?.idProveedor);
     return { data: buffer, message: 'Plantilla generada', success: true };
+  }
+
+  @MessagePattern({ cmd: 'get_seller_columnas_disponibles' })
+  getSellerColumnasDisponibles(@Payload() data: { idProveedor: number }) {
+    return this.sellerConfigService.getColumnasDisponibles(data.idProveedor);
+  }
+
+  @MessagePattern({ cmd: 'set_seller_columnas_activas' })
+  setSellerColumnasActivas(@Payload() data: { idProveedor: number; columnas: string[] }) {
+    return this.sellerConfigService.setColumnasActivas(data.idProveedor, data.columnas);
+  }
+
+  @MessagePattern({ cmd: 'get_seller_stock_minimo_config' })
+  getSellerStockMinimoConfig(@Payload() data: { idProveedor: number }) {
+    return this.sellerConfigService.getStockMinimoConfig(data.idProveedor);
+  }
+
+  @MessagePattern({ cmd: 'upsert_seller_stock_minimo_rule' })
+  upsertSellerStockMinimoRule(@Payload() data: { idProveedor: number; regla: any }) {
+    return this.sellerConfigService.upsertStockMinimoRule(data.idProveedor, data.regla);
+  }
+
+  @MessagePattern({ cmd: 'delete_seller_stock_minimo_rule' })
+  deleteSellerStockMinimoRule(@Payload() data: { idProveedor: number; id: number }) {
+    return this.sellerConfigService.deleteStockMinimoRule(data.idProveedor, data.id);
   }
 
   @MessagePattern({ cmd: 'list_products_sellers_pendientes' })
@@ -125,6 +154,26 @@ export class ProductsController {
     return this.productsSellersService.getRejectionCodes();
   }
 
+  @MessagePattern({ cmd: 'list_seller_familias' })
+  listSellerFamilias() {
+    return this.productsSellersService.listFamilias();
+  }
+
+  @MessagePattern({ cmd: 'list_seller_subfamilias' })
+  listSellerSubfamilias(@Payload() data: { codigoCategoria: string }) {
+    return this.productsSellersService.listSubfamilias(data?.codigoCategoria);
+  }
+
+  @MessagePattern({ cmd: 'get_seller_image_file' })
+  async getSellerImageFile(@Payload() data: { key: string }) {
+    try {
+      const result = await this.productsSellersService.getSellerImageFile(data?.key);
+      return { data: result, message: 'Ok', success: true };
+    } catch (err: any) {
+      return { data: null, message: err?.message || 'Imagen no encontrada', success: false };
+    }
+  }
+
   @MessagePattern({ cmd: 'get_import_error_codes' })
   getImportErrorCodes() {
     return this.productsSellersService.getImportErrorCodes();
@@ -134,6 +183,11 @@ export class ProductsController {
   async resolveProveedorByEmail(@Payload() data: { email: string }) {
     const idProveedor = await this.productsSellersService.resolveProveedorIdByEmail(data.email);
     return { data: { idProveedor }, message: 'Ok', success: true };
+  }
+
+  @MessagePattern({ cmd: 'resync_sellers_aprobados_mongo' })
+  async resyncSellersAprobadosMongo() {
+    return this.productsSellersService.resyncAprobadosAMongo();
   }
 
   @MessagePattern({ cmd: 'get_seller_catalog' })
@@ -152,13 +206,24 @@ export class ProductsController {
   }
 
   @MessagePattern({ cmd: 'create_proveedor' })
-  async createProveedor(@Payload() data: { nombre: string; email: string }) {
+  async createProveedor(@Payload() data: { nombre: string; email: string; password?: string }) {
     return this.productsSellersService.createProveedor(data);
   }
 
   @MessagePattern({ cmd: 'list_proveedores' })
   async listProveedores() {
     return this.productsSellersService.listProveedores();
+  }
+
+  @MessagePattern({ cmd: 'list_proveedores_con_estado' })
+  async listProveedoresConEstado() {
+    return this.productsSellersService.listProveedoresConEstado();
+  }
+
+  @MessagePattern({ cmd: 'register_proveedor_login' })
+  async registerProveedorLogin(@Payload() data: { idProveedor: number; acceptedTerms: boolean }) {
+    await this.productsSellersService.registerProveedorLogin(data.idProveedor, !!data.acceptedTerms);
+    return { success: true };
   }
 
   @MessagePattern({ cmd: 'get_provider_dashboard_stats' })
@@ -580,6 +645,63 @@ export class ProductsController {
       return await this.productsService.deleteProductSello(productoCodigo);
     } catch (error) {
       this.logger.error('Error in delete_product_sello:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'preview_sello_regla' })
+  async previewSelloRegla(@Payload() filtro: any) {
+    try {
+      return await this.sellosReglasService.previewCount(filtro || {});
+    } catch (error) {
+      this.logger.error('Error in preview_sello_regla:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'create_sello_regla' })
+  async createSelloRegla(@Payload() payload: {
+    filtro: any;
+    nombre?: string | null;
+    file: any;
+    fechaDesde?: string | null;
+    fechaHasta?: string | null;
+    userId?: string;
+  }) {
+    try {
+      return await this.sellosReglasService.createRegla(payload);
+    } catch (error) {
+      this.logger.error('Error in create_sello_regla:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'list_sello_reglas' })
+  async listSelloReglas() {
+    try {
+      return { data: await this.sellosReglasService.listReglas(), success: true };
+    } catch (error) {
+      this.logger.error('Error in list_sello_reglas:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'toggle_sello_regla' })
+  async toggleSelloRegla(@Payload() payload: { id: number; activo: boolean; userId?: string }) {
+    try {
+      return await this.sellosReglasService.toggleRegla(payload.id, payload.activo, payload.userId);
+    } catch (error) {
+      this.logger.error('Error in toggle_sello_regla:', error);
+      throw error;
+    }
+  }
+
+  @MessagePattern({ cmd: 'delete_sello_regla' })
+  async deleteSelloRegla(@Payload() id: number) {
+    try {
+      return await this.sellosReglasService.deleteRegla(Number(id));
+    } catch (error) {
+      this.logger.error('Error in delete_sello_regla:', error);
       throw error;
     }
   }

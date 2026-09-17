@@ -109,4 +109,55 @@ export class ProductsSeller {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updated_at: Date;
+
+  @Column({ name: 'deposito', nullable: true })
+  deposito: string | null;
+
+  @Column({ name: 'disponible_retiro_inmediato', type: 'boolean', nullable: true })
+  disponible_retiro_inmediato: boolean | null;
+
+  @Column({ name: 'tiempo_preparacion_horas', type: 'int', nullable: true })
+  tiempo_preparacion_horas: number | null;
+
+  @Column({ name: 'peso_kg', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  peso_kg: number | null;
+
+  @Column({ name: 'dimensiones_cm', nullable: true })
+  dimensiones_cm: string | null;
+
+  @Column({ name: 'garantia_meses', type: 'int', nullable: true })
+  garantia_meses: number | null;
+
+  @Column({ name: 'condicion_producto', nullable: true })
+  condicion_producto: string | null;
+
+  @Column({ name: 'video_url', nullable: true })
+  video_url: string | null;
+
+  @Column({ name: 'ficha_tecnica_url', nullable: true })
+  ficha_tecnica_url: string | null;
+
+  @Column({ name: 'color_variante', nullable: true })
+  color_variante: string | null;
+
+  @Column({ name: 'unidad_venta', nullable: true })
+  unidad_venta: string | null;
+
+  @Column({ name: 'observaciones_proveedor', type: 'text', nullable: true })
+  observaciones_proveedor: string | null;
+
+  @Column({ name: 'erp_articulo_match', nullable: true })
+  erp_articulo_match: string | null;
+
+  @Column({ name: 'erp_match_score', type: 'int', nullable: true })
+  erp_match_score: number | null;
+
+  @Column({ name: 'erp_match_status', default: 'sin_match' })
+  erp_match_status: string;
+
+  @Column({ name: 'erp_match_motivo', nullable: true })
+  erp_match_motivo: string | null;
+
+  @Column({ name: 'erp_match_evaluado_at', type: 'datetime', nullable: true })
+  erp_match_evaluado_at: Date | null;
 }

@@ -3,7 +3,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import * as path from 'path';
 import { ImageStorageService } from '@shared/common/services/image-storage.service';
-import { SellerImageValidatorUtil } from '@products/utils/seller-image-validator.util';
+import { SellerImageValidatorUtil } from '@products/utils/products-seller/seller-image-validator.util';
 import { ProductsSellerEtlPayload } from '../types';
 
 export interface CorridaReporte {

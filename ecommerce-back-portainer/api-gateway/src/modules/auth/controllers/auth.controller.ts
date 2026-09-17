@@ -109,7 +109,10 @@ export class AuthController {
 
   @Post('validateBasicUser')
   @SneakyThrows('AuthService', 'validateBasicUser')
-  async validateBasicUser(@Body() body: { email: string; password?: string }, @Req() req: Request) {
+  async validateBasicUser(
+    @Body() body: { email: string; password?: string; acceptedTerms?: boolean },
+    @Req() req: Request,
+  ) {
     if (!body?.email) {
       throw new BadRequestException('email is required');
     }
@@ -137,6 +140,13 @@ export class AuthController {
     );
 
     if (result?.success && result?.token && idProveedor) {
+      // Login de proveedor con contraseña verificada: se registra el ingreso
+      // y, si vino marcado, la aceptación de Términos y Condiciones. No
+      // bloquea la respuesta del login si esto falla.
+      this.productsClient
+        .send({ cmd: 'register_proveedor_login' }, { idProveedor, acceptedTerms: !!body.acceptedTerms })
+        .subscribe({ error: () => undefined });
+
       const decoded = this.jwtService.decode(result.token) as Record<string, any>;
       const { exp, iat, ...decodedClaims } = decoded;
       const providerToken = this.jwtService.sign(
@@ -235,7 +245,7 @@ export class AuthController {
   @UseGuards(RolesGuard)
   @RequireModulo('panel')
   @Post('proveedores')
-  async createProveedor(@Body() body: { nombre: string; email: string }) {
+  async createProveedor(@Body() body: { nombre: string; email: string; password?: string }) {
     return await firstValueFrom(
       this.productsClient.send({ cmd: 'create_proveedor' }, body),
     );

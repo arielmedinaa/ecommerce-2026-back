@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: products-service
-  namespace: ecommerce-prod
+  namespace: default
   labels:
     app: products-service
 spec:
@@ -17,13 +17,16 @@ spec:
     spec:
       containers:
       - name: products-service
-        image: your-account-id.dkr.ecr.us-east-1.amazonaws.com/products-service:latest
-        imagePullPolicy: Always
+        image: localhost/ecommerce-products-service:latest
+        imagePullPolicy: Never
         ports:
         - containerPort: 3106
+        - containerPort: 4000
         envFrom:
         - configMapRef:
             name: ecommerce-config
+        - secretRef:
+            name: ecommerce-secrets
         resources:
           requests:
             memory: "128Mi"
@@ -31,12 +34,28 @@ spec:
           limits:
             memory: "256Mi"
             cpu: "250m"
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 4000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 4000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: products-service
-  namespace: ecommerce-prod
+  namespace: default
 spec:
   selector:
     app: products-service
@@ -50,18 +69,27 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: products-service-hpa
-  namespace: ecommerce-prod
+  namespace: default
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: products-service
-  minReplicas: 2
+  minReplicas: 3
   maxReplicas: 10
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 120
   metrics:
   - type: Resource
     resource:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 70
+        averageUtilization: 60
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 85

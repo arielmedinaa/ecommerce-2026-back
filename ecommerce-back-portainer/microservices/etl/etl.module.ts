@@ -9,7 +9,7 @@ import { ProviderRunnerService } from './service/provider-runner.service';
 import { SchedulerService } from './service/scheduler.service';
 import { MicroserviceModule } from '@shared/config/microservice/microservice.module';
 import { ImageStorageService } from '@shared/common/services/image-storage.service';
-import { SellerImageValidatorUtil } from '@products/utils/seller-image-validator.util';
+import { SellerImageValidatorUtil } from '@products/utils/products-seller/seller-image-validator.util';
 
 @Module({
   imports: [

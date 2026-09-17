@@ -4,6 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ProductsController } from './controller/products.controller';
+import { HealthController } from './controller/health.controller';
 import { ProductsService } from './service/products/products.service';
 import { ProductsImagesService } from './service/products/products-images.service';
 import { PromosService } from './service/promos/promos.service';
@@ -61,7 +62,7 @@ import { ProductoMongo, ProductoMongoSchema } from './schemas/products-seller/pr
     DatabaseModule.forRoot(),
     MongooseModule.forFeature([{ name: ProductoMongo.name, schema: ProductoMongoSchema }]),
   ],
-  controllers: [ProductsController],
+  controllers: [ProductsController, HealthController],
   providers: [
     ProductsService,
     ProductsImagesService,

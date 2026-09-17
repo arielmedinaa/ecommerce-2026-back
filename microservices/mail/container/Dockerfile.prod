@@ -1,0 +1,37 @@
+FROM node:20-alpine AS deps
+WORKDIR /usr/src/app
+RUN apk add --no-cache python3 make g++ libc6-compat
+COPY microservices/mail/package.json ./package.json
+RUN yarn config set network-timeout 600000 && \
+    yarn config set registry https://registry.npmjs.org/ && \
+    yarn install --network-timeout 600000 --ignore-engines || \
+    npm install --registry https://registry.npmjs.org/ --timeout=600000
+
+FROM deps AS build
+WORKDIR /usr/src/app
+COPY tsconfig.paths.json ./tsconfig.paths.json
+COPY shared/ ./shared/
+COPY microservices/auth/schemas/ ./microservices/auth/schemas/
+COPY microservices/mail/ ./microservices/mail/
+WORKDIR /usr/src/app/microservices/mail
+RUN npx tsc -p tsconfig.json && npx --yes tsc-alias@1.8.10 -p tsconfig.json
+
+FROM node:20-alpine AS deps-prod
+WORKDIR /usr/src/app
+RUN apk add --no-cache python3 make g++ libc6-compat
+COPY microservices/mail/package.json ./package.json
+RUN yarn config set network-timeout 600000 && \
+    yarn config set registry https://registry.npmjs.org/ && \
+    yarn install --production --network-timeout 600000 --ignore-engines || \
+    npm install --omit=dev --registry https://registry.npmjs.org/ --timeout=600000
+
+FROM node:20-alpine AS runtime
+RUN apk add --no-cache libc6-compat curl
+WORKDIR /usr/src/app
+COPY --from=deps-prod /usr/src/app/node_modules ./node_modules
+COPY --from=build /usr/src/app/microservices/mail/dist ./dist
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup && chown -R appuser:appgroup /usr/src/app
+USER appuser
+ENV NODE_ENV=production
+EXPOSE 3108
+CMD ["node", "dist/microservices/mail/main.js"]

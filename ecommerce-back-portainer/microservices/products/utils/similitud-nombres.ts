@@ -1,19 +1,3 @@
-/**
- * Similitud entre nombres de artículo, para detectar que un proveedor está
- * volviendo a subir un producto que ya tenemos aunque no haya mandado el mismo
- * código interno (o haya cambiado un detalle de redacción).
- *
- * Usamos el coeficiente de Dice sobre bigramas: es tolerante a palabras
- * reordenadas y a diferencias de largo, y no penaliza tanto como Levenshtein
- * cuando el proveedor agrega o saca un adjetivo. No requiere dependencias ni
- * soporte del motor de base de datos (MariaDB no trae trigramas).
- */
-
-/**
- * Normaliza para comparar: sin acentos, sin signos, en minúsculas y con los
- * espacios colapsados. "Cortapelo  Oraimo SmartTrimmer 2" y
- * "cortapelo oraimo smarttrimmer 2" tienen que dar exactamente lo mismo.
- */
 export function normalizarNombre(texto: string): string {
   return (texto || '')
     .normalize('NFD')
@@ -33,9 +17,6 @@ function bigramas(texto: string): Map<string, number> {
   return mapa;
 }
 
-/**
- * Devuelve un valor entre 0 y 1. 1 = nombres idénticos tras normalizar.
- */
 export function similitudNombres(a: string, b: string): number {
   const na = normalizarNombre(a);
   const nb = normalizarNombre(b);

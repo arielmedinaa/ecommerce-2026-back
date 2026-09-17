@@ -72,6 +72,46 @@ function buildFacturacionContadoCreditoQuery(columnaFecha: string): string {
   `;
 }
 
+function buildHistorialPromocionesQuery(columnaFecha: string): string {
+  return `
+    SELECT
+      COALESCE(sd.id_promo, 0) AS id_promo,
+      COALESCE(pc.nombre, 'Productos individuales') AS nombre_promo,
+      COALESCE(SUM(sd.gravada10), 0) AS monto,
+      COUNT(*) AS cantidad_lineas,
+      COUNT(DISTINCT CONCAT(sc.comprobante, '-', sc.numero)) AS cantidad_documentos
+    FROM solicitudcab sc
+    INNER JOIN solicituddet sd ON sd.comprobante = sc.comprobante AND sd.numero = sc.numero
+    LEFT JOIN tbl_promos_cabeceras pc ON pc.id_promo = sd.id_promo
+    WHERE ${columnaFecha} BETWEEN ? AND ?
+      AND sc.comprobante IN ${VENDEDORES_ECOMMERCE_SUBQUERY}
+      AND sc.estado_soli NOT IN ('31', '25', '37')
+      AND sc.estado_soli IN ('19', '16')
+    GROUP BY COALESCE(sd.id_promo, 0), nombre_promo
+    ORDER BY monto DESC
+  `;
+}
+
+function buildHistorialTopProductosQuery(columnaFecha: string): string {
+  return `
+    SELECT
+      sd.codigo AS codigo,
+      sd.descrip AS descripcion,
+      COALESCE(SUM(sd.gravada10), 0) AS monto,
+      SUM(sd.cantidad) AS cantidad_unidades,
+      COUNT(*) AS cantidad_lineas
+    FROM solicitudcab sc
+    INNER JOIN solicituddet sd ON sd.comprobante = sc.comprobante AND sd.numero = sc.numero
+    WHERE ${columnaFecha} BETWEEN ? AND ?
+      AND sc.comprobante IN ${VENDEDORES_ECOMMERCE_SUBQUERY}
+      AND sc.estado_soli NOT IN ('31', '25', '37')
+      AND sc.estado_soli IN ('19', '16')
+    GROUP BY sd.codigo, sd.descrip
+    ORDER BY monto DESC
+    LIMIT 5
+  `;
+}
+
 const TOTAL_FACTURADO_EMPRESA_QUERY = `
   SELECT COALESCE(SUM(vc.exenta + vc.gravada5 + vc.gravada10), 0) AS total
   FROM ventacab vc
@@ -431,6 +471,96 @@ export class DashboardStatsService {
           metaPorcentaje: META_PORCENTAJE_ECOMMERCE,
           cumpleMeta: false,
         },
+        message: `Error: ${error.message}`,
+        success: false,
+      };
+    }
+  }
+
+  async getHistorialDesglosePromociones(
+    desde: string,
+    hasta: string,
+    modoFecha: 'agendamiento' | 'solicitud' = 'agendamiento',
+  ): Promise<{
+    data: {
+      total: number;
+      promociones: {
+        idPromo: number;
+        nombre: string;
+        monto: number;
+        porcentaje: number;
+        cantidadLineas: number;
+        cantidadDocumentos: number;
+      }[];
+      topProductos: {
+        codigo: string;
+        descripcion: string;
+        monto: number;
+        porcentaje: number;
+        cantidadUnidades: number;
+        cantidadLineas: number;
+      }[];
+    };
+    message: string;
+    success: boolean;
+  }> {
+    try {
+      const columnaFecha = modoFecha === 'solicitud' ? 'sc.fecha' : 'sc.age_frecepcion';
+
+      const [promoRows, productoRows] = await Promise.all([
+        this.econtDb.executeQuery<{
+          id_promo: number;
+          nombre_promo: string;
+          monto: string;
+          cantidad_lineas: string;
+          cantidad_documentos: string;
+        }>(buildHistorialPromocionesQuery(columnaFecha), [desde, hasta]),
+        this.econtDb.executeQuery<{
+          codigo: string;
+          descripcion: string;
+          monto: string;
+          cantidad_unidades: string;
+          cantidad_lineas: string;
+        }>(buildHistorialTopProductosQuery(columnaFecha), [desde, hasta]),
+      ]);
+
+      const total = (promoRows || []).reduce((sum, r) => sum + Number(r.monto || 0), 0);
+
+      const promociones = (promoRows || [])
+        .map((r) => {
+          const monto = Number(r.monto || 0);
+          return {
+            idPromo: Number(r.id_promo || 0),
+            nombre: r.nombre_promo,
+            monto,
+            porcentaje: total > 0 ? (monto / total) * 100 : 0,
+            cantidadLineas: Number(r.cantidad_lineas || 0),
+            cantidadDocumentos: Number(r.cantidad_documentos || 0),
+          };
+        })
+        .sort((a, b) => b.monto - a.monto);
+
+      const topProductos = (productoRows || []).map((r) => {
+        const monto = Number(r.monto || 0);
+        return {
+          codigo: r.codigo,
+          descripcion: r.descripcion,
+          monto,
+          porcentaje: total > 0 ? (monto / total) * 100 : 0,
+          cantidadUnidades: Number(r.cantidad_unidades || 0),
+          cantidadLineas: Number(r.cantidad_lineas || 0),
+        };
+      });
+
+      return {
+        data: { total, promociones, topProductos },
+        message: 'Ok',
+        success: true,
+      };
+    } catch (error) {
+      this.logger.error(`Error calculando desglose de promociones del historial: ${error.message}`);
+      return {
+        data: { total: 0, promociones: [], topProductos: [] },
         message: `Error: ${error.message}`,
         success: false,
       };

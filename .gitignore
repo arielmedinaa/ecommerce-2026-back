@@ -12,6 +12,19 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
+# Credenciales AWS (nunca commitear)
+aws.json
+*.pem
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+
 # OS
 .DS_Store
 
