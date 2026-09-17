@@ -1,0 +1,24 @@
+{
+  "jsc": {
+    "target": "es2021",
+    "parser": {
+      "syntax": "typescript",
+      "decorators": {
+        "decoratorsBeforeExport": true
+      }
+    },
+    "transform": {
+      "decoratorMetadata": true
+    }
+  },
+  "module": {
+    "type": "commonjs",
+    "strict": false,
+    "strictMode": true,
+    "lazy": false,
+    "noInterop": false
+  },
+  "minify": false,
+  "isModule": true,
+  "exclude": ["node_modules", "dist", "test", "**/*.spec.ts", "microservices/etl/providers/**/*.ts"]
+}
