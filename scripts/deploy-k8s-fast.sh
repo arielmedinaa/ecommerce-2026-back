@@ -60,9 +60,6 @@ SSH_CMD="ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -o 
 SCP_CMD="scp -o PreferredAuthentications=password -o PubkeyAuthentication=no -o ConnectTimeout=10"
 RSYNC_CMD="rsync -az -e \"ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -o ConnectTimeout=10\""
 
-# REMOTE_ROOT is a plain rsync'd tree on the control-plane, not a git checkout
-# (no .git there) — sync source files directly instead of `git pull`, which
-# silently no-op'd (fatal: not a git repository) and left stale Dockerfiles.
 SYNC_RET=0
 for entry in package.json package-lock.json yarn.lock nest-cli.json tsconfig.json tsconfig.prod.json tsconfig.paths.json .swcrc .swcrc.prod api-gateway microservices shared deploy; do
   SSHPASS="$SSH_PASS" sshpass -e rsync -az \
@@ -108,11 +105,6 @@ build_service() {
     IMAGE="ecommerce-${SVC}"
   fi
 
-  # This control-plane is also a live k8s node (flannel + kube-proxy +
-  # netavark all sharing iptables) — podman's own bridge network for build
-  # containers can't reach the internet through that stack at all (verified:
-  # DNS and even ICMP time out on the bridge, host itself is fine). Building
-  # with --network=host skips the bridge entirely.
   if timeout 300 podman build \
     --network=host \
     --build-arg SERVICE_MAIN="$SERVICE_MAIN" \
