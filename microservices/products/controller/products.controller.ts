@@ -59,6 +59,26 @@ export class ProductsController {
     return result;
   }
 
+  @MessagePattern({ cmd: 'create_product_seller_manual' })
+  async createProductSellerManual(
+    @Payload() data: { idProveedor: number; creadoPor: string; form: Record<string, any> },
+  ) {
+    return await this.productsSellersService.createManual(data.idProveedor, data.creadoPor, data.form || {});
+  }
+
+  @MessagePattern({ cmd: 'update_product_seller_manual' })
+  async updateProductSellerManual(
+    @Payload()
+    data: { idProveedor: number; codigoArticulo: string; modificadoPor: string; cambios: Record<string, any> },
+  ) {
+    return await this.productsSellersService.updateManual(
+      data.idProveedor,
+      data.codigoArticulo,
+      data.modificadoPor,
+      data.cambios || {},
+    );
+  }
+
   @MessagePattern({ cmd: 'list_excel_historial' })
   listExcelHistorial(@Payload() data: { idProveedor: number }) {
     return this.productsSellersService.listHistorialExcel(data.idProveedor);

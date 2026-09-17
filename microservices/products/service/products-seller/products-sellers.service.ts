@@ -54,6 +54,11 @@ type RowResult = {
   requiere_revision?: boolean;
 };
 
+// Costo mínimo aceptado para un producto de proveedor (Gs.). Lo comparten la
+// validación del import y la edición manual: si vive en dos lugares, se
+// desincroniza. El texto que ve el proveedor está en IMPORT_ERROR_CODES[106].
+const COSTO_MINIMO = 9000;
+
 @Injectable()
 export class ProductsSellersService {
   private readonly logger = new Logger(ProductsSellersService.name);
@@ -452,6 +457,302 @@ export class ProductsSellersService {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Alta y edición manual desde el panel del proveedor.
+  //
+  // Pasan por exactamente la misma validación que el import por Excel
+  // (validarFilaCatalogo) para que no existan dos definiciones de "producto
+  // válido" según la puerta por la que entre. Lo único que hace createManual
+  // de más es traducir los nombres de campo del formulario a los de la
+  // plantilla, porque el validador razona en términos de la planilla:
+  // recibe la marca y la categoría como TEXTO y las resuelve contra el ERP,
+  // mientras que el formulario ya trabaja con códigos.
+  // ---------------------------------------------------------------------------
+
+  private readonly CAMPOS_FORM_DIRECTOS = [
+    'codigo_proveedor_interno', 'nombre_articulo', 'descripcion', 'codigo_de_barra',
+    'costo', 'stock_actual', 'imagen_1', 'imagen_2', 'imagen_3', 'imagen_4', 'imagen_5',
+  ] as const;
+
+  private async formAFilaCatalogo(
+    form: Record<string, any>,
+    columnasActivas: string[],
+  ): Promise<Record<string, string>> {
+    const datos: Record<string, string> = {};
+    const txt = (v: any) => (v === null || v === undefined ? '' : String(v).trim());
+
+    for (const campo of this.CAMPOS_FORM_DIRECTOS) datos[campo] = txt(form[campo]);
+    for (const campo of columnasActivas) datos[campo] = txt(form[campo]);
+
+    // El formulario manda marca como texto libre, igual que la planilla.
+    datos.marca = txt(form.marca_texto_original ?? form.marca);
+
+    // Categoría y subcategoría llegan como códigos (vienen de los selects) y el
+    // validador las matchea por nombre exacto: se traducen acá. Si el código no
+    // resuelve a ninguna familia, se deja el valor original para que el
+    // validador lo trate como categoría no reconocida y no como categoría
+    // ausente — son dos errores distintos (105 vs. revisión de categoría).
+    const codigoCategoria = txt(form.codigo_categoria);
+    const codigoSubcategoria = txt(form.codigo_subcategoria);
+    const { categoriaNombre, subcategoriaNombre } = await this.sellersUtils.getNombresCategoria(
+      codigoCategoria || null,
+      codigoSubcategoria || null,
+    );
+    datos.categoria = categoriaNombre ?? codigoCategoria;
+    datos.subcategoria = subcategoriaNombre ?? codigoSubcategoria;
+
+    return datos;
+  }
+
+  /**
+   * Alta manual de un producto. Devuelve el mismo `codigoError` que usa el
+   * import (IMPORT_ERROR_CODES) para que el panel pueda mostrar el motivo y la
+   * solución con el texto ya escrito, en vez de inventar mensajes propios.
+   */
+  async createManual(
+    idProveedor: number,
+    creadoPor: string,
+    form: Record<string, any>,
+  ): Promise<{
+    data: ProductsSeller | null;
+    created: boolean;
+    codigoError?: number;
+    motivo?: string;
+    solucion?: string;
+    campo?: string | null;
+    message: string;
+    success: boolean;
+  }> {
+    try {
+      const proveedor = await this.proveedorRepository.findOne({ where: { id: idProveedor } });
+      if (!proveedor) {
+        return { data: null, created: false, message: 'Proveedor no encontrado', success: false };
+      }
+
+      const columnasActivas = await this.sellerConfigService.getColumnasActivas(idProveedor);
+      const datos = await this.formAFilaCatalogo(form, columnasActivas);
+      const resultado = await this.validarFilaCatalogo(
+        idProveedor,
+        creadoPor,
+        datos,
+        {},
+        undefined,
+        columnasActivas,
+      );
+
+      if (!resultado.ok) {
+        const err = IMPORT_ERROR_CODES[resultado.codigo as number];
+        return {
+          data: null,
+          created: false,
+          codigoError: err?.codigo,
+          motivo: err?.motivo,
+          solucion: err?.solucion,
+          campo: err?.campo ?? null,
+          message: err?.motivo ?? 'No se pudo validar el producto',
+          success: false,
+        };
+      }
+
+      // Mismo criterio que el import: si el producto ya existía (por código
+      // interno, código de barra o nombre muy parecido) se refresca en lugar de
+      // duplicarlo, y vuelve a pendiente para que la IA lo revise de nuevo.
+      if (resultado.existente && resultado.actualizacion) {
+        await this.sellerRepository.update(resultado.existente.id, {
+          ...resultado.actualizacion,
+          estado: 'pendiente',
+          codigo_rechazo: null,
+          motivo_rechazo: null,
+          updated_by: creadoPor,
+        });
+        const data = await this.resolverVeredictoYSincronizar(
+          resultado.existente.id,
+          proveedor,
+          creadoPor,
+          resultado.categoriaNombre ?? null,
+          resultado.subcategoriaNombre ?? null,
+        );
+        return {
+          data,
+          created: false,
+          message: 'Ya tenías este producto cargado: se actualizaron sus datos',
+          success: true,
+        };
+      }
+
+      const guardado = await this.sellerRepository.save(
+        this.sellerRepository.create(resultado.entidad as Partial<ProductsSeller>),
+      );
+      const data = await this.resolverVeredictoYSincronizar(
+        guardado.id,
+        proveedor,
+        creadoPor,
+        resultado.categoriaNombre ?? null,
+        resultado.subcategoriaNombre ?? null,
+      );
+      return { data, created: true, message: 'Producto cargado', success: true };
+    } catch (error: any) {
+      this.logger.error(`createManual (proveedor ${idProveedor}): ${error.message}`);
+      return { data: null, created: false, message: `Error: ${error.message}`, success: false };
+    }
+  }
+
+  /**
+   * Edición manual de un producto propio del proveedor: stock, costo y las
+   * columnas extra que tenga habilitadas. No toca nombre, marca ni categoría
+   * —eso es un alta/re-subida, no una edición— ni el código interno, que es la
+   * clave de deduplicación.
+   *
+   * Re-evalúa con IA sólo cuando el cambio puede mover el veredicto: si cambió
+   * el costo (entra el mínimo de Gs. 9.000) o si el stock cruzó el cero (entra
+   * el rechazo 303). Actualizar el stock de 10 a 8 no despublica el producto.
+   */
+  async updateManual(
+    idProveedor: number,
+    codigoArticulo: string,
+    modificadoPor: string,
+    cambios: Record<string, any>,
+  ): Promise<{ data: ProductsSeller | null; message: string; success: boolean }> {
+    try {
+      const proveedor = await this.proveedorRepository.findOne({ where: { id: idProveedor } });
+      if (!proveedor) return { data: null, message: 'Proveedor no encontrado', success: false };
+
+      // La pertenencia va en el WHERE: un proveedor sólo puede editar lo suyo.
+      const actual = await this.sellerRepository.findOne({
+        where: { codigo_articulo: codigoArticulo, id_proveedor: idProveedor },
+      });
+      if (!actual) return { data: null, message: 'Producto no encontrado', success: false };
+
+      const patch: Partial<ProductsSeller> = { updated_by: modificadoPor };
+      let costoCambio = false;
+      let stockCruzaCero = false;
+
+      if (cambios.costo !== undefined && cambios.costo !== null && cambios.costo !== '') {
+        const costo = Number(cambios.costo);
+        if (!Number.isFinite(costo) || costo < COSTO_MINIMO) {
+          const err = IMPORT_ERROR_CODES[106];
+          return { data: null, message: err.motivo, success: false };
+        }
+        const recargo = await this.sellersUtils.getRecargo(
+          actual.codigo_categoria || null,
+          actual.codigo_subcategoria || null,
+        );
+        patch.costo = costo;
+        patch.precioventa = Math.round(costo * (1 + recargo / 100) * 100) / 100;
+        costoCambio = Number(actual.costo) !== costo;
+      }
+
+      if (cambios.stock_actual !== undefined && cambios.stock_actual !== null && cambios.stock_actual !== '') {
+        const stock = Number(cambios.stock_actual);
+        if (!Number.isFinite(stock) || stock < 0) {
+          const err = IMPORT_ERROR_CODES[107];
+          return { data: null, message: err.motivo, success: false };
+        }
+        patch.stock_actual = stock;
+        stockCruzaCero = Number(actual.stock_actual) === 0 !== (stock === 0);
+      }
+
+      const columnasActivas = await this.sellerConfigService.getColumnasActivas(idProveedor);
+      Object.assign(patch, this.parseExtraColumnas(
+        Object.fromEntries(
+          columnasActivas.map((c) => [c, cambios[c] === undefined || cambios[c] === null ? '' : String(cambios[c])]),
+        ),
+        columnasActivas.filter((c) => cambios[c] !== undefined),
+      ));
+
+      const reevaluar = costoCambio || stockCruzaCero;
+      if (reevaluar) {
+        patch.estado = 'pendiente';
+        patch.codigo_rechazo = null;
+        patch.motivo_rechazo = null;
+      }
+
+      await this.sellerRepository.update(actual.id, patch);
+
+      const data = reevaluar
+        ? await this.resolverVeredictoYSincronizar(
+            actual.id,
+            proveedor,
+            modificadoPor,
+            null,
+            null,
+            { resolverNombres: true },
+          )
+        : await this.sincronizarSinReevaluar(actual.id, proveedor);
+
+      return {
+        data,
+        message: reevaluar
+          ? 'Producto actualizado: el agente lo está revisando de nuevo'
+          : 'Producto actualizado',
+        success: true,
+      };
+    } catch (error: any) {
+      this.logger.error(`updateManual (proveedor ${idProveedor}, ${codigoArticulo}): ${error.message}`);
+      return { data: null, message: `Error: ${error.message}`, success: false };
+    }
+  }
+
+  /**
+   * Veredicto de IA y sincronización, en el orden correcto y releyendo la fila
+   * entre los dos pasos.
+   *
+   * El re-read no es cosmético: evaluarYAplicar cambia el estado en la base
+   * pero no el objeto que uno tiene en memoria, y upsertFromSellerRow decide
+   * si corre el match contra el ERP mirando `seller.estado`. Pasarle el objeto
+   * viejo —que todavía dice 'pendiente'— hace que el match nunca se evalúe.
+   */
+  private async resolverVeredictoYSincronizar(
+    sellerId: number,
+    proveedor: Proveedor,
+    modificadoPor: string,
+    categoriaNombre: string | null,
+    subcategoriaNombre: string | null,
+    opts: { resolverNombres?: boolean } = {},
+  ): Promise<ProductsSeller | null> {
+    const previo = await this.sellerRepository.findOne({ where: { id: sellerId } });
+    if (previo) await this.aiApproval.evaluarYAplicar(previo, modificadoPor);
+
+    const final = await this.sellerRepository.findOne({ where: { id: sellerId } });
+    if (!final) return null;
+
+    let catNombre = categoriaNombre;
+    let subNombre = subcategoriaNombre;
+    if (opts.resolverNombres) {
+      const nombres = await this.sellersUtils.getNombresCategoria(
+        final.codigo_categoria || null,
+        final.codigo_subcategoria || null,
+      );
+      catNombre = nombres.categoriaNombre;
+      subNombre = nombres.subcategoriaNombre;
+    }
+
+    try {
+      await this.sellerMongoService.upsertFromSellerRow(final, proveedor, catNombre, subNombre);
+    } catch (error: any) {
+      this.logger.error(`No se pudo sincronizar ${final.codigo_articulo} a Mongo: ${error.message}`);
+    }
+    return this.sellerRepository.findOne({ where: { id: sellerId } });
+  }
+
+  private async sincronizarSinReevaluar(
+    sellerId: number,
+    proveedor: Proveedor,
+  ): Promise<ProductsSeller | null> {
+    const final = await this.sellerRepository.findOne({ where: { id: sellerId } });
+    if (!final) return null;
+    const { categoriaNombre, subcategoriaNombre } = await this.sellersUtils.getNombresCategoria(
+      final.codigo_categoria || null,
+      final.codigo_subcategoria || null,
+    );
+    try {
+      await this.sellerMongoService.upsertFromSellerRow(final, proveedor, categoriaNombre, subcategoriaNombre);
+    } catch (error: any) {
+      this.logger.error(`No se pudo sincronizar ${final.codigo_articulo} a Mongo: ${error.message}`);
+    }
+    return this.sellerRepository.findOne({ where: { id: sellerId } });
+  }
+
   private readonly TEMPLATE_CACHE_TTL = 6 * 60 * 60 * 1000; // 6h: balance entre no regenerar siempre y no servir catálogo viejo por mucho tiempo
 
   private templateCacheKey(idProveedor?: number): string {
@@ -707,7 +1008,7 @@ export class ProductsSellersService {
     if (!nombre) return { ok: false, codigo: 103 };
     if (!marcaTexto) return { ok: false, codigo: 104 };
     if (!categoriaTexto) return { ok: false, codigo: 105 };
-    if (!Number.isFinite(costo) || costo < 9000) return { ok: false, codigo: 106 };
+    if (!Number.isFinite(costo) || costo < COSTO_MINIMO) return { ok: false, codigo: 106 };
     if (!Number.isFinite(stock) || stock < 0) return { ok: false, codigo: 107 };
 
     const marcaMatch = await this.sellersUtils.matchMarca(marcaTexto);
@@ -913,11 +1214,23 @@ export class ProductsSellersService {
           for (const seller of saved) {
             await this.aiApproval.evaluarYAplicar(seller, 'ai-agent');
           }
+          // Re-lectura obligatoria antes de sincronizar: evaluarYAplicar dejó
+          // el veredicto en la base, pero los objetos de `saved` siguen
+          // diciendo estado 'pendiente', y upsertFromSellerRow decide si corre
+          // el match contra el ERP mirando ese campo. Sincronizar con el
+          // objeto viejo hacía que ningún producto nuevo se matcheara nunca
+          // (quedaban en sin_match con erp_match_evaluado_at en null), y por
+          // eso se publicaban duplicando artículos del ERP. La rama de
+          // actualización de más abajo ya hacía este re-read.
           if (proveedor) {
+            const refrescados = await this.sellerRepository.find({
+              where: saved.map((seller) => ({ id: seller.id })),
+            });
+            const porId = new Map(refrescados.map((r) => [r.id, r]));
             await Promise.allSettled(
               saved.map((seller, idx) =>
                 this.sellerMongoService.upsertFromSellerRow(
-                  seller,
+                  porId.get(seller.id) ?? seller,
                   proveedor,
                   metaBatch[idx]?.categoriaNombre ?? null,
                   metaBatch[idx]?.subcategoriaNombre ?? null,

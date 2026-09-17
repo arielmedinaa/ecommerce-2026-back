@@ -31,13 +31,75 @@ interface CartResponse {
   total: number;
 }
 
+export type JotaTaxonomia = {
+  familias: Set<number>;
+  subfamilias: Set<number>;
+  terminos: string[];
+};
+
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
   readonly JOTA_MARCA = 257;
+  // Respaldo de la taxonomía JOTA: se usan solo si getJotaTaxonomia() falla.
+  // La regla de negocio es "si lo buscado cae en la familia/subfamilia de
+  // JOTA, JOTA va primero", y eso depende de qué vende JOTA hoy — no de una
+  // lista escrita a mano que hay que editar cada vez que suma una línea.
   readonly JOTA_FAMILIAS = new Set([4, 5, 6, 7]);
   readonly JOTA_KEYWORDS =
     /(cocina|anafe|heladera|refriger|freezer|climatiz|aire|lavarrop|lavado|lavasecarropas)/i;
+
+  private jotaTaxonomia: JotaTaxonomia | null = null;
+  private jotaTaxonomiaAt = 0;
+  private readonly JOTA_TAXONOMIA_TTL = 30 * 60 * 1000;
+
+  /**
+   * Familias, subfamilias y nombres de taxonomía donde JOTA tiene artículos
+   * visibles en la web. Es la fuente de verdad de "lo buscado cae en la
+   * familia/subfamilia de JOTA".
+   */
+  async getJotaTaxonomia(): Promise<JotaTaxonomia | null> {
+    if (
+      this.jotaTaxonomia &&
+      Date.now() - this.jotaTaxonomiaAt < this.JOTA_TAXONOMIA_TTL
+    ) {
+      return this.jotaTaxonomia;
+    }
+    try {
+      const rows = await this.productReadRepository.query(
+        `SELECT DISTINCT a.familia, a.subfamilia, f.nombre AS nombre_familia, sf.nombre AS nombre_subfamilia
+           FROM articulo a
+           JOIN familia f ON f.codigo = a.familia
+           JOIN subfamilia sf ON sf.codigo = a.subfamilia
+          WHERE a.marca = ? AND a.baja = 0 AND (a.web = 1 OR a.websc = 1)`,
+        [this.JOTA_MARCA],
+      );
+      const familias = new Set<number>();
+      const subfamilias = new Set<number>();
+      const terminos = new Set<string>();
+      for (const r of rows as any[]) {
+        const fam = Number(r.familia);
+        const sub = Number(r.subfamilia);
+        if (Number.isFinite(fam)) familias.add(fam);
+        if (Number.isFinite(sub)) subfamilias.add(sub);
+        for (const nombre of [r.nombre_familia, r.nombre_subfamilia]) {
+          for (const tok of String(nombre ?? '')
+            .toLowerCase()
+            .split(/[^a-záéíóúñ0-9]+/i)) {
+            if (tok.length >= 4) terminos.add(tok);
+          }
+        }
+      }
+      if (familias.size === 0) return this.jotaTaxonomia;
+      this.jotaTaxonomia = { familias, subfamilias, terminos: [...terminos] };
+      this.jotaTaxonomiaAt = Date.now();
+    } catch (e) {
+      this.logger.warn(
+        `No se pudo resolver la taxonomía JOTA, se usa el respaldo: ${(e as any)?.message ?? e}`,
+      );
+    }
+    return this.jotaTaxonomia;
+  }
 
   constructor(
     @InjectRepository(Product, 'WRITE_CONNECTION')
@@ -255,14 +317,28 @@ export class ProductsService {
       };
     }
 
-    const { data } = await this.productsCatalogUtil.getCachedPrismaProductos(
-      {
-        search: termino,
-        limit: 15,
-        offset: 0,
-        soloConStock: true,
-      },
+    const filtrosSugerencias = {
+      search: termino,
+      limit: 15,
+      offset: 0,
+      soloConStock: true,
+    };
+    const res = await this.productsCatalogUtil.getCachedPrismaProductos(
+      filtrosSugerencias,
       this.WEB_BASE_WHERE,
+    );
+    // Mismo criterio JOTA que el listado: el dropdown del buscador es la
+    // primera vista de resultados que ve el usuario y antes salteaba la regla
+    // porque llamaba al catálogo directo, sin pasar por findAll.
+    const { data } = await this.productsUtils.aplicarPrioridadJota(
+      res,
+      filtrosSugerencias,
+      this,
+      (f: any) =>
+        this.productsCatalogUtil.getCachedPrismaProductos(
+          f,
+          this.WEB_BASE_WHERE,
+        ),
     );
     const rows = Array.isArray(data) ? data : [];
 

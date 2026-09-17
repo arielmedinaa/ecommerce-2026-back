@@ -11,7 +11,6 @@ COPY nest-cli.json ./
 COPY tsconfig.json ./
 COPY tsconfig.prod.json ./
 COPY tsconfig.paths.json ./
-COPY .swcrc ./
 
 RUN --mount=type=cache,target=/root/.yarn \
     yarn config set network-timeout 600000 && \
@@ -21,14 +20,18 @@ RUN --mount=type=cache,target=/root/.yarn \
 FROM deps AS build
 WORKDIR /usr/src/app
 
+COPY .swcrc ./
 COPY api-gateway/ ./api-gateway/
 COPY microservices/ ./microservices/
 COPY shared/ ./shared/
 
+# Los tres arboles son independientes, asi que se compilan en paralelo.
+# tsc-alias va despues porque reescribe los alias sobre el dist ya emitido.
 RUN --mount=type=cache,target=/root/.swc \
-    npx swc ./api-gateway/src -d dist && \
-    npx swc ./microservices -d dist && \
-    npx swc ./shared -d dist && \
+    npx swc ./api-gateway/src -d dist & \
+    npx swc ./microservices -d dist & \
+    npx swc ./shared -d dist & \
+    wait && \
     npx tsc-alias -p tsconfig.prod.json
 
 FROM node:20-alpine AS runtime

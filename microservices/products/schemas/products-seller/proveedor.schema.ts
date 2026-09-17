@@ -23,6 +23,11 @@ export class Proveedor {
   @Column({ name: 'ruc', nullable: true })
   ruc: string | null;
 
+  // proveedor.codigo del ERP. Es la clave con la que se lee cs_score_proveedor
+  // para ordenar el catálogo del panel con el mismo criterio que el del ERP.
+  @Column({ name: 'codigo_erp', type: 'int', nullable: true })
+  codigo_erp: number | null;
+
   @Column({ name: 'telefono', nullable: true })
   telefono: string | null;
 

@@ -159,6 +159,50 @@ export class ProductsController {
     );
   }
 
+  // Alta manual de un producto desde el panel del proveedor. El idProveedor se
+  // resuelve del email del token, nunca del body: el proveedor sólo puede
+  // cargar en su propio catálogo.
+  @UseGuards(ProviderAuthGuard)
+  @Post('sellers/manual')
+  async createProductSellerManual(@Body() body: Record<string, any>, @Req() request: any) {
+    const email = request.user?.email;
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) {
+      return { data: null, created: false, message: 'Proveedor no encontrado', success: false };
+    }
+    return await firstValueFrom(
+      this.productsClient
+        .send(
+          { cmd: 'create_product_seller_manual' },
+          { idProveedor, creadoPor: email, form: body || {} },
+        )
+        .pipe(timeout(120000)),
+    );
+  }
+
+  // Edición de un producto propio (stock, costo y columnas extra). La
+  // pertenencia se valida dos veces: acá el idProveedor sale del token, y el
+  // servicio además lo exige en el WHERE de la búsqueda.
+  @UseGuards(ProviderAuthGuard)
+  @Patch('sellers/manual/:codigoArticulo')
+  async updateProductSellerManual(
+    @Param('codigoArticulo') codigoArticulo: string,
+    @Body() body: Record<string, any>,
+    @Req() request: any,
+  ) {
+    const email = request.user?.email;
+    const idProveedor = await this.resolveIdProveedor(email);
+    if (!idProveedor) return { data: null, message: 'Proveedor no encontrado', success: false };
+    return await firstValueFrom(
+      this.productsClient
+        .send(
+          { cmd: 'update_product_seller_manual' },
+          { idProveedor, codigoArticulo, modificadoPor: email, cambios: body || {} },
+        )
+        .pipe(timeout(120000)),
+    );
+  }
+
   @UseGuards(ProviderAuthGuard)
   @Get('sellers/excel-historial')
   async listExcelHistorial(@Query('email') email: string) {

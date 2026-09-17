@@ -92,8 +92,10 @@ export class ProductsSeller {
   @Column({ name: 'estado', default: 'pendiente' })
   estado: string;
 
+  // La columna es nullable y el código la limpia con null al reabrir un
+  // producto rechazado; el tipo tiene que admitirlo.
   @Column({ name: 'motivo_rechazo', nullable: true })
-  motivo_rechazo: string;
+  motivo_rechazo: string | null;
 
   @Column({ name: 'codigo_rechazo', type: 'int', nullable: true })
   codigo_rechazo: number | null;

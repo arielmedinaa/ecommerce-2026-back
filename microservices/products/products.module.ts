@@ -26,6 +26,7 @@ import { ProductsUtils } from './utils/products/utils-products';
 import { ProductsSellersUtils } from './utils/products-seller/utils-products-sellers';
 import { SellerImageValidatorUtil } from './utils/products-seller/seller-image-validator.util';
 import { LegacyBucketUtil } from './utils/products-seller/legacy-bucket.util';
+import { CatalogOrderUtil } from './utils/products-seller/catalog-order.util';
 import { PromoPricingUtil } from './utils/products/promo-pricing.util';
 import { ProductsResilienceUtil } from './utils/products/products-resilience.util';
 import { ProductsCatalogUtil } from './utils/products/products-catalog.util';
@@ -91,6 +92,7 @@ import { ProductoMongo, ProductoMongoSchema } from './schemas/products-seller/pr
     ProductsSellersUtils,
     SellerImageValidatorUtil,
     LegacyBucketUtil,
+    CatalogOrderUtil,
     PromoPricingUtil,
     ProductsResilienceUtil,
     ProductsCatalogUtil,

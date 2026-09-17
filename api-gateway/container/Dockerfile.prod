@@ -1,14 +1,3 @@
-# ============================================================================
-# Dockerfile de producción — api-gateway
-#
-# api-gateway NO tiene su propio package.json (a diferencia de los demás
-# microservicios), así que usa las dependencias del root del monorepo. Lo que
-# SÍ se limita es el código que se compila: solo api-gateway/src/, el entry
-# point (microservices/main.ts) y shared/, más un par de DTOs de products que
-# el gateway reutiliza directamente (@products/schemas/dto/*). No se compila
-# el resto de los microservicios.
-# ============================================================================
-
 FROM node:20-alpine AS deps
 WORKDIR /usr/src/app
 RUN apk add --no-cache vips-dev python3 make g++ libc6-compat

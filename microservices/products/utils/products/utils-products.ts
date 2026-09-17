@@ -1013,11 +1013,11 @@ export class ProductsUtils {
     );
   }
 
-  private esConsultaJota(
+  private async esConsultaJota(
     rows: any[],
     filters: any = {},
     ProductsService: any,
-  ): boolean {
+  ): Promise<boolean> {
     const search = String(filters?.search ?? '').trim();
     if (search) {
       const marcaDetectada = this.detectBrandToken(normalizarNombre(search));
@@ -1025,13 +1025,50 @@ export class ProductsUtils {
         return false;
       }
     }
+
+    // Taxonomía real de JOTA (familias/subfamilias donde tiene artículos web).
+    // Si la consulta no la pudo resolver, se cae al respaldo hardcodeado.
+    const taxonomia =
+      typeof ProductsService.getJotaTaxonomia === 'function'
+        ? await ProductsService.getJotaTaxonomia()
+        : null;
+    const familias: Set<number> =
+      taxonomia?.familias ?? ProductsService.JOTA_FAMILIAS;
+
     const categoria = Number(filters?.categoria);
+    if (Number.isFinite(categoria) && familias.has(categoria)) return true;
+
+    const subcategoria = Number(
+      filters?.subcategoria ?? filters?.subfamilia ?? NaN,
+    );
     if (
-      Number.isFinite(categoria) &&
-      ProductsService.JOTA_FAMILIAS.has(categoria)
-    )
+      taxonomia &&
+      Number.isFinite(subcategoria) &&
+      taxonomia.subfamilias.has(subcategoria)
+    ) {
       return true;
-    if (search && ProductsService.JOTA_KEYWORDS.test(search)) return true;
+    }
+
+    if (search) {
+      // Si no hay filtro de categoría, la señal es el texto: cae en JOTA si
+      // menciona alguna palabra de los nombres de su familia/subfamilia.
+      if (taxonomia) {
+        const buscado = normalizarNombre(search);
+        const tokens = buscado.split(/\s+/).filter((t) => t.length >= 4);
+        for (const tok of tokens) {
+          if (
+            taxonomia.terminos.some(
+              (t) => t === tok || t.startsWith(tok) || tok.startsWith(t),
+            )
+          ) {
+            return true;
+          }
+        }
+      }
+      if (ProductsService.JOTA_KEYWORDS.test(search)) return true;
+    }
+
+    // Listado sin categoría ni búsqueda: la home/catálogo general.
     if (!Number.isFinite(categoria) && !search) return true;
     return false;
   }
@@ -1082,7 +1119,8 @@ export class ProductsUtils {
     const rows = Array.isArray(res.data) ? res.data : [];
     const marcaFiltro = this.normFiltro(filters?.marca);
     if (marcaFiltro || rows.length === 0) return res;
-    if (!this.esConsultaJota(rows, filters, ProductsService)) return res;
+    if (!(await this.esConsultaJota(rows, filters, ProductsService)))
+      return res;
 
     const offset = Number(filters?.offset) || 0;
     const limit = Number(filters?.limit) || rows.length;
@@ -1114,8 +1152,15 @@ export class ProductsUtils {
         offset: 0,
         limit: Math.max(limit, 12),
       });
-      const jota = Array.isArray(jotaRes.data) ? jotaRes.data : [];
-      if (!jota.length) return res;
+      const jotaTodos = Array.isArray(jotaRes.data) ? jotaRes.data : [];
+      if (!jotaTodos.length) return res;
+      // JOTA va primero, pero no puede ocupar la página entera: el bloque se
+      // topea a la mitad del limit. Sin el tope, una categoría con muchos
+      // artículos JOTA llenaba la página 1 y empujaba lo realmente buscado a la
+      // página 2 — y como `total` no cuenta las filas inyectadas, la
+      // paginación se corría y repetía productos entre páginas.
+      const tope = limit > 0 ? Math.max(4, Math.floor(limit / 2)) : jotaTodos.length;
+      const jota = jotaTodos.slice(0, tope);
       const merged = dedupPrepend(jota, rows);
       const data = limit > 0 ? merged.slice(0, limit) : merged;
       return { ...res, data };
