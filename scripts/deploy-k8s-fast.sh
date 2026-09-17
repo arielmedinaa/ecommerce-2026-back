@@ -108,8 +108,13 @@ build_service() {
     IMAGE="ecommerce-${SVC}"
   fi
 
-  if timeout 120 podman build \
-    --dns 8.8.8.8 --dns 1.1.1.1 \
+  # This control-plane is also a live k8s node (flannel + kube-proxy +
+  # netavark all sharing iptables) — podman's own bridge network for build
+  # containers can't reach the internet through that stack at all (verified:
+  # DNS and even ICMP time out on the bridge, host itself is fine). Building
+  # with --network=host skips the bridge entirely.
+  if timeout 300 podman build \
+    --network=host \
     --build-arg SERVICE_MAIN="$SERVICE_MAIN" \
     -t "$IMAGE:latest" \
     -f deploy/docker/Dockerfile.prod . \
